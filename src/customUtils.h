@@ -7,8 +7,6 @@
 void print(std::string);
 void print(double);
 
-void exception(std::string);
-
 class stopwatch {
     public:
         stopwatch();

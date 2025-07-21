@@ -6,8 +6,7 @@ int main() {
     performanceWatch.start();
 
 
-    SQLiteDb database = SQLiteDb("storage");
-
+    SQLiteDb database = SQLiteDb();
 
 
     print("Done in ");

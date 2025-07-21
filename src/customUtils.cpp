@@ -1,19 +1,19 @@
 #include "customUtils.h"
 
 #include <iostream>
-#include <stdexcept>
+// #include <stdexcept>
 #include <string>
 #include <chrono>
 
 void print(std::string message) {
     std::cout << message;
 }
-void print(double duration) {
+void print(int duration) {
     std::cout << duration;
 }
-
-void exception(std::string message) {
-    throw std::runtime_error(message);
+void print(double duration) {
+    // todo: display decimal
+    std::cout << duration;
 }
 
 stopwatch::stopwatch() {}

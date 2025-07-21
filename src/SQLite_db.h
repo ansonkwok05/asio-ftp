@@ -2,24 +2,27 @@
 
 #include <sqlite3.h>
 #include <string>
-
-struct SQLite_TableCountContext {
-    int tcount;
-};
-
-struct SQLite_TableExistsContext {
-    bool texists;
-};
+#include <vector>
 
 class SQLiteDb {
     public:
-        SQLiteDb(std::string);
-        static int tablesCount(void *, int, char **, char **);
-        static int existsTable(void *, int, char **, char **);
-        static int printAll(void *, int, char **, char **);
+        SQLiteDb();
         ~SQLiteDb();
 
     private:
+        struct SQLite_Context {
+            int argc = 0;                       // number of columns
+            std::vector<std::string> argv;      // results
+            std::vector<std::string> azColName; // column names
+        };
         sqlite3 * db;
-        void checkRC(int, std::string, char *);
+
+        void check_db_directory();
+        void check_db_file();
+        void check_table_count();
+        void check_existing_tables();
+        void createTable(std::string);
+
+        static int sqlite_callback(void *, int, char **, char **);
+        void print_table(SQLite_Context);
 };
