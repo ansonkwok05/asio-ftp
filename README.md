@@ -1,6 +1,5 @@
 # QuickShare
+This project aims to design a software that shares files across devices with portability and user-friendly in mind.
 
-a software aiming to share files across devices in a simple manner
-
-Dependencies:
-sqlite3
+# Installation
+dependencies: sqlite3
