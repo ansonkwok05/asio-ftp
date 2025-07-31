@@ -1,4 +1,5 @@
 .vscode
 main
 main.exe
-db
+db/
+build/*

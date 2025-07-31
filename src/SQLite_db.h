@@ -4,25 +4,27 @@
 #include <string>
 #include <vector>
 
-class SQLiteDb {
-    public:
-        SQLiteDb();
-        ~SQLiteDb();
+class SQLiteDb
+{
+public:
+    SQLiteDb();
+    ~SQLiteDb();
 
-    private:
-        struct SQLite_Context {
-            int argc = 0;                       // number of columns
-            std::vector<std::string> argv;      // results
-            std::vector<std::string> azColName; // column names
-        };
-        sqlite3 * db;
+private:
+    struct SQLite_Context
+    {
+        int argc = 0;                       // number of columns
+        std::vector<std::string> argv;      // results
+        std::vector<std::string> azColName; // column names
+    };
+    sqlite3 *db;
 
-        void check_db_directory();
-        void check_db_file();
-        void check_table_count();
-        void check_existing_tables();
-        void createTable(std::string);
+    void check_db_directory();
+    void check_db_file();
+    void check_table_count();
+    void check_existing_tables();
+    void createTable(std::string);
 
-        static int sqlite_callback(void *, int, char **, char **);
-        void print_table(SQLite_Context);
+    static int sqlite_callback(void *, int, char **, char **);
+    void print_table(SQLite_Context);
 };

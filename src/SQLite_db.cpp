@@ -9,19 +9,22 @@
 #include <unordered_map>
 #include <algorithm>
 
-SQLiteDb::SQLiteDb() {
+SQLiteDb::SQLiteDb()
+{
     check_db_directory();
 
     check_db_file();
 
     check_table_count();
 
-    check_existing_tables();    // this will create missing tables with predefined structure but will not delete table
+    check_existing_tables(); // this will create missing tables with predefined structure but will not delete table
 }
 
-void SQLiteDb::check_db_directory() {
+void SQLiteDb::check_db_directory()
+{
     // checking for db directory existance
-    if (std::filesystem::is_directory("db")) {
+    if (std::filesystem::is_directory("db"))
+    {
         print("db folder found\n");
         return;
     }
@@ -29,13 +32,16 @@ void SQLiteDb::check_db_directory() {
     std::filesystem::create_directory("db");
 }
 
-void SQLiteDb::check_db_file() {
+void SQLiteDb::check_db_file()
+{
     // checking for db file existance
-    if (std::filesystem::exists("db/storage.db")) {
+    if (std::filesystem::exists("db/storage.db"))
+    {
         print("storage.db found\n");
 
         int rc = sqlite3_open("db/storage.db", &db);
-        if (rc != SQLITE_OK) {
+        if (rc != SQLITE_OK)
+        {
             throw std::runtime_error("Failed to open database.");
         }
 
@@ -46,33 +52,36 @@ void SQLiteDb::check_db_file() {
     print("storage.db does not exist, creating a new one now\n");
 
     int rc = sqlite3_open("db/storage.db", &db);
-    if (rc != SQLITE_OK) {
+    if (rc != SQLITE_OK)
+    {
         throw std::runtime_error("Failed to create database.");
     }
 
     print("Created and opened storage.db at ./db\n");
 }
 
-void SQLiteDb::check_table_count() {
+void SQLiteDb::check_table_count()
+{
     // checking for table count
 
     SQLite_Context context; // context for return values
-    char * errMsg;          // returned error message
+    char *errMsg;           // returned error message
     int rc = sqlite3_exec(
         db,
         "SELECT count(*) FROM sqlite_master WHERE type='table';",
         sqlite_callback,
         &context,
-        &errMsg
-    );
-    if (rc != SQLITE_OK) {
+        &errMsg);
+    if (rc != SQLITE_OK)
+    {
         print("Failed to check table count.\n");
         throw std::runtime_error(errMsg);
     }
 
     int tablesCount = context.argv[0][0] - '0';
 
-    if (tablesCount > 3) {
+    if (tablesCount > 3)
+    {
         throw std::runtime_error("Unexpected table count (" + std::to_string(tablesCount) + "). Should not be more than 3.");
     }
 
@@ -80,19 +89,20 @@ void SQLiteDb::check_table_count() {
     print(" tables found in current database\n");
 }
 
-void SQLiteDb::check_existing_tables() {
+void SQLiteDb::check_existing_tables()
+{
     // checking for all existing tables
 
     SQLite_Context context; // context for return values
-    char * errMsg;          // returned error message
+    char *errMsg;           // returned error message
     int rc = sqlite3_exec(
         db,
         "SELECT * FROM sqlite_master WHERE type='table';",
         sqlite_callback,
         &context,
-        &errMsg
-    );
-    if (rc != SQLITE_OK) {
+        &errMsg);
+    if (rc != SQLITE_OK)
+    {
         print("Failed to get existing tables.\n");
         throw std::runtime_error(errMsg);
     }
@@ -100,51 +110,60 @@ void SQLiteDb::check_existing_tables() {
     // tables that should exist in database
     const std::vector<std::string> target_tables = {"users", "files", "file_metadata"};
 
-    if (context.argv.size() == 0) {
+    if (context.argv.size() == 0)
+    {
         print("No tables found in database\n");
-        for (int i = 0; i < target_tables.size(); i++) {
+        for (int i = 0; i < target_tables.size(); i++)
+        {
             createTable(target_tables[i]);
         }
         return; // early exit
     }
 
     std::unordered_map<std::string, bool> existing_tables;
-    for (int i = 0; i < context.argv.size(); i++) {
+    for (int i = 0; i < context.argv.size(); i++)
+    {
         existing_tables[context.argv[i]] = true;
     }
 
     print("Current tables:\n");
-    for (const auto & [key,value] : existing_tables) {
+    for (const auto &[key, value] : existing_tables)
+    {
         print(key + " ");
     }
     print("\n");
 
     // find untargeted tables
-    for (const auto & [key,value] : existing_tables) {
-        if (std::find(target_tables.begin(), target_tables.end(), key) == target_tables.end()) {
+    for (const auto &[key, value] : existing_tables)
+    {
+        if (std::find(target_tables.begin(), target_tables.end(), key) == target_tables.end())
+        {
             print("Unexpected table " + key + " found in database\n");
         }
     }
 
     // find targeted but missing tables
-    for (int i = 0; i < target_tables.size(); i++) {
-        if (!existing_tables[target_tables[i]]) {
+    for (int i = 0; i < target_tables.size(); i++)
+    {
+        if (!existing_tables[target_tables[i]])
+        {
             print("Expected table " + target_tables[i] + " not found in database\n");
             createTable(target_tables[i]);
         }
     }
 }
 
-void SQLiteDb::createTable(std::string table_name) {
+void SQLiteDb::createTable(std::string table_name)
+{
     print("Creating table " + table_name + "\n");
 
     const std::map<std::string, std::string> table_structure = {
         {"users", "(userid CHAR(36) PRIMARY KEY, username );"},
         {"files", ""},
-        {"file_metadata", ""}
-    };
+        {"file_metadata", ""}};
 
-    if (table_structure.find(table_name) == table_structure.end()) {
+    if (table_structure.find(table_name) == table_structure.end())
+    {
         throw std::runtime_error("Unknown table name / structure.");
     }
 
@@ -168,25 +187,29 @@ void SQLiteDb::createTable(std::string table_name) {
     // }
 }
 
-int SQLiteDb::sqlite_callback(void * context, int argc, char **argv, char **azColName) {
+int SQLiteDb::sqlite_callback(void *context, int argc, char **argv, char **azColName)
+{
     print("SQLITEDB CALLBACK\n");
 
     // using a context to return values
-    SQLite_Context * c = (SQLite_Context *) context;
-    if (!c) throw std::runtime_error("Query context error.");
+    SQLite_Context *c = (SQLite_Context *)context;
+    if (!c)
+        throw std::runtime_error("Query context error.");
 
     // copy argc
     c->argc += argc;
 
     // copy argv and azColName
-    for (int i = 0; i < argc; i++) {
+    for (int i = 0; i < argc; i++)
+    {
         c->argv.push_back(argv[i]);
         c->azColName.push_back(azColName[i]);
     }
     return 0;
 }
 
-void SQLiteDb::print_table(SQLite_Context context) {
+void SQLiteDb::print_table(SQLite_Context context)
+{
     print("\nPRINT TABLE:\n");
 
     print("argc = " + std::to_string(context.argc) + "\n");
@@ -194,8 +217,10 @@ void SQLiteDb::print_table(SQLite_Context context) {
     print("azColName.size() = " + std::to_string(context.azColName.size()) + "\n");
     print("\n---\n");
 
-    for (int i = 0; i < context.argv.size(); i++) {
-        for (int j = 0; j < context.argc; j++) {
+    for (int i = 0; i < context.argv.size(); i++)
+    {
+        for (int j = 0; j < context.argc; j++)
+        {
             print("Column " + context.azColName[j] + "\n");
             print("Data   " + context.argv[i * j + j] + "\n");
         }
@@ -203,6 +228,7 @@ void SQLiteDb::print_table(SQLite_Context context) {
     print("---\n:PRINT TABLE\n\n");
 }
 
-SQLiteDb::~SQLiteDb() {
+SQLiteDb::~SQLiteDb()
+{
     sqlite3_close(db);
 }
