@@ -1,9 +1,9 @@
 #include "customUtils.h"
 
-#include <iostream>
-#include <iomanip>
-#include <string>
 #include <chrono>
+#include <iomanip>
+#include <iostream>
+#include <string>
 
 void print(std::string message)
 {

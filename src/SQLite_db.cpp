@@ -1,13 +1,13 @@
-#include "customUtils.h"
 #include "SQLite_db.h"
+#include "customUtils.h"
 
-#include <filesystem>
-#include <string>
-#include <cstring>
-#include <vector>
-#include <map>
-#include <unordered_map>
 #include <algorithm>
+#include <cstring>
+#include <filesystem>
+#include <map>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
 SQLiteDb::SQLiteDb()
 {
@@ -45,7 +45,7 @@ void SQLiteDb::check_db_file_exists()
             throw std::runtime_error("Failed to open database.");
         }
 
-        print("Opened database\n");
+        print("Opened database storage.db\n");
         return;
     }
 
