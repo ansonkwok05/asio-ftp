@@ -11,35 +11,35 @@
 
 SQLiteDb::SQLiteDb()
 {
-    check_db_directory();
+    check_data_folder_exists();
 
-    check_db_file();
+    check_db_file_exists();
 
     check_table_count();
 
     check_existing_tables(); // this will create missing tables with predefined structure but will not delete table
 }
 
-void SQLiteDb::check_db_directory()
+void SQLiteDb::check_data_folder_exists()
 {
-    // checking for db directory existance
-    if (std::filesystem::is_directory("db"))
+    // checking for data directory existance
+    if (std::filesystem::is_directory("data"))
     {
-        print("db folder found\n");
+        print("Found data folder\n");
         return;
     }
-    print("db folder not found, creating a one right now\n");
-    std::filesystem::create_directory("db");
+    print("data folder does not exist, creating a one right now\n");
+    std::filesystem::create_directory("data");
 }
 
-void SQLiteDb::check_db_file()
+void SQLiteDb::check_db_file_exists()
 {
     // checking for db file existance
-    if (std::filesystem::exists("db/storage.db"))
+    if (std::filesystem::exists("data/storage.db"))
     {
-        print("storage.db found\n");
+        print("Found data/storage.db\n");
 
-        int rc = sqlite3_open("db/storage.db", &db);
+        int rc = sqlite3_open("data/storage.db", &db);
         if (rc != SQLITE_OK)
         {
             throw std::runtime_error("Failed to open database.");
@@ -49,15 +49,15 @@ void SQLiteDb::check_db_file()
         return;
     }
 
-    print("storage.db does not exist, creating a new one now\n");
+    print("data/storage.db does not exist, creating a new one now\n");
 
-    int rc = sqlite3_open("db/storage.db", &db);
+    int rc = sqlite3_open("data/storage.db", &db);
     if (rc != SQLITE_OK)
     {
         throw std::runtime_error("Failed to create database.");
     }
 
-    print("Created and opened storage.db at ./db\n");
+    print("Created and opened storage.db at ./data\n");
 }
 
 void SQLiteDb::check_table_count()
@@ -85,7 +85,7 @@ void SQLiteDb::check_table_count()
         throw std::runtime_error("Unexpected table count (" + std::to_string(tablesCount) + "). Should not be more than 3.");
     }
 
-    print(tablesCount);
+    print((int)tablesCount);
     print(" tables found in current database\n");
 }
 

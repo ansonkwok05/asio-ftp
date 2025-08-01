@@ -1,7 +1,7 @@
 #include "customUtils.h"
 
 #include <iostream>
-// #include <stdexcept>
+#include <iomanip>
 #include <string>
 #include <chrono>
 
@@ -11,12 +11,11 @@ void print(std::string message)
 }
 void print(int duration)
 {
-    std::cout << duration;
+    std::cout << std::fixed << std::setprecision(0) << duration;
 }
 void print(double duration)
 {
-    // todo: display decimal
-    std::cout << duration;
+    std::cout << std::fixed << std::setprecision(3) << duration;
 }
 
 stopwatch::stopwatch() {}

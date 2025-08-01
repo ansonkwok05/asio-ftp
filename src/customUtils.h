@@ -5,6 +5,7 @@
 #include <thread>
 
 void print(std::string);
+void print(int);
 void print(double);
 
 class stopwatch

@@ -19,8 +19,8 @@ private:
     };
     sqlite3 *db;
 
-    void check_db_directory();
-    void check_db_file();
+    void check_data_folder_exists();
+    void check_db_file_exists();
     void check_table_count();
     void check_existing_tables();
     void createTable(std::string);

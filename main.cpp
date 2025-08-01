@@ -9,7 +9,7 @@ int main()
     SQLiteDb database = SQLiteDb();
 
     print("Done in ");
-    print(performanceWatch.lapUs());
-    print("us\n");
+    print(performanceWatch.lapMs());
+    print("ms\n");
     return 0;
 }
