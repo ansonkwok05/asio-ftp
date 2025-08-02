@@ -34,7 +34,7 @@ namespace sqlite_wrapper
             print("Found data folder\n");
             return;
         }
-        setPrintColor("Yellow");
+        setPrintColor("yellow");
         print("data folder does not exist, creating a one right now\n");
         resetPrintColor();
         std::filesystem::create_directory("data");
@@ -48,7 +48,7 @@ namespace sqlite_wrapper
             print("Found data/storage.db\n");
 
             int rc = sqlite3_open("data/storage.db", &db);
-            if (rc != SQLITE_OK || true)
+            if (rc != SQLITE_OK)
             {
                 throw std::runtime_error("Failed to open database.");
             }
@@ -57,7 +57,7 @@ namespace sqlite_wrapper
             return;
         }
 
-        setPrintColor("Yellow");
+        setPrintColor("yellow");
         print("data/storage.db does not exist, creating a new one now\n");
         resetPrintColor();
 
@@ -101,7 +101,7 @@ namespace sqlite_wrapper
         }
         else
         {
-            setPrintColor("Yellow");
+            setPrintColor("yellow");
             print("No tables found in database\n");
             resetPrintColor();
         }
@@ -205,7 +205,7 @@ namespace sqlite_wrapper
 
     int SQLiteDb::sqlite_callback(void *context, int argc, char **argv, char **azColName)
     {
-        setPrintColor("Blue");
+        setPrintColor("blue");
         print("SQLITEDB CALLBACK\n");
         resetPrintColor();
 
