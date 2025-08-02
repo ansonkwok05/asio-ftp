@@ -3,22 +3,29 @@
 #include <chrono>
 #include <string>
 #include <thread>
+#include <map>
 
-void print(std::string);
-void print(int);
-void print(double);
-
-class stopwatch
+namespace customUtils
 {
-public:
-    stopwatch();
-    void start();
-    double lapMs();
-    double lapUs();
-    double lapNs();
+    void print(std::string);
+    void print(int);
+    void print(double, int);
 
-private:
-    std::chrono::time_point<std::chrono::steady_clock> timeStamp;
-};
+    void setPrintColor(std::string);
+    void resetPrintColor();
 
-void sleep(int);
+    class stopwatch
+    {
+    public:
+        stopwatch();
+        void start();
+        double lapMs();
+        double lapUs();
+        double lapNs();
+
+    private:
+        std::chrono::time_point<std::chrono::steady_clock> timeStamp;
+    };
+
+    void sleep(int);
+}

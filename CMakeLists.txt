@@ -2,4 +2,13 @@ cmake_minimum_required(VERSION 3.10)
 
 project(QuickShare)
 
-add_executable(QuickShare main.cpp third_party/sqlite3.c src/customUtils.cpp src/SQLite_db.cpp)
+file(GLOB src
+    "src/*.h"
+    "src/*.cpp"
+)
+file(GLOB third_party
+    "third_party/*.h"
+    "third_party/*.c"
+)
+
+add_executable(QuickShare main.cpp ${src} ${third_party})
