@@ -6,16 +6,26 @@
 #include <map>
 #include <string>
 
+using std::cout;
+using std::string;
+
 namespace customUtils
 {
-	void print(std::string message)
+	void print(string message)
 	{
-		std::cout << message;
+		cout << message;
+	}
+
+	void print(string message, string color)
+	{
+		setPrintColor(color);
+		cout << message;
+		resetPrintColor();
 	}
 
 	void print(int number)
 	{
-		std::cout << std::fixed << std::setprecision(0) << number;
+		cout << std::fixed << std::setprecision(0) << number;
 	}
 
 	/**
@@ -24,25 +34,24 @@ namespace customUtils
 	 */
 	void print(double decimal, int decimalPoints)
 	{
-		std::cout << std::fixed << std::setprecision(decimalPoints) << decimal;
+		cout << std::fixed << std::setprecision(decimalPoints) << decimal;
 	}
 
-	const std::map<std::string, int> colorMap = {
+	const std::map<string, int> colorMap = {
 		{"black", 30}, {"red", 31}, {"green", 32}, {"yellow", 33}, {"blue", 34}, {"magenta", 35}, {"cyan", 36}, {"white", 37}};
 
 	/**
 	 * set the color of cout by setting ANSI color code
-	 * @param color A string representing the color (Black, Red, Green, Yellow,
-	 * Blue, Magenta, Cyan, White)
+	 * @param color A string representing the color (black, red, green, yellow, blue, magenta, cyan, white)
 	 */
-	void setPrintColor(std::string color)
+	void setPrintColor(string color)
 	{
-		std::cout << "\033[" << colorMap.at(color) << "m";
+		cout << "\033[" << colorMap.at(color) << "m";
 	}
 
 	void resetPrintColor()
 	{
-		std::cout << "\033[0m";
+		cout << "\033[0m";
 	}
 
 	customUtils::stopwatch::stopwatch() {}
@@ -67,6 +76,9 @@ namespace customUtils
 		return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - timeStamp).count();
 	}
 
+	/**
+	 * @param ms An int representing miliseconds to sleep for
+	 */
 	void sleep(int ms)
 	{
 		std::this_thread::sleep_for(std::chrono::milliseconds(ms));

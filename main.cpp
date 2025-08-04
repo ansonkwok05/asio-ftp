@@ -10,9 +10,7 @@ int main()
     customUtils::stopwatch performanceTimer;
     performanceTimer.start();
 
-    setPrintColor("green");
-    print("Initializing database\n");
-    resetPrintColor();
+    print("Initializing database\n", "green");
 
     sqlite_wrapper::SQLiteDb database = sqlite_wrapper::SQLiteDb();
 

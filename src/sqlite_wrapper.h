@@ -24,8 +24,9 @@ namespace sqlite_wrapper
         void check_data_folder_exists();
         void check_db_file_exists();
         void check_table_count();
-        void check_existing_tables();
-        void createTable(std::string);
+        void check_tables();
+
+        void create_table(std::string);
 
         static int sqlite_callback(void *, int, char **, char **);
         void print_table(SQLite_Context);
