@@ -165,8 +165,6 @@ namespace sqlite_wrapper
         table_creation_query += " " + table_name;
         table_creation_query += " " + table_structure.at(table_name);
 
-        print(table_creation_query + "\n", "blue");
-
         SQLite_Context context; // context for return values
         char *errMsg;           // returned error message
         int rc = sqlite3_exec(
@@ -184,8 +182,6 @@ namespace sqlite_wrapper
 
     int SQLiteDb::sqlite_callback(void *context, int argc, char **argv, char **azColName)
     {
-        print("SQLITEDB CALLBACK\n", "blue");
-
         // using a context to return values
         SQLite_Context *c = (SQLite_Context *)context;
         if (!c)
