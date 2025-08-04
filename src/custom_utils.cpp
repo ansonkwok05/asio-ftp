@@ -1,4 +1,4 @@
-#include "customUtils.h"
+#include "custom_utils.h"
 
 #include <chrono>
 #include <iomanip>
@@ -9,7 +9,7 @@
 using std::cout;
 using std::string;
 
-namespace customUtils
+namespace custom_utils
 {
 	void print(string message)
 	{
@@ -54,7 +54,7 @@ namespace customUtils
 		cout << "\033[0m";
 	}
 
-	customUtils::stopwatch::stopwatch() {}
+	custom_utils::stopwatch::stopwatch() {}
 
 	void stopwatch::start()
 	{

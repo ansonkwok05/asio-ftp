@@ -7,7 +7,7 @@
 
 using std::string;
 
-namespace customUtils
+namespace custom_utils
 {
     void print(string);
     void print(string, string);

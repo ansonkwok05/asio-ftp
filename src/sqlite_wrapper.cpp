@@ -1,17 +1,12 @@
 #include "sqlite_wrapper.h"
-#include "customUtils.h"
+#include "custom_utils.h"
 
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
-#include <map>
 #include <string>
-#include <unordered_map>
-#include <vector>
 
-using std::string;
-
-using customUtils::print;
+using custom_utils::print;
 
 namespace sqlite_wrapper
 {
@@ -29,7 +24,7 @@ namespace sqlite_wrapper
         // checking for data directory existance
         if (std::filesystem::is_directory("data"))
         {
-            print("Found data folder\n");
+            print("Found data folder\n", "green");
             return;
         }
         print("data folder does not exist, creating a one right now\n", "yellow");
@@ -41,7 +36,7 @@ namespace sqlite_wrapper
         // checking for db file existance
         if (std::filesystem::exists("data/storage.db"))
         {
-            print("Found data/storage.db\n");
+            print("Found data/storage.db\n", "green");
 
             int rc = sqlite3_open("data/storage.db", &db);
             if (rc != SQLITE_OK)
@@ -49,7 +44,7 @@ namespace sqlite_wrapper
                 throw std::runtime_error("Failed to open database.");
             }
 
-            print("Opened database storage.db\n");
+            print("Opened database storage.db\n", "green");
             return;
         }
 
@@ -61,7 +56,7 @@ namespace sqlite_wrapper
             throw std::runtime_error("Failed to create database.");
         }
 
-        print("Created and opened storage.db at ./data\n");
+        print("Created and opened storage.db at ./data\n", "green");
     }
 
     void SQLiteDb::check_tables()
@@ -81,30 +76,28 @@ namespace sqlite_wrapper
             throw std::runtime_error(errMsg);
         }
 
-        // tables that should exist in database
-        const std::vector<string> target_tables = {"users", "files", "file_metadata"};
-
         // if no tables exists, create em all
         if (context.argv.size() == 0)
         {
-            for (int i = 0; i < target_tables.size(); i++)
+            print("No tables found in database\n", "yellow");
+            for (int i = 0; i < TARGET_TABLES.size(); i++)
             {
-                create_table(target_tables[i]);
+                create_table(TARGET_TABLES[i]);
             }
             check_tables(); // double check tables again after creating em all
             return;
         }
 
         // if table count matches, check if all table matches
-        if (context.argv.size() == target_tables.size())
+        if (context.argv.size() == TARGET_TABLES.size())
         {
             bool allTablesValid = true;
 
             // for each targetted table name, search through current table list for a match
-            for (int i = 0; i < target_tables.size(); i++)
+            for (int i = 0; i < TARGET_TABLES.size(); i++)
             {
                 // if any no match, the current table is not valid
-                if (std::find(context.argv.begin(), context.argv.end(), target_tables[i]) == context.argv.end())
+                if (std::find(context.argv.begin(), context.argv.end(), TARGET_TABLES[i]) == context.argv.end())
                 {
                     allTablesValid = false;
                     break;
@@ -113,7 +106,7 @@ namespace sqlite_wrapper
 
             if (allTablesValid)
             {
-                print("Valid tables in database\n", "green");
+                print("All tables are valid in database\n", "green");
                 return; // table is valid
             }
         }
@@ -124,9 +117,9 @@ namespace sqlite_wrapper
         for (int i = 0; i < context.argv.size(); i++)
         {
             // find untargeted tables, check if it doesnt exists in target_tables
-            if (std::find(target_tables.begin(), target_tables.end(), context.argv[i]) == target_tables.end())
+            if (std::find(TARGET_TABLES.begin(), TARGET_TABLES.end(), context.argv[i]) == TARGET_TABLES.end())
             {
-                customUtils::setPrintColor("red");
+                custom_utils::setPrintColor("red");
                 throw std::runtime_error("Unexpected table \"" + context.argv[i] + "\" found in database\n");
             }
             print("-> " + context.argv[i] + "\n");
@@ -134,36 +127,31 @@ namespace sqlite_wrapper
         print("\n");
 
         // find targeted but missing tables
-        for (int i = 0; i < target_tables.size(); i++)
+        for (int i = 0; i < TARGET_TABLES.size(); i++)
         {
-            if (std::find(context.argv.begin(), context.argv.end(), target_tables[i]) == context.argv.end())
+            if (std::find(context.argv.begin(), context.argv.end(), TARGET_TABLES[i]) == context.argv.end())
             {
-                print("Expected table " + target_tables[i] + " is not found in database\n");
-                create_table(target_tables[i]);
+                print("Expected table " + TARGET_TABLES[i] + " is not found in database\n");
+                create_table(TARGET_TABLES[i]);
             }
         }
 
         check_tables(); // double check to confirm correct tables
     }
 
-    void SQLiteDb::create_table(string table_name)
+    void SQLiteDb::create_table(std::string table_name)
     {
         print("Creating \"" + table_name + "\" table\n");
 
-        const std::map<string, string> table_structure = {
-            {"users", "(userid CHAR(36) PRIMARY KEY, username VARCHAR(30), password VARCHAR(255), email VARCHAR(255));"},
-            {"files", "(fileid CHAR(36) PRIMARY KEY, userid CHAR(36), FOREIGN KEY (userid) REFERENCES users (userid));"},
-            {"file_metadata", "(fileid CHAR(36), FOREIGN KEY (fileid) REFERENCES files(fileid));"}}; // incomplete data types, should include filename, mimetype, filesize, upload time, creation time, modify time
-
-        if (table_structure.find(table_name) == table_structure.end())
+        if (TABLE_STRUCTURES.find(table_name) == TABLE_STRUCTURES.end())
         {
             throw std::runtime_error("Unknown table name / structure.");
         }
 
-        string table_creation_query = "CREATE TABLE IF NOT EXISTS";
+        std::string table_creation_query = "CREATE TABLE IF NOT EXISTS";
 
         table_creation_query += " " + table_name;
-        table_creation_query += " " + table_structure.at(table_name);
+        table_creation_query += " " + TABLE_STRUCTURES.at(table_name);
 
         SQLite_Context context; // context for return values
         char *errMsg;           // returned error message

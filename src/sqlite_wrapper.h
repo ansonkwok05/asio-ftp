@@ -3,9 +3,16 @@
 #include <sqlite3.h>
 #include <string>
 #include <vector>
+#include <map>
 
 namespace sqlite_wrapper
 {
+    const std::vector<std::string> TARGET_TABLES = {"users", "files", "file_metadata"};
+    const std::map<std::string, std::string> TABLE_STRUCTURES = {
+        {"users", "(userid CHAR(36) PRIMARY KEY, username VARCHAR(30), password VARCHAR(255), email VARCHAR(255));"},
+        {"files", "(fileid CHAR(36) PRIMARY KEY, userid CHAR(36), FOREIGN KEY (userid) REFERENCES users (userid));"},
+        {"file_metadata", "(fileid CHAR(36), FOREIGN KEY (fileid) REFERENCES files(fileid));"}}; // incomplete data types, should include filename, mimetype, filesize, upload time, creation time, modify time
+
     class SQLiteDb
     {
     public:
