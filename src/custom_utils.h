@@ -1,8 +1,8 @@
 #pragma once
 
 #include <chrono>
-#include <string>
 #include <thread>
+#include <string>
 #include <map>
 
 namespace custom_utils

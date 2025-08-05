@@ -1,7 +1,6 @@
 #include "sqlite_wrapper.h"
 #include "custom_utils.h"
 
-#include <cstring>
 #include <filesystem>
 #include <algorithm>
 #include <string>
