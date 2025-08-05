@@ -18,6 +18,7 @@ namespace sqlite_wrapper
     public:
         SQLiteDb();
         ~SQLiteDb();
+        void insert_data(std::string, int);
 
     private:
         struct SQLite_Context
@@ -28,9 +29,9 @@ namespace sqlite_wrapper
         };
         sqlite3 *db;
 
+        // initialization functions
         void check_data_folder_exists();
         void check_db_file_exists();
-        void check_table_count();
         void check_tables();
 
         void create_table(std::string);

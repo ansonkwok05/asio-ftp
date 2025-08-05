@@ -5,16 +5,14 @@
 #include <thread>
 #include <map>
 
-using std::string;
-
 namespace custom_utils
 {
-    void print(string);
-    void print(string, string);
+    void print(std::string);
+    void print(std::string, std::string);
     void print(int);
     void print(double, int);
 
-    void setPrintColor(string);
+    void setPrintColor(std::string);
     void resetPrintColor();
 
     class stopwatch

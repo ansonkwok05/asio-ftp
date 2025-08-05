@@ -7,16 +7,15 @@
 #include <string>
 
 using std::cout;
-using std::string;
 
 namespace custom_utils
 {
-	void print(string message)
+	void print(std::string message)
 	{
 		cout << message;
 	}
 
-	void print(string message, string color)
+	void print(std::string message, std::string color)
 	{
 		setPrintColor(color);
 		cout << message;
@@ -37,14 +36,14 @@ namespace custom_utils
 		cout << std::fixed << std::setprecision(decimalPoints) << decimal;
 	}
 
-	const std::map<string, int> colorMap = {
+	const std::map<std::string, int> colorMap = {
 		{"black", 30}, {"red", 31}, {"green", 32}, {"yellow", 33}, {"blue", 34}, {"magenta", 35}, {"cyan", 36}, {"white", 37}};
 
 	/**
 	 * set the color of cout by using ANSI color code
 	 * @param color A string representing the color (black, red, green, yellow, blue, magenta, cyan, white)
 	 */
-	void setPrintColor(string color)
+	void setPrintColor(std::string color)
 	{
 		cout << "\033[" << colorMap.at(color) << "m";
 	}

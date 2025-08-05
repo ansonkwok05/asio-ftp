@@ -19,6 +19,16 @@ namespace sqlite_wrapper
         check_tables(); // check current and create missing tables with predefined structure
     }
 
+    SQLiteDb::~SQLiteDb()
+    {
+        sqlite3_close(db);
+    }
+
+    void SQLiteDb::insert_data(std::string, int)
+    {
+        // todo: implement inserting data to table
+    }
+
     void SQLiteDb::check_data_folder_exists()
     {
         // checking for data directory existance
@@ -205,10 +215,5 @@ namespace sqlite_wrapper
             }
         }
         print("---\n:PRINT TABLE\n\n");
-    }
-
-    SQLiteDb::~SQLiteDb()
-    {
-        sqlite3_close(db);
     }
 }
