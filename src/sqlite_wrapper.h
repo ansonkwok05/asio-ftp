@@ -14,6 +14,7 @@ namespace sqlite_wrapper
         SQLiteDb();
         ~SQLiteDb();
         void insert_data(std::string, std::vector<std::string>, std::vector<std::string>);
+        void delete_data(std::string, std::string, std::string);
 
     private:
         // TARGET_TABLES(MAP of STRINGS) -> COLUMN DEFINITIONS(VECTOR of STRINGS)
@@ -41,6 +42,5 @@ namespace sqlite_wrapper
         void check_table_structure(std::string);
 
         static int sqlite_callback(void *, int, char **, char **);
-        void print_table(SQLite_Context);
     };
 }

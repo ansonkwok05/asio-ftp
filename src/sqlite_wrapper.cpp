@@ -28,10 +28,6 @@ namespace sqlite_wrapper
     // no safe guard here, do validate data before inserting data
     void SQLiteDb::insert_data(std::string table_name, std::vector<std::string> column_vector, std::vector<std::string> value_vector)
     {
-
-        // successful queries
-        // INSERT INTO users (userid, username, password) VALUES ("1234USERID", "myusername", "mypassword")
-
         std::string data_insertion_query = "INSERT INTO " + table_name + " (";
 
         for (int i = 0; i < column_vector.size(); i++)
@@ -65,6 +61,26 @@ namespace sqlite_wrapper
         {
             print("\nFailed to insert data\n", "red");
             print("Query: " + data_insertion_query + "\n", "red");
+            throw std::runtime_error(errMsg);
+        }
+    }
+
+    // delete a row
+    void SQLiteDb::delete_data(std::string table_name, std::string primary_key_column, std::string value)
+    {
+        std::string data_deletion_query = "DELETE FROM " + table_name + " WHERE " + primary_key_column + " = '" + value + "'";
+
+        char *errMsg; // returned error message
+        int rc = sqlite3_exec(
+            db,
+            data_deletion_query.c_str(),
+            0,
+            0,
+            &errMsg);
+        if (rc != SQLITE_OK)
+        {
+            print("\nFailed to delete data\n", "red");
+            print("Query: " + data_deletion_query + "\n", "red");
             throw std::runtime_error(errMsg);
         }
     }
