@@ -15,5 +15,26 @@ int main()
     print("Database setup done in ", "green");
     print(performanceTimer.lapUs() / 1000, 3);
     print("ms\n");
+
+    // // test insert data
+    // performanceTimer.start();
+
+    // print("Restarted timer ", "blue");
+    // print(performanceTimer.lapUs() / 1000, 3);
+    // print("ms\n");
+
+    // std::string testStr = "XD";
+    // for (int i = 0; i < 10; i++)
+    // {
+    //     database.insert_data("users", {"userid", "username", "password"}, {testStr, "huhlmao", "pw"});
+    //     testStr += "D";
+    //     print(performanceTimer.lapUs() / 1000, 3);
+    //     print("ms\n");
+    // }
+
+    // print("10 insert operation all done in ", "blue");
+    // print(performanceTimer.lapUs() / 1000, 3);
+    // print("ms\n");
+
     return 0;
 }
