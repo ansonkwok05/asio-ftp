@@ -25,7 +25,12 @@ namespace sqlite_wrapper
         sqlite3_close(db);
     }
 
-    // no safe guard here, do validate data before inserting data
+    /**
+     * No safe guard here, do validate data before inserting data. Beware of wrong data type.
+     * @param table_name Name of the table.
+     * @param column_vector Columns to insertion.
+     * @param value_vector Values to insert.
+     */
     void SQLiteDb::insert_data(std::string table_name, std::vector<std::string> column_vector, std::vector<std::string> value_vector)
     {
         std::string data_insertion_query = "INSERT INTO " + table_name + " (";
@@ -61,11 +66,59 @@ namespace sqlite_wrapper
         {
             print("\nFailed to insert data\n", "red");
             print("Query: " + data_insertion_query + "\n", "red");
+            throw std::runtime_error(errMsg); // could be due to full / corrupted database, or incorrect data type is inserted
+        }
+    }
+
+    /**
+     * Reads data from table.
+     * @param table_name Name of the table
+     * @param columns_vector Columns to read, leave empty to read all
+     */
+    void SQLiteDb::read_data(std::string table_name, std::vector<std::string> columns_vector)
+    {
+        std::string data_selection_query = "SELECT ";
+
+        if (columns_vector.size() == 0)
+        {
+            data_selection_query += "*";
+        }
+        else
+        {
+            for (int i = 0; i < columns_vector.size(); i++)
+            {
+                data_selection_query += columns_vector[i];
+                if (i != columns_vector.size() - 1)
+                {
+                    data_selection_query += ", ";
+                }
+            }
+        }
+
+        data_selection_query += " FROM " + table_name;
+
+        char *errMsg; // returned error message
+        int rc = sqlite3_exec(
+            db,
+            data_selection_query.c_str(),
+            0,
+            0,
+            &errMsg);
+        if (rc != SQLITE_OK)
+        {
+            print("\nFailed to read data\n", "red");
+            print("Query: " + data_selection_query + "\n", "red");
             throw std::runtime_error(errMsg);
         }
     }
 
-    // delete a row
+    /**
+     * Deletes a row in the table. No error is thrown if the row doesn't exist,
+     * except when primary_key_column is not found.
+     * @param table_name Name of the table
+     * @param primary_key_column Primary key column name
+     * @param value Primary key value for deletion
+     */
     void SQLiteDb::delete_data(std::string table_name, std::string primary_key_column, std::string value)
     {
         std::string data_deletion_query = "DELETE FROM " + table_name + " WHERE " + primary_key_column + " = '" + value + "'";
@@ -81,7 +134,7 @@ namespace sqlite_wrapper
         {
             print("\nFailed to delete data\n", "red");
             print("Query: " + data_deletion_query + "\n", "red");
-            throw std::runtime_error(errMsg);
+            throw std::runtime_error(errMsg); // something is really wrong when this throws, check primary_key_column arg
         }
     }
 

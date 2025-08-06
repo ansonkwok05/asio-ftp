@@ -19,7 +19,7 @@ int main()
     // {
     //     // test insert data
     //     performanceTimer.start();
-    //     print("\nRestarted timer ", "blue");
+    //     print("\nRestarted timer, starting insert test ", "blue");
     //     print(performanceTimer.lapUs() / 1000, 3);
     //     print("ms\n");
 
@@ -37,26 +37,44 @@ int main()
     //     print("ms\n");
     // }
 
-    {
-        // test delete data
-        performanceTimer.start();
-        print("\nRestarted timer ", "blue");
-        print(performanceTimer.lapUs() / 1000, 3);
-        print("ms\n");
+    // {
+    //     // test read data
+    //     performanceTimer.start();
+    //     print("\nRestarted timer, starting read test ", "blue");
+    //     print(performanceTimer.lapUs() / 1000, 3);
+    //     print("ms\n");
+    //     for (int i = 0; i < 10; i++)
+    //     {
+    //         database.read_data("users", {"userid", "username"});
+    //         print(performanceTimer.lapUs() / 1000, 3);
+    //         print("ms ");
+    //     }
+    //     print("\n");
+    //     print("10 read operation all done in ", "blue");
+    //     print(performanceTimer.lapUs() / 1000, 3);
+    //     print("ms\n");
+    // }
 
-        std::string useridStr = "XD";
-        for (int i = 0; i < 10; i++)
-        {
-            database.delete_data("users", "userid", useridStr);
-            useridStr += "D";
-            print(performanceTimer.lapUs() / 1000, 3);
-            print("ms ");
-        }
-        print("\n");
-        print("10 delete operation all done in ", "blue");
-        print(performanceTimer.lapUs() / 1000, 3);
-        print("ms\n");
-    }
+    // {
+    //     // test delete data
+    //     performanceTimer.start();
+    //     print("\nRestarted timer, starting delete test ", "blue");
+    //     print(performanceTimer.lapUs() / 1000, 3);
+    //     print("ms\n");
+
+    //     std::string useridStr = "XD";
+    //     for (int i = 0; i < 10; i++)
+    //     {
+    //         database.delete_data("users", "userid", useridStr);
+    //         useridStr += "D";
+    //         print(performanceTimer.lapUs() / 1000, 3);
+    //         print("ms ");
+    //     }
+    //     print("\n");
+    //     print("10 delete operation all done in ", "blue");
+    //     print(performanceTimer.lapUs() / 1000, 3);
+    //     print("ms\n");
+    // }
 
     return 0;
 }
