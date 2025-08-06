@@ -1,5 +1,5 @@
 .vs
 .vscode
 out/
-build/
+build
 data/
