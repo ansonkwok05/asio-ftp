@@ -1,5 +1,6 @@
 #include "src/custom_utils.h"
 #include "src/sqlite_wrapper.h"
+#include "src/fs_handler.h"
 
 using custom_utils::print;
 
@@ -22,7 +23,6 @@ int main()
     //     print("\nRestarted timer, starting insert test ", "blue");
     //     print(performanceTimer.lapUs() / 1000, 3);
     //     print("ms\n");
-
     //     std::string useridStr = "XD";
     //     for (int i = 0; i < 10; i++)
     //     {
@@ -61,7 +61,6 @@ int main()
     //     print("\nRestarted timer, starting delete test ", "blue");
     //     print(performanceTimer.lapUs() / 1000, 3);
     //     print("ms\n");
-
     //     std::string useridStr = "XD";
     //     for (int i = 0; i < 10; i++)
     //     {
@@ -75,6 +74,12 @@ int main()
     //     print(performanceTimer.lapUs() / 1000, 3);
     //     print("ms\n");
     // }
+
+    /* test data
+    INSERT INTO users (userid, username, password) VALUES ("uid", "un", "pw");
+    INSERT INTO files (fileid, userid) VALUES ("fid", "uid");
+    INSERT INTO files_metadata (filename, file_description, file_size, fileid) VALUES ("fn", "descript", "123", "fid");
+    */
 
     return 0;
 }

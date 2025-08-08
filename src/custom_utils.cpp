@@ -6,10 +6,10 @@
 #include <string>
 #include <map>
 
-using std::cout;
-
 namespace custom_utils
 {
+	using std::cout;
+
 	void print(std::string message)
 	{
 		cout << message;

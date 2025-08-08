@@ -18,10 +18,39 @@ namespace sqlite_wrapper
         void read_data(std::string table_name, std::vector<std::string> columns_vector);
 
     private:
-        // TARGET_TABLES(MAP of STRINGS) -> COLUMN DEFINITIONS(VECTOR of STRINGS)
-        // todo: files_meta need more data columns, should include filename, mimetype, filesize, upload time, creation time, modify time
+        /**
+         * TARGET_TABLES[TABLE_NAME] -> VECTOR of COLUMN DEFINITIONS
+         */
         const std::map<std::string, std::vector<std::string>> TARGET_TABLES = {
-            {"users", {"userid CHAR(36) PRIMARY KEY NOT NULL", "username VARCHAR(30) NOT NULL", "password VARCHAR(255) NOT NULL", "email VARCHAR(255)"}}, {"files", {"fileid CHAR(36) PRIMARY KEY NOT NULL", "userid CHAR(36) NOT NULL", "FOREIGN KEY (userid) REFERENCES users (userid)"}}, {"files_metadata", {"fileid CHAR(36) NOT NULL", "FOREIGN KEY (fileid) REFERENCES files(fileid)"}}};
+            {
+                "users",
+                {
+                    "userid CHAR(36) PRIMARY KEY NOT NULL",
+                    "username VARCHAR(30) NOT NULL",
+                    "password VARCHAR(255) NOT NULL",
+                    "email VARCHAR(255)",
+                },
+            },
+            {
+                "files",
+                {
+                    "fileid CHAR(36) PRIMARY KEY NOT NULL",
+                    "userid CHAR(36) NOT NULL",
+                    "FOREIGN KEY (userid) REFERENCES users (userid)",
+                },
+            },
+            {
+                "files_metadata",
+                {
+                    "filename VARCHAR(255) NOT NULL",
+                    "file_description VARCHAR(255)",
+                    "file_size BIGINT NOT NULL",
+                    "uploaded_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP", // default is UTC time
+                    "fileid CHAR(36) NOT NULL",
+                    "FOREIGN KEY (fileid) REFERENCES files (fileid)",
+                },
+            },
+        };
 
         const std::string OPTIMIZATIONS = "PRAGMA journal_mode = WAL; PRAGMA synchronous = normal; PRAGMA journal_size_limit = 6144000";
 

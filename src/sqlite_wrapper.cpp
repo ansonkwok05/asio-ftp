@@ -1,14 +1,15 @@
 #include "sqlite_wrapper.h"
 #include "custom_utils.h"
+#include "fs_handler.h"
 
-#include <filesystem>
+#include <stdexcept>
 #include <algorithm>
 #include <string>
 
-using custom_utils::print;
-
 namespace sqlite_wrapper
 {
+    using custom_utils::print;
+
     SQLiteDb::SQLiteDb()
     {
         check_data_folder_exists();
@@ -141,16 +142,16 @@ namespace sqlite_wrapper
     void SQLiteDb::check_data_folder_exists()
     {
         // checking for data directory existance
-        if (std::filesystem::is_directory("data"))
+        if (fs_handler::directory_exists("data"))
         {
             print("Found data folder\n", "green");
             return;
         }
 
         print("data folder does not exist, creating a one right now\n", "yellow");
-        std::filesystem::create_directory("data");
+        fs_handler::create_directory("data");
 
-        if (!std::filesystem::is_directory("data"))
+        if (!fs_handler::directory_exists("data"))
         {
             print("\n", "red");
             throw std::runtime_error("Unable to create data folder");
@@ -161,7 +162,7 @@ namespace sqlite_wrapper
     void SQLiteDb::check_db_file_exists()
     {
         // checking for db file existance
-        if (std::filesystem::exists("data/storage.db"))
+        if (fs_handler::file_exists("data/storage.db"))
         {
             print("Found data/storage.db\n", "green");
 
