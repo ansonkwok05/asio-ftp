@@ -1,16 +1,16 @@
-# QuickShare
-A software that shares files across devices with portability and user-friendly in mind.
+# QuickSave
+QuickSave is a cross-platform C++ application built to provide a fast and straightforward way to share files directly between devices.
 
 # Requirements
 * **CMake** version 3.10 or higher
 * **gcc**
+* **g++**
 
 # Compilation
 This project is built using CMake, allowing cross-platform compilation across Windows, macOS and Linux.
 
 ### Windows
-Build using Visual Studio, or use CMake to generate your own build files.<br>
-Using CMake in Windows is pretty much the same as in Linux, the only problem is setting the right PATH environment.
+Can be built using Visual Studio, or use CMake to generate your own build files.
 
 ### Linux
 ```
