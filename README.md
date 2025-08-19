@@ -2,9 +2,11 @@
 QuickSave is a cross-platform C++ application built to provide a fast and straightforward way to share files directly between devices.
 
 # Requirements
-* **CMake** version 3.10 or higher
-* **gcc**
-* **g++**
+* CMake version 3.10 or higher
+* gcc
+* g++
+* SQLite3
+* libssh
 
 # Compilation
 This project is built using CMake, allowing cross-platform compilation across Windows, macOS and Linux.
