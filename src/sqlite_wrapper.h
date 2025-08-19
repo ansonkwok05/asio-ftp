@@ -13,9 +13,9 @@ namespace sqlite_wrapper
     public:
         SQLiteDb();
         ~SQLiteDb();
-        void insert_data(std::string, std::vector<std::string>, std::vector<std::string>);
-        void delete_data(std::string, std::string, std::string);
-        void read_data(std::string table_name, std::vector<std::string> columns_vector);
+        bool insert_data(std::string, std::vector<std::string>, std::vector<std::string>);
+        bool delete_data(std::string, std::string, std::string);
+        bool read_data(std::string table_name, std::vector<std::string> columns_vector);
 
     private:
         /**
