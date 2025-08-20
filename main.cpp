@@ -85,21 +85,25 @@ int main()
     print("\n");
     //
 
-    performanceWatcher.start();
+    // // i cant find documentation for libssh,
+    // // i give up
+    // {
+    //     performanceWatcher.start();
 
-    print("Initializing SFTP server\n", "green");
+    //     print("Initializing SFTP server\n", "green");
 
-    sftp_server::server sftp_server = sftp_server::server();
+    //     sftp_server::server sftp_server = sftp_server::server();
 
-    print("SFTP server setup done in ", "green");
-    print(performanceWatcher.lapUs() / 1000, 3);
-    print("ms\n");
+    //     print("SFTP server setup done in ", "green");
+    //     print(performanceWatcher.lapUs() / 1000, 3);
+    //     print("ms\n");
 
-    //
-    print("\n");
-    //
+    //     //
+    //     print("\n");
+    //     //
 
-    sftp_server.startServerLoop();
+    //     sftp_server.startServerLoop();
+    // }
 
     return 0;
 }

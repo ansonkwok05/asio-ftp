@@ -1,8 +1,9 @@
 #include "sftp_server.h"
 #include "custom_utils.h"
 
-#include <libssh/libssh.h>
 #include <libssh/server.h>
+#include <libssh/sftpserver.h>
+#include <libssh/callbacks.h>
 
 #include <stdexcept>
 
@@ -14,14 +15,15 @@ namespace sftp_server
     {
         ssh_init(); // initialize libssh cryptographic data structures
 
-        createSSHBind();
-        setBindOptions();
-        startBinding(); // starts ssh server and listens to port
+        createSSHBind();  // ssh_bind_new
+        setBindOptions(); // ssh_bind_options_set
+        startBinding();   // starts ssh server and listens to port
     }
 
     server::~server()
     {
         ssh_bind_free(bind);
+        ssh_finalize();
     }
 
     void server::createSSHBind()
@@ -29,6 +31,7 @@ namespace sftp_server
         bind = ssh_bind_new();
         if (bind == NULL)
         {
+            ssh_finalize();
             print("\n", "red");
             throw std::runtime_error("Failed to create ssh bind");
         }
@@ -37,14 +40,19 @@ namespace sftp_server
 
     void server::setBindOptions()
     {
+        // set listen address
         ssh_bind_options_set(bind, SSH_BIND_OPTIONS_BINDADDR, BINDADDR.c_str());
+
+        // set listen port
         ssh_bind_options_set(bind, SSH_BIND_OPTIONS_BINDPORT_STR, BINDPORT.c_str());
 
         // todo: check for "ssh_key" folder, create one if not found
         // todo: check for rsa key file, exit program if not found
 
+        // set rsa key
         ssh_bind_options_set(bind, SSH_BIND_OPTIONS_RSAKEY, "ssh_key/rsa.pem");
 
+        // debug logging
         int verbosity = SSH_LOG_FUNCTIONS;
         ssh_bind_options_set(bind, SSH_BIND_OPTIONS_LOG_VERBOSITY, &verbosity);
 
@@ -72,12 +80,12 @@ namespace sftp_server
             ssh_session session = ssh_new();
             if (session == NULL)
             {
-                print("Failed to preallocate ssh session\n", "red");
+                print("Failed to allocate ssh session\n", "red");
                 custom_utils::sleep(1000);
                 continue;
             }
 
-            // Accept connection
+            // Blocks thread until new incoming connection
             if (ssh_bind_accept(bind, session) != SSH_OK)
             {
                 ssh_disconnect(session);
@@ -88,9 +96,14 @@ namespace sftp_server
                 continue;
             }
 
-            print("SSH connection received\n");
+            print("SSH connection accepted\n");
 
-            ssh_set_auth_methods(session, SSH_AUTH_METHOD_PASSWORD);
+            // todo: create new thread to deal with each connection
+            // otherwise one connection will block all other connections
+            // for now this is only for one connection
+
+            handle_session(session); // blocking
+
             // todo: add user authentication and use the sqlite database
 
             // // todo:
@@ -102,8 +115,31 @@ namespace sftp_server
             print("SSH connect discarded\n");
 
             print("\n");
-
-            custom_utils::sleep(1); // reduce cpu utilization when idle
         }
+    }
+
+    void server::handle_session(ssh_session session)
+    {
+        ssh_event event;
+        event = ssh_event_new();
+        if (event == NULL)
+        {
+            print("Failed to create polling context\n", "red");
+        }
+
+        ssh_event_free(event);
+
+        // ssh_message message = ssh_message_get(session);
+        // if (!message)
+        // {
+        //     print("no message\n");
+        //     return;
+        // }
+
+        // print("Message type -> ");
+        // print(ssh_message_type(message));
+        // print("\n");
+
+        // ssh_message_free(message);
     }
 }
