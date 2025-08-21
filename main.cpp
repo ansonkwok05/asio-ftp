@@ -1,6 +1,6 @@
 #include "src/custom_utils.h"
 #include "src/sqlite_wrapper.h"
-#include "src/sftp_server.h"
+#include "src/ftp_server.h"
 
 using custom_utils::print;
 
@@ -85,25 +85,15 @@ int main()
     print("\n");
     //
 
-    // // i cant find documentation for libssh,
-    // // i give up
-    // {
-    //     performanceWatcher.start();
+    performanceWatcher.start();
 
-    //     print("Initializing SFTP server\n", "green");
+    print("Initializing FTP server\n", "green");
 
-    //     sftp_server::server sftp_server = sftp_server::server();
+    ftp_server::server ftp_server = ftp_server::server();
 
-    //     print("SFTP server setup done in ", "green");
-    //     print(performanceWatcher.lapUs() / 1000, 3);
-    //     print("ms\n");
-
-    //     //
-    //     print("\n");
-    //     //
-
-    //     sftp_server.startServerLoop();
-    // }
+    print("FTP server setup done in ", "green");
+    print(performanceWatcher.lapUs() / 1000, 3);
+    print("ms\n");
 
     return 0;
 }

@@ -11,7 +11,7 @@ file(GLOB src
 
 add_executable(QuickSave main.cpp ${src})
 
-# SQLite3 dependency
+# SQLite3 (database) library
 find_package(SQLite3 REQUIRED)
 if (SQLite3_FOUND)
     include_directories(${SQLite3_INCLUDE_DIRS})
@@ -20,11 +20,16 @@ else()
     message(FATAL_ERROR "SQLite3 not found. Please install it using a package manager")
 endif()
 
-# libssh dependency
-find_package(libssh REQUIRED)
-if (libssh_FOUND)
-    include_directories(${libssh_INCLUDE_DIRS})
-    target_link_libraries(QuickSave ssh)
+# get rid of warning
+if(POLICY CMP0167)
+  cmake_policy(SET CMP0167 NEW)
+endif()
+
+# Boost (network) library
+find_package(Boost 1.40.0)
+if (Boost_FOUND)
+    include_directories(${Boost_INCLUDE_DIRS})
+    target_link_libraries(QuickSave ${Boost_LIBRARIES})
 else()
-    message(FATAL_ERROR "libssh not found. Please install it using a package manager")
+    message(FATAL_ERROR "Boost not found. Please install it using a package manager")
 endif()
