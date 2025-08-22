@@ -32,7 +32,8 @@ namespace sqlite_wrapper
      * @param column_vector Columns to insertion.
      * @param value_vector Values to insert.
      */
-    void SQLiteDb::insert_data(std::string table_name, std::vector<std::string> column_vector, std::vector<std::string> value_vector)
+    void SQLiteDb::insert_data(std::string table_name, std::vector<std::string> column_vector,
+                               std::vector<std::string> value_vector)
     {
         std::string data_insertion_query = "INSERT INTO " + table_name + " (";
 
@@ -57,18 +58,14 @@ namespace sqlite_wrapper
         data_insertion_query += "')";
 
         char *errMsg; // returned error message
-        int rc = sqlite3_exec(
-            db,
-            data_insertion_query.c_str(),
-            0,
-            0,
-            &errMsg);
+        int rc = sqlite3_exec(db, data_insertion_query.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
 
             print("\nFailed to insert data\n", "red");
             print("Query: " + data_insertion_query + "\n", "red");
-            throw std::runtime_error(errMsg); // could be due to full / corrupted database, or incorrect data type is inserted
+            throw std::runtime_error(
+                errMsg); // could be due to full / corrupted database, or incorrect data type is inserted
         }
     }
 
@@ -100,12 +97,7 @@ namespace sqlite_wrapper
         data_selection_query += " FROM " + table_name;
 
         char *errMsg; // returned error message
-        int rc = sqlite3_exec(
-            db,
-            data_selection_query.c_str(),
-            0,
-            0,
-            &errMsg);
+        int rc = sqlite3_exec(db, data_selection_query.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
             print("\nFailed to read data\n", "red");
@@ -124,20 +116,17 @@ namespace sqlite_wrapper
      */
     void SQLiteDb::delete_data(std::string table_name, std::string primary_key_column, std::string value)
     {
-        std::string data_deletion_query = "DELETE FROM " + table_name + " WHERE " + primary_key_column + " = '" + value + "'";
+        std::string data_deletion_query =
+            "DELETE FROM " + table_name + " WHERE " + primary_key_column + " = '" + value + "'";
 
         char *errMsg; // returned error message
-        int rc = sqlite3_exec(
-            db,
-            data_deletion_query.c_str(),
-            0,
-            0,
-            &errMsg);
+        int rc = sqlite3_exec(db, data_deletion_query.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
             print("\nFailed to delete data\n", "red");
             print("Query: " + data_deletion_query + "\n", "red");
-            throw std::runtime_error(errMsg); // something is wrong when this error is thrown, check primary_key_column arg
+            throw std::runtime_error(
+                errMsg); // something is wrong when this error is thrown, check primary_key_column arg
         }
     }
 
@@ -197,12 +186,8 @@ namespace sqlite_wrapper
 
         SQLite_Context context; // context for return values
         char *errMsg;           // returned error message
-        int rc = sqlite3_exec(
-            db,
-            "SELECT name FROM sqlite_master WHERE type='table'",
-            sqlite_callback,
-            &context,
-            &errMsg);
+        int rc =
+            sqlite3_exec(db, "SELECT name FROM sqlite_master WHERE type='table'", sqlite_callback, &context, &errMsg);
         if (rc != SQLITE_OK)
         {
             print("\nFailed to list all table names\n", "red");
@@ -229,7 +214,8 @@ namespace sqlite_wrapper
             // for each table name, search through target table list for a match
             for (int i = 0; i < context.argv.size(); i++)
             {
-                if (TARGET_TABLES.find(context.argv[i]) == TARGET_TABLES.end()) // an unknown table name is found in database
+                if (TARGET_TABLES.find(context.argv[i]) ==
+                    TARGET_TABLES.end()) // an unknown table name is found in database
                 {
                     allTableNamesValid = false;
                     print("\n", "red");
@@ -265,12 +251,7 @@ namespace sqlite_wrapper
     {
         SQLite_Context context; // context for return values
         char *errMsg;           // returned error message
-        int rc = sqlite3_exec(
-            db,
-            OPTIMIZATIONS.c_str(),
-            0,
-            0,
-            &errMsg);
+        int rc = sqlite3_exec(db, OPTIMIZATIONS.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
             print("\nFailed to list all table names\n", "red");
@@ -303,12 +284,7 @@ namespace sqlite_wrapper
 
         SQLite_Context context; // context for return values
         char *errMsg;           // returned error message
-        int rc = sqlite3_exec(
-            db,
-            table_creation_query.c_str(),
-            0,
-            0,
-            &errMsg);
+        int rc = sqlite3_exec(db, table_creation_query.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
             print("\nFailed to create \"" + table_name + "\" table.\n", "red");
@@ -322,12 +298,7 @@ namespace sqlite_wrapper
 
         SQLite_Context context; // context for return values
         char *errMsg;           // returned error message
-        int rc = sqlite3_exec(
-            db,
-            table_structure_check_query.c_str(),
-            sqlite_callback,
-            &context,
-            &errMsg);
+        int rc = sqlite3_exec(db, table_structure_check_query.c_str(), sqlite_callback, &context, &errMsg);
         if (rc != SQLITE_OK)
         {
             print("\nFailed to check table structure\n", "red");
@@ -337,7 +308,8 @@ namespace sqlite_wrapper
         if (context.argv.size() != 1)
         {
             print("\n", "red");
-            throw std::runtime_error("Unexpected return value from SQLITE, table structure check must return size of 1");
+            throw std::runtime_error(
+                "Unexpected return value from SQLITE, table structure check must return size of 1");
         }
 
         std::string table_creation_query = "CREATE TABLE " + table_name + " (";
@@ -380,4 +352,4 @@ namespace sqlite_wrapper
         }
         return 0;
     }
-}
+} // namespace sqlite_wrapper

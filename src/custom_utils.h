@@ -1,19 +1,22 @@
 #pragma once
 
 #include <chrono>
-#include <thread>
 #include <string>
+#include <vector>
 #include <map>
 
 namespace custom_utils
 {
+    void print(char);
     void print(std::string);
     void print(std::string, std::string);
-    void print(int);
-    void print(double, int);
+    void printNum(int);
+    void printNum(double, int);
 
     void setPrintColor(std::string);
     void resetPrintColor();
+
+    std::vector<std::string> splitString(const std::string &, char);
 
     class stopwatch
     {
@@ -29,4 +32,4 @@ namespace custom_utils
     };
 
     void sleep(int);
-}
+} // namespace custom_utils

@@ -52,7 +52,8 @@ namespace sqlite_wrapper
             },
         };
 
-        const std::string OPTIMIZATIONS = "PRAGMA journal_mode = WAL; PRAGMA synchronous = normal; PRAGMA journal_size_limit = 6144000";
+        const std::string OPTIMIZATIONS =
+            "PRAGMA journal_mode = WAL; PRAGMA synchronous = normal; PRAGMA journal_size_limit = 6144000";
 
         struct SQLite_Context
         {
@@ -73,4 +74,4 @@ namespace sqlite_wrapper
 
         static int sqlite_callback(void *, int, char **, char **);
     };
-}
+} // namespace sqlite_wrapper

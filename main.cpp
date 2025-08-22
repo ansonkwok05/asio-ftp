@@ -1,8 +1,9 @@
 #include "src/custom_utils.h"
-#include "src/sqlite_wrapper.h"
 #include "src/ftp_server.h"
+#include "src/sqlite_wrapper.h"
 
 using custom_utils::print;
+using custom_utils::printNum;
 
 int main()
 {
@@ -14,7 +15,7 @@ int main()
     sqlite_wrapper::SQLiteDb database = sqlite_wrapper::SQLiteDb();
 
     print("Database setup done in ", "green");
-    print(performanceWatcher.lapUs() / 1000, 3);
+    printNum(performanceWatcher.lapUs() / 1000, 3);
     print("ms\n");
 
     // {
@@ -85,15 +86,13 @@ int main()
     print("\n");
     //
 
-    performanceWatcher.start();
+    print("Start FTP server\n", "green");
 
-    print("Initializing FTP server\n", "green");
+    //
+    print("\n");
+    //
 
     ftp_server::server ftp_server = ftp_server::server();
-
-    print("FTP server setup done in ", "green");
-    print(performanceWatcher.lapUs() / 1000, 3);
-    print("ms\n");
 
     return 0;
 }

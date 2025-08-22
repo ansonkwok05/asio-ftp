@@ -6,22 +6,7 @@
 namespace fs_handler
 {
     const char HEX_CHARS[16] = {
-        '0',
-        '1',
-        '2',
-        '3',
-        '4',
-        '5',
-        '6',
-        '7',
-        '8',
-        '9',
-        'A',
-        'B',
-        'C',
-        'D',
-        'E',
-        'F',
+        '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
     };
 
     /**
@@ -57,4 +42,4 @@ namespace fs_handler
 
     std::string read_file_signature(std::string);
     unsigned long long read_file_size(std::string);
-}
+} // namespace fs_handler
