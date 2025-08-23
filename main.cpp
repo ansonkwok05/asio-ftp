@@ -88,10 +88,6 @@ int main()
 
     print("Start FTP server\n", "green");
 
-    //
-    print("\n");
-    //
-
     ftp_server::server ftp_server = ftp_server::server();
 
     return 0;

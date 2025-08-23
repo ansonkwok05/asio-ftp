@@ -6,7 +6,8 @@ QuickSave is a cross-platform C++ application built to provide a fast and straig
 * gcc
 * g++
 * SQLite3
-* libssh
+* Boost.Asio
+* OpenSSL
 
 # Compilation
 This project is built using CMake, allowing cross-platform compilation across Windows, macOS and Linux.
