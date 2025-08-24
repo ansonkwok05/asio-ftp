@@ -6,6 +6,7 @@
 
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 namespace session
 {
@@ -17,36 +18,19 @@ namespace session
 
     void session::start()
     {
-        // // read first 3 bytes to see if client is implicit (immediate secure connection)
-        // try
-        // {
-        //     char data[3];
-        //     // size_t bytes_read = socket.read_some(boost::asio::buffer(data, 3));
-        //     size_t bytes_read = socket.next_layer().read_some(boost::asio::buffer(data, 3));
+        boost::system::error_code err;
 
-        //     print("FIRST THREE BYTES -> ", "red");
-        //     print(std::string(data) + "\n");
-        // }
-        // catch (boost::system::error_code err)
-        // {
-        //     print("FAILED READING FIRST THREE BYTES\n");
-        //     print(std::string(err.what()) + "\n");
-        // }
-        // return; // remove later
-
-        try
+        socket.handshake(boost::asio::ssl::stream_base::handshake_type::server, err);
+        if (err)
         {
-            socket.handshake(boost::asio::ssl::stream_base::server);
-            print("TLS handshake completed successfully\n");
-        }
-        catch (std::exception err)
-        {
-            print("TLS handshake failed -> " + std::string(err.what()) + "\n");
-            // print("Possible non secure FTP client\n");
+            // always threw "stream truncated" error on implicit tls
+            print("TLS handshake failed -> " + std::string(err.what()) + "\n", "red");
 
             stop();
-            return;
+            throw std::runtime_error("");
         }
+
+        print("TLS handshake completed successfully\n");
 
         send_message(FTP_WELCOMEMESSAGE);
         read_incoming_message();
@@ -54,34 +38,12 @@ namespace session
 
     void session::stop()
     {
-        print("Session stopping\n", "green");
-        try
-        {
-            socket.lowest_layer().close();
-        }
-        catch (std::exception err)
-        {
-            print("Failed to close -> " + std::string(err.what()) + "\n");
-        }
+        socket.lowest_layer().close();
     }
 
     void session::send_message(std::string message)
     {
         message += "\r\n"; // all messages need to end in \r\n
-        // boost::asio::async_write(socket, boost::asio::buffer(message),
-        //                          [this](boost::system::error_code err, size_t bytes_transferred) {
-        //                              if (err)
-        //                              {
-        //                                  print("yo error -> ");
-        //                                  print(err.message());
-        //                                  print("\n");
-        //                                  return;
-        //                              }
-        //                              print("Sent message\n");
-
-        //                              read_incoming_message();
-        //                          });
-
         boost::asio::write(socket, boost::asio::buffer(message));
         print("Sent message\n");
     }

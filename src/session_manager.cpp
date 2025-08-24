@@ -22,9 +22,16 @@ namespace session_manager
 
     void session_manager::stop(session_ptr s)
     {
-        print("Stopping a session\n", "green");
-        sessions.erase(s);
-        s->stop();
+        print("Stopping session\n", "green");
+        try
+        {
+            sessions.erase(s);
+            s->stop();
+        }
+        catch (std::exception err)
+        {
+            print("Session Failed to stop\n", "yellow");
+        }
     }
 
     void session_manager::stop_all(session_ptr s)
