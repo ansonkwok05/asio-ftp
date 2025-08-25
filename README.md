@@ -1,6 +1,13 @@
 # QuickSave
 QuickSave is a cross-platform C++ application built to provide a fast and straightforward way to share files directly between devices.
 
+### Current features
+* SQLite database operations - insert, read, delete
+* FTPS server - explicit and implicit mode (currently only TLS handshake is implemented)
+
+### To be implemented:
+* SFTP server
+
 # Requirements
 * CMake version 3.10 or higher
 * gcc
@@ -24,4 +31,4 @@ make
 ```
 
 ### macOS
-Not tested, but should work using CMake.
+Not tested, but should work by using CMake to build.

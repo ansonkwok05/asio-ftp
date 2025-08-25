@@ -1,6 +1,8 @@
 #include "src/custom_utils.h"
-#include "src/ftp_server.h"
-#include "src/sqlite_wrapper.h"
+#include "src/ftps/ftps_server.h"
+#include "src/sqlite/sqlite_wrapper.h"
+
+#include <thread>
 
 using custom_utils::print;
 using custom_utils::printNum;
@@ -12,7 +14,9 @@ int main()
 
     print("Initializing database\n", "green");
 
-    sqlite_wrapper::SQLiteDb database = sqlite_wrapper::SQLiteDb();
+    sqlite_wrapper::SQLiteDb *database = new sqlite_wrapper::SQLiteDb(true);
+    delete database;
+    database = nullptr;
 
     print("Database setup done in ", "green");
     printNum(performanceWatcher.lapUs() / 1000, 3);
@@ -86,9 +90,12 @@ int main()
     print("\n");
     //
 
-    print("Start FTP server\n", "green");
+    // launch FTPS server in worker thread
+    std::thread ftps_server_thread([]() { ftps_server::server ftps_server = ftps_server::server(); });
 
-    ftp_server::server ftp_server = ftp_server::server();
+    print("FTPS server worker thread started\n", "green");
+
+    ftps_server_thread.join(); // prevent main thread to die, while worker thread can do its thing
 
     return 0;
 }

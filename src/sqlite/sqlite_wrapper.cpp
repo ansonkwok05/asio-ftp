@@ -1,6 +1,6 @@
 #include "sqlite_wrapper.h"
-#include "custom_utils.h"
 #include "fs_handler.h"
+#include "../custom_utils.h"
 
 #include <stdexcept>
 #include <algorithm>
@@ -8,9 +8,23 @@
 
 namespace sqlite_wrapper
 {
-    using custom_utils::print;
-
     SQLiteDb::SQLiteDb()
+    {
+        initialize();
+    }
+
+    SQLiteDb::SQLiteDb(bool logging)
+    {
+        allowLogging = logging;
+        initialize();
+    }
+
+    SQLiteDb::~SQLiteDb()
+    {
+        sqlite3_close(db);
+    }
+
+    void SQLiteDb::initialize()
     {
         check_data_folder_exists();
 
@@ -19,11 +33,6 @@ namespace sqlite_wrapper
         check_tables(); // check current and create missing tables with predefined structure
 
         set_optimizations(); // optimizations done to improve performance
-    }
-
-    SQLiteDb::~SQLiteDb()
-    {
-        sqlite3_close(db);
     }
 
     /**
@@ -331,13 +340,27 @@ namespace sqlite_wrapper
         }
     }
 
+    void SQLiteDb::print(std::string message)
+    {
+        if (!allowLogging)
+            return;
+        custom_utils::print(message);
+    }
+
+    void SQLiteDb::print(std::string message, std::string color)
+    {
+        if (!allowLogging)
+            return;
+        custom_utils::print(message, color);
+    }
+
     int SQLiteDb::sqlite_callback(void *context, int argc, char **argv, char **azColName)
     {
         // using a context to return values
         SQLite_Context *c = (SQLite_Context *)context;
         if (!c)
         {
-            print("\n", "red");
+            custom_utils::print("\n", "red");
             throw std::runtime_error("Query context error.");
         }
 

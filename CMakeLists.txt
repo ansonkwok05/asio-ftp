@@ -5,7 +5,8 @@ project(QuickSave)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 
-file(GLOB src
+# recursively find all .cpp files
+file(GLOB_RECURSE src
     "src/*.cpp"
 )
 

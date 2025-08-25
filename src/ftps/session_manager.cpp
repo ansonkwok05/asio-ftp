@@ -1,5 +1,5 @@
 #include "session_manager.h"
-#include "custom_utils.h"
+#include "../custom_utils.h"
 
 namespace session_manager
 {
@@ -7,7 +7,7 @@ namespace session_manager
 
     void session_manager::start(session_ptr s)
     {
-        print("\nSession initializing\n", "green");
+        print("Session initializing\n", "green");
         try
         {
             sessions.insert(s);

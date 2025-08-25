@@ -19,8 +19,9 @@ namespace session
         const std::string FTP_WELCOMEMESSAGE = "220 Hello from my C++ FTP server!";
 
         // list of commands supported
-        const std::vector<std::string> FTP_COMMANDS = {"AUTH", "USER", "PASS", "SYST", "FEAT", "PBSZ",
-                                                       "PROT", "PWD",  "TYPE", "PASV", "PORT"};
+        const std::vector<std::string> FTP_COMMANDS = {
+            "USER", "PASS", "SYST", "FEAT", "PBSZ", "PROT", "PWD", "TYPE", "PASV", "PORT",
+        };
 
         boost::asio::ssl::stream<boost::asio::ip::tcp::socket> socket;
 

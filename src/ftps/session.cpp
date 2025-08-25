@@ -1,5 +1,5 @@
 #include "session.h"
-#include "custom_utils.h"
+#include "../custom_utils.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -23,7 +23,6 @@ namespace session
         socket.handshake(boost::asio::ssl::stream_base::handshake_type::server, err);
         if (err)
         {
-            // always threw "stream truncated" error on implicit tls
             print("TLS handshake failed -> " + std::string(err.what()) + "\n", "red");
 
             stop();
@@ -55,9 +54,15 @@ namespace session
                                [this, &data](boost::system::error_code err, size_t bytes_transferred) {
                                    if (err)
                                    {
-                                       print("async_read_some error -> ");
-                                       print(err.message());
-                                       print("\n");
+                                       // client disconnected
+                                       if (err.message() == "stream truncated")
+                                       {
+                                           print("FTPS client disconnected\n", "green");
+                                           stop();
+                                           return;
+                                       }
+
+                                       print("async_read_some error -> " + err.message() + "\n", "red");
                                        return;
                                    }
 
@@ -104,28 +109,9 @@ namespace session
             return;
         }
 
-        if (splitStr.at(0) == "AUTH")
-        {
-            if (splitStr.at(1) == "TLS")
-            {
-                send_message("234 AUTH TLS successful");
-                return;
-            }
-            if (splitStr.at(1) == "SSL")
-            {
-                send_message("234 AUTH SSL successful");
-                return;
-            }
-
-            send_message("503 Bad command syntax");
-            return;
-        }
-
         if (splitStr.at(0) == "USER")
         {
-            print("Current user -> ");
-            print(splitStr.at(1));
-            print("\n");
+            print("Current user: \"" + username + "\" -> \"" + splitStr.at(1) + "\"\n");
 
             username = splitStr.at(1);
 
@@ -138,9 +124,7 @@ namespace session
 
         if (splitStr.at(0) == "PASS")
         {
-            print("Password received -> ");
-            print(splitStr.at(1));
-            print("\n");
+            print("Password received -> \"" + splitStr.at(1) + "\"\n");
 
             if (username == "")
             {
@@ -213,7 +197,9 @@ namespace session
             // I: Turn the binary flag on.
             // L 8: Turn the binary flag on.
 
-            send_message("200 Success"); // todo: actually check and implement this feature
+            print("Type -> \"" + splitStr.at(1) + "\"\n");
+
+            send_message("200 TYPE I"); // todo: actually check and implement this feature
             return;
         }
 

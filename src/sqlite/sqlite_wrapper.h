@@ -12,12 +12,17 @@ namespace sqlite_wrapper
     {
     public:
         SQLiteDb();
+        SQLiteDb(bool);
+
         ~SQLiteDb();
+
         void insert_data(std::string, std::vector<std::string>, std::vector<std::string>);
         void delete_data(std::string, std::string, std::string);
         void read_data(std::string table_name, std::vector<std::string> columns_vector);
 
     private:
+        bool allowLogging = false;
+
         /**
          * TARGET_TABLES[TABLE_NAME] -> VECTOR of COLUMN DEFINITIONS
          */
@@ -64,6 +69,7 @@ namespace sqlite_wrapper
         sqlite3 *db;
 
         // initialization functions
+        void initialize(); // this calls all init functions at once
         void check_data_folder_exists();
         void check_db_file_exists();
         void check_tables();
@@ -71,6 +77,9 @@ namespace sqlite_wrapper
 
         void create_table(std::string);
         void check_table_structure(std::string);
+
+        void print(std::string);
+        void print(std::string, std::string);
 
         static int sqlite_callback(void *, int, char **, char **);
     };
