@@ -24,10 +24,6 @@ namespace fs_handler
         std::filesystem::create_directory(path_to_directory);
     }
 
-    /**
-     * Returns the suggested file extension from its file signature
-     * @param file_name File name / Path to file
-     */
     std::string get_file_description(std::string file_name)
     {
         if (!file_exists)
@@ -57,9 +53,6 @@ namespace fs_handler
         return "";
     }
 
-    /**
-     * @param file_name File name / Path to file
-     */
     unsigned long long read_file_size(std::string file_name)
     {
         if (!file_exists)

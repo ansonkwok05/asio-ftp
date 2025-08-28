@@ -23,8 +23,8 @@ namespace ftps_server
 
         session_manager::session_manager manager;
 
-        void accept_connection(boost::asio::ip::tcp::acceptor &, boost::asio::io_context &,
-                               boost::asio::ssl::context &);
+        void accept_connection(boost::asio::ip::tcp::acceptor &acceptor, boost::asio::io_context &io_ctx,
+                               boost::asio::ssl::context &ssl_ctx);
     };
 
 } // namespace ftps_server

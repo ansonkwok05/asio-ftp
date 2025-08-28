@@ -32,8 +32,7 @@ namespace ftps_server
 
         print("FTPS server listening on port -> " + std::to_string(PORT) + "\n", "green");
 
-        // blocks until all async operation is finished
-        io_ctx.run();
+        io_ctx.run(); // blocks until all async operation is finished
     }
 
     void server::accept_connection(boost::asio::ip::tcp::acceptor &acceptor, boost::asio::io_context &io_ctx,
@@ -43,11 +42,13 @@ namespace ftps_server
             [this, &acceptor, &io_ctx, &ssl_ctx](boost::system::error_code err, boost::asio::ip::tcp::socket socket) {
                 if (err)
                 {
-                    print("Failed to accept FTPS connection\n");
+                    print("Failed to accept FTPS connection\n", "red");
                     accept_connection(acceptor, io_ctx, ssl_ctx);
                     return;
                 }
                 print("FTPS connection accepted\n", "green");
+
+                bool already_sent_welcome_message = false;
 
                 custom_utils::stopwatch stopwatch;
                 stopwatch.start();
@@ -58,9 +59,10 @@ namespace ftps_server
                 while (stopwatch.lapMs() < WAIT_TIME)
                 {
                     // message length longer than this is TLS handshake??
+                    // low priority todo: experiment with different length
                     if (socket.available() > 30)
                         break;
-                    custom_utils::sleep(50);
+                    custom_utils::sleep(20);
                 }
 
                 // if no TLS handshake initiated by client,
@@ -71,6 +73,7 @@ namespace ftps_server
                     print("Start implicit mode\n", "green");
                     // start by sending welcome message
                     boost::asio::write(socket, boost::asio::buffer(FTP_WELCOMEMESSAGE));
+                    already_sent_welcome_message = true;
 
                     // within WAIT_TIME,
                     // if no "AUTH" command is received,
@@ -104,12 +107,7 @@ namespace ftps_server
                         // start TLS handshake
                         if (sanitizedStr == "AUTH TLS" || sanitizedStr == "AUTH SSL")
                         {
-                            // when some FTP clients connects in explicit mode
-                            // instead of initiating the TLS handshake, they disconnects immediately after this
-                            // FileZilla is able to initiate TLS handshake and establish a conection
-                            // low priority todo: figure out how to deal with this
-                            // log: alright i don't know how i fixed it, now my phone can connect. really confused
-                            boost::asio::write(socket, boost::asio::buffer("234 Ready\r\n"));
+                            boost::asio::write(socket, boost::asio::buffer("234 OK\r\n"));
                             break;
                         }
                         else
@@ -144,8 +142,9 @@ namespace ftps_server
 
                 print("Handshake size: " + std::to_string(socket.available()) + "\n");
 
-                // create FTP session for new connection
-                manager.start(std::make_shared<session::session>(std::move(socket), ssl_ctx));
+                // create FTPS session for new connection
+                manager.start(std::make_shared<session::session>(std::move(socket), io_ctx, ssl_ctx),
+                              already_sent_welcome_message);
 
                 accept_connection(acceptor, io_ctx, ssl_ctx);
             });

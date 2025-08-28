@@ -7,16 +7,29 @@
 
 namespace custom_utils
 {
-    void print(char);
-    void print(std::string);
-    void print(std::string, std::string);
-    void printNum(int);
-    void printNum(double, int);
+    void print(char character);
+    void print(std::string message);
+    void print(std::string message, std::string color);
 
-    void setPrintColor(std::string);
+    void printNum(int number);
+
+    /**
+     * @param decimal A decimal number
+     * @param decimalPoints Decimal points to display
+     */
+    void printNum(double decimal, int decimalPoints);
+
+    /**
+     * set the color of cout by using ANSI color code
+     * @param color A string representing the color (black, red, green, yellow, blue, magenta, cyan, white)
+     */
+    void setPrintColor(std::string color);
+
     void resetPrintColor();
 
-    std::vector<std::string> splitString(const std::string &, char);
+    std::vector<std::string> splitString(const std::string &inputString, char delimiter);
+    std::string replaceString(const std::string &original, std::string search, std::string replacement);
+    std::string generate_uuid_string(size_t length);
 
     class stopwatch
     {
@@ -31,5 +44,9 @@ namespace custom_utils
         std::chrono::time_point<std::chrono::steady_clock> timeStamp;
     };
 
-    void sleep(int);
+    /**
+     * sleep for milliseconds
+     * @param ms An int representing miliseconds
+     */
+    void sleep(int ms);
 } // namespace custom_utils

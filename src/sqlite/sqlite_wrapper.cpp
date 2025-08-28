@@ -10,13 +10,11 @@ namespace sqlite_wrapper
 {
     SQLiteDb::SQLiteDb()
     {
-        initialize();
     }
 
     SQLiteDb::SQLiteDb(bool logging)
     {
         allowLogging = logging;
-        initialize();
     }
 
     SQLiteDb::~SQLiteDb()
@@ -24,7 +22,7 @@ namespace sqlite_wrapper
         sqlite3_close(db);
     }
 
-    void SQLiteDb::initialize()
+    void SQLiteDb::init_db()
     {
         check_data_folder_exists();
 
@@ -35,15 +33,26 @@ namespace sqlite_wrapper
         set_optimizations(); // optimizations done to improve performance
     }
 
-    /**
-     * No safe guard here, do validate data before inserting data. Beware of wrong data type.
-     * @param table_name Name of the table.
-     * @param column_vector Columns to insertion.
-     * @param value_vector Values to insert.
-     */
-    void SQLiteDb::insert_data(std::string table_name, std::vector<std::string> column_vector,
+    void SQLiteDb::connect()
+    {
+        int rc = sqlite3_open("data/storage.db", &db);
+        if (rc != SQLITE_OK)
+        {
+            print("\n", "red");
+            throw std::runtime_error("Failed to open database.");
+        }
+
+        print("Opened database storage.db\n", "green");
+    }
+
+    bool SQLiteDb::insert_data(std::string table_name, std::vector<std::string> column_vector,
                                std::vector<std::string> value_vector)
     {
+        if (column_vector.size() != value_vector.size())
+        {
+            return false;
+        }
+
         std::string data_insertion_query = "INSERT INTO " + table_name + " (";
 
         for (int i = 0; i < column_vector.size(); i++)
@@ -70,20 +79,19 @@ namespace sqlite_wrapper
         int rc = sqlite3_exec(db, data_insertion_query.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
-
+            // could be due to full/corrupted database, or incorrect data/data type is inserted
             print("\nFailed to insert data\n", "red");
             print("Query: " + data_insertion_query + "\n", "red");
-            throw std::runtime_error(
-                errMsg); // could be due to full / corrupted database, or incorrect data type is inserted
+            print("Error code -> " + std::to_string(rc) + "\n", "red");
+            print("Error msg -> " + std::string(errMsg) + "\n", "red");
+
+            return false;
         }
+        return true;
     }
 
-    /**
-     * Reads data from table.
-     * @param table_name Name of the table
-     * @param columns_vector Columns to read, leave empty to read all
-     */
-    void SQLiteDb::read_data(std::string table_name, std::vector<std::string> columns_vector)
+    bool SQLiteDb::read_data(std::string table_name, std::vector<std::string> columns_vector,
+                             std::vector<std::string> &returned_data)
     {
         std::string data_selection_query = "SELECT ";
 
@@ -105,25 +113,27 @@ namespace sqlite_wrapper
 
         data_selection_query += " FROM " + table_name;
 
+        SQLite_Context context;
         char *errMsg; // returned error message
-        int rc = sqlite3_exec(db, data_selection_query.c_str(), 0, 0, &errMsg);
+        int rc = sqlite3_exec(db, data_selection_query.c_str(), sqlite_callback, &context, &errMsg);
         if (rc != SQLITE_OK)
         {
             print("\nFailed to read data\n", "red");
             print("Query: " + data_selection_query + "\n", "red");
-            throw std::runtime_error(errMsg);
+            print("Error code -> " + std::to_string(rc) + "\n", "red");
+            print("Error msg -> " + std::string(errMsg) + "\n", "red");
+
+            return false;
         }
+
+        for (auto str : context.argv)
+        {
+            returned_data.push_back(str);
+        }
+        return true;
     }
 
-    /**
-     * Deletes a row in the table. No error is thrown if the row doesn't exist,
-     * except when primary_key_column is not found.
-     * @param table_name Name of the table
-     * @param primary_key_column Primary key column name
-     * @param value Primary key value for deletion
-     * @return true if success, false if failed
-     */
-    void SQLiteDb::delete_data(std::string table_name, std::string primary_key_column, std::string value)
+    bool SQLiteDb::delete_data(std::string table_name, std::string primary_key_column, std::string value)
     {
         std::string data_deletion_query =
             "DELETE FROM " + table_name + " WHERE " + primary_key_column + " = '" + value + "'";
@@ -134,9 +144,12 @@ namespace sqlite_wrapper
         {
             print("\nFailed to delete data\n", "red");
             print("Query: " + data_deletion_query + "\n", "red");
-            throw std::runtime_error(
-                errMsg); // something is wrong when this error is thrown, check primary_key_column arg
+            print("Error code -> " + std::to_string(rc) + "\n", "red");
+            print("Error msg -> " + std::string(errMsg) + "\n", "red");
+
+            return false;
         }
+        return true;
     }
 
     void SQLiteDb::check_data_folder_exists()
@@ -148,7 +161,7 @@ namespace sqlite_wrapper
             return;
         }
 
-        print("data folder does not exist, creating a one right now\n", "yellow");
+        print("data folder does not exist, creating a new one right now\n", "yellow");
         fs_handler::create_directory("data");
 
         if (!fs_handler::directory_exists("data"))
@@ -161,7 +174,7 @@ namespace sqlite_wrapper
 
     void SQLiteDb::check_db_file_exists()
     {
-        // checking for db file existance
+        // checking for db file existance, and connect if found
         if (fs_handler::file_exists("data/storage.db"))
         {
             print("Found data/storage.db\n", "green");
@@ -170,10 +183,9 @@ namespace sqlite_wrapper
             if (rc != SQLITE_OK)
             {
                 print("\n", "red");
-                throw std::runtime_error("Failed to open database.");
+                throw std::runtime_error("Failed to create database.");
             }
-
-            print("Opened database storage.db\n", "green");
+            print("Connected to data/storage.db\n", "green");
             return;
         }
 
@@ -186,7 +198,7 @@ namespace sqlite_wrapper
             throw std::runtime_error("Failed to create database.");
         }
 
-        print("Created and opened storage.db at ./data\n", "green");
+        print("Created and connected to data/storage.db\n", "green");
     }
 
     void SQLiteDb::check_tables()
@@ -238,7 +250,7 @@ namespace sqlite_wrapper
                 {
                     check_table_structure(context.argv[i]);
                 }
-                print("All tables are valid in database\n", "green");
+                print("All tables are validated in database\n", "green");
                 return; // table is valid
             }
         }

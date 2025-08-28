@@ -36,10 +36,18 @@ namespace fs_handler
     };
 
     // one-liner filesystem wrapper functions
-    bool directory_exists(std::string);
-    bool file_exists(std::string);
-    void create_directory(std::string);
+    bool directory_exists(std::string path_to_directory);
+    bool file_exists(std::string file_name);
+    void create_directory(std::string path_to_directory);
 
-    std::string read_file_signature(std::string);
-    unsigned long long read_file_size(std::string);
+    /**
+     * Returns the suggested file extension from its file signature
+     * @param file_name File name / Path to file
+     */
+    std::string get_file_description(std::string file_name);
+
+    /**
+     * @param file_name File name / Path to file
+     */
+    unsigned long long read_file_size(std::string file_name);
 } // namespace fs_handler
