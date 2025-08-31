@@ -38,7 +38,8 @@ namespace fs_handler
     // one-liner filesystem wrapper functions
     bool directory_exists(std::string path_to_directory);
     bool file_exists(std::string file_name);
-    void create_directory(std::string path_to_directory);
+    bool create_directory(std::string path_to_directory);
+    bool remove_file(std::string path_to_file);
 
     /**
      * Returns the suggested file extension from its file signature

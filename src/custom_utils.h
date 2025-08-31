@@ -28,6 +28,8 @@ namespace custom_utils
     void resetPrintColor();
 
     std::vector<std::string> splitString(const std::string &inputString, char delimiter);
+    std::string vectorStrJoin(std::vector<std::string> inputVector, std::string seperator);
+
     std::string replaceString(const std::string &original, std::string search, std::string replacement);
     std::string generate_uuid_string(size_t length);
 

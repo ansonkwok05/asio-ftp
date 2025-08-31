@@ -67,6 +67,9 @@ namespace sqlite_wrapper
 
         for (int i = 0; i < value_vector.size(); i++)
         {
+            // check if value contains ', replace with '' to insert correctly
+            value_vector.at(i) = custom_utils::replaceString(value_vector.at(i), "'", "''");
+
             data_insertion_query += value_vector[i];
             if (i != value_vector.size() - 1)
             {

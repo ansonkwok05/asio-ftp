@@ -25,6 +25,11 @@ namespace session_manager
     void session_manager::stop(std::string s_uuid)
     {
         print("Stopping session\n", "green");
+
+        // todo: there is an address boundary error that causes crash
+        // crashes right on boost asio ssl part
+        // possibly due to io_context is still running
+
         try
         {
             for (auto s : sessions)
@@ -37,7 +42,7 @@ namespace session_manager
                 // found session with s_uuid
                 sessions.erase(s);
                 print("Session stopped -> " + s_uuid + "\n", "green");
-                break;
+                return;
             }
         }
         catch (std::exception err)

@@ -11,6 +11,8 @@ using custom_utils::printNum;
 
 int main()
 {
+    std::srand(std::time(NULL)); // initialize rand
+
     { // database initialization
         custom_utils::stopwatch performanceWatcher;
         performanceWatcher.start();
@@ -99,53 +101,87 @@ int main()
                 }
             }
 
-            { // create test data for "files" table
-                std::vector<std::string> return_data;
-                database->read_data("files", {}, return_data);
+            // { // create test data for "files" table
+            //     std::vector<std::string> return_data;
+            //     database->read_data("files", {}, return_data);
 
-                std::vector<std::string> parsedData;
-                size_t i = 0;
-                while (i < return_data.size())
-                {
-                    parsedData.push_back(return_data.at(i));
-                    i += 2;
-                }
+            //     std::vector<std::string> parsedData;
+            //     size_t i = 0;
+            //     while (i < return_data.size())
+            //     {
+            //         parsedData.push_back(return_data.at(i));
+            //         i += 2;
+            //     }
 
-                if (std::find(parsedData.begin(), parsedData.end(), "test_file_1") == parsedData.end())
-                {
-                    database->insert_data("files", {"user_id", "file_id"}, {"numba1", "test_file_1"});
-                }
+            //     std::string file_idstr = "test_file";
 
-                if (std::find(parsedData.begin(), parsedData.end(), "test_file_2") == parsedData.end())
-                {
-                    database->insert_data("files", {"user_id", "file_id"}, {"numba1", "test_file_2"});
-                }
-            }
+            //     for (int i = 0; i < 5; i++)
+            //     {
+            //         file_idstr += "1";
+            //         if (std::find(parsedData.begin(), parsedData.end(), file_idstr) == parsedData.end())
+            //         {
+            //             database->insert_data("files", {"user_id", "file_id"}, {"numba1", file_idstr});
+            //         }
+            //     }
 
-            { // create test data for "files_metadata" table
-                std::vector<std::string> return_data;
-                database->read_data("files_metadata", {}, return_data);
+            //     if (std::find(parsedData.begin(), parsedData.end(), "folder_id1") == parsedData.end())
+            //     {
+            //         database->insert_data("files", {"user_id", "file_id"}, {"numba1", "folder_id1"});
+            //     }
 
-                std::vector<std::string> parsedData;
-                size_t i = 4;
-                while (i < return_data.size())
-                {
-                    parsedData.push_back(return_data.at(i));
-                    i += 5;
-                }
+            //     for (int i = 0; i < 5; i++)
+            //     {
+            //         file_idstr += "1";
+            //         if (std::find(parsedData.begin(), parsedData.end(), file_idstr) == parsedData.end())
+            //         {
+            //             database->insert_data("files", {"user_id", "file_id"}, {"numba1", file_idstr});
+            //         }
+            //     }
+            // }
 
-                if (std::find(parsedData.begin(), parsedData.end(), "test_file_1") == parsedData.end())
-                {
-                    database->insert_data("files_metadata", {"file_name", "file_path", "file_size", "file_id"},
-                                          {"yo_iden", "/", "21", "test_file_1"});
-                }
+            // { // create test data for "files_metadata" table
+            //     std::vector<std::string> return_data;
+            //     database->read_data("files_metadata", {}, return_data);
 
-                if (std::find(parsedData.begin(), parsedData.end(), "test_file_2") == parsedData.end())
-                {
-                    database->insert_data("files_metadata", {"file_name", "file_path", "file_size", "file_id"},
-                                          {"soda", "/", "9", "test_file_2"});
-                }
-            }
+            //     std::vector<std::string> parsedData;
+            //     size_t i = 5;
+            //     while (i < return_data.size())
+            //     {
+            //         parsedData.push_back(return_data.at(i));
+            //         i += 6;
+            //     }
+
+            //     std::string file_idstr = "test_file";
+
+            //     for (int i = 0; i < 5; i++)
+            //     {
+            //         file_idstr += "1";
+            //         if (std::find(parsedData.begin(), parsedData.end(), file_idstr) == parsedData.end())
+            //         {
+            //             database->insert_data("files_metadata",
+            //                                   {"file_name", "file_path", "file_size", "is_directory", "file_id"},
+            //                                   {"yo_iden" + file_idstr, "/", "21", "0", file_idstr});
+            //         }
+            //     }
+
+            //     if (std::find(parsedData.begin(), parsedData.end(), "folder_id1") == parsedData.end())
+            //     {
+            //         database->insert_data("files_metadata",
+            //                               {"file_name", "file_path", "file_size", "is_directory", "file_id"},
+            //                               {"example_folder", "/", "9", "1", "folder_id1"});
+            //     }
+
+            //     for (int i = 0; i < 5; i++)
+            //     {
+            //         file_idstr += "1";
+            //         if (std::find(parsedData.begin(), parsedData.end(), file_idstr) == parsedData.end())
+            //         {
+            //             database->insert_data("files_metadata",
+            //                                   {"file_name", "file_path", "file_size", "is_directory", "file_id"},
+            //                                   {"yo_iden" + file_idstr, "/example_folder", "21", "0", file_idstr});
+            //         }
+            //     }
+            // }
 
             print("Test data created\n", "blue");
         }

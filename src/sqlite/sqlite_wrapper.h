@@ -78,6 +78,7 @@ namespace sqlite_wrapper
                     "file_path VARCHAR(1024) NOT NULL",
                     "file_size BIGINT NOT NULL",
                     "modified_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP", // default is UTC time
+                    "is_directory INTEGER NOT NULL",
                     "file_id CHAR(36) NOT NULL",
                     "FOREIGN KEY (file_id) REFERENCES files (file_id)",
                 },

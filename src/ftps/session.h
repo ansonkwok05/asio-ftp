@@ -30,22 +30,28 @@ namespace session
         // list of commands supported
         // the comments of the commands is from Wikipedia
         const std::vector<std::string> FTP_COMMANDS = {
+            "SYST", // Return system type
+            "QUIT", // Disconnect.
+
             "USER", // Authentication username
             "PASS", // Authentication password
 
             "PBSZ", // Protection Buffer Size
             "PROT", // Data Channel Protection Level.
             "FEAT", // Get the feature list implemented by the server.
+            "OPTS", // Select options for a feature (for example OPTS UTF8 ON).
             "PWD",  // Print working directory. Returns the current directory of the host.
             "TYPE", // Sets the transfer mode (ASCII/Binary).
             "PASV", // Enter passive mode.
             "LIST", // Returns information of a file or directory if specified, else information of the current working
                     // directory is returned.
-
-            "SYST", // Return system type
-
-            // todo:
-            // "OPTS UTF8 ON"
+            "CWD",  // Change working directory.
+            "RMD",  // Remove a directory.
+            "CDUP", // Change to Parent Directory.
+            "MKD",  // Make directory.
+            "STOR", // Accept the data and to store the data as a file at the server site
+            "RETR", // Retrieve a copy of the file
+            "DELE", // Delete file.
         };
 
         const int WAIT_TIME = 200; // milliseconds to wait for TLS handshake
@@ -64,7 +70,7 @@ namespace session
 
         std::vector<std::string> pending_data_channel_buffer;
 
-        sqlite_wrapper::SQLiteDb database = sqlite_wrapper::SQLiteDb();
+        sqlite_wrapper::SQLiteDb database = sqlite_wrapper::SQLiteDb(true);
 
         std::string username;
         std::string userid; // got from "users" table database lookup
@@ -76,16 +82,30 @@ namespace session
         std::string TYPE = ""; // binary flag for whether to send in binary or ascii
 
         std::string working_directory = "/"; // "/" is the root directory in FTP
+        std::string pending_write_filename = "";
+        std::string pending_read_filename = "";
 
         void stop(); // cleanup
 
         void send_message(std::string message);
         void read_incoming_message();
         void data_channel_send(std::string message);
+
+        void data_channel_start_accept();
+
         void handle_FTP_command(std::string &data);
         bool command_exists(std::string command);
 
         std::string parse_metadata_time(std::string time_str);
+        std::string generate_metadata_currentTime();
+
+        // / -> /
+        // /directory -> /
+        // /directory/:trollface: -> /directory/
+        // directory -> /
+        std::string get_last_slash(std::string directory);
+
+        std::vector<std::string> get_files_metadatas();
 
         void log_behavior(std::string log); // log client behavior to implement new features
     };

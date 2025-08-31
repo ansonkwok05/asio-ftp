@@ -19,9 +19,36 @@ namespace fs_handler
         return std::filesystem::exists(file_name);
     }
 
-    void create_directory(std::string path_to_directory)
+    bool create_directory(std::string path_to_directory)
     {
-        std::filesystem::create_directory(path_to_directory);
+        try
+        {
+            if (std::filesystem::create_directory(path_to_directory))
+                return true;
+            else
+                return false;
+        }
+        catch (const std::filesystem::filesystem_error &err)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool remove_file(std::string path_to_file)
+    {
+        try
+        {
+            if (std::filesystem::remove(path_to_file))
+                return true;
+            else
+                return false;
+        }
+        catch (const std::filesystem::filesystem_error &err)
+        {
+            return false;
+        }
     }
 
     std::string get_file_description(std::string file_name)
@@ -63,4 +90,4 @@ namespace fs_handler
 
         return std::filesystem::file_size(std::filesystem::path(file_name));
     }
-}
+} // namespace fs_handler

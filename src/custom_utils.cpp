@@ -78,6 +78,19 @@ namespace custom_utils
         return splittedStr;
     }
 
+    std::string vectorStrJoin(std::vector<std::string> inputVector, std::string seperator)
+    {
+        std::string output;
+
+        for (size_t i = 0; i < inputVector.size() - 1; i++)
+        {
+            output += inputVector.at(i) + seperator;
+        }
+        output += inputVector.at(inputVector.size() - 1);
+
+        return output;
+    }
+
     std::string replaceString(const std::string &original, std::string search, std::string replacement)
     {
         std::string output = "";
@@ -116,8 +129,6 @@ namespace custom_utils
 
     std::string generate_uuid_string(size_t length)
     {
-        std::srand(std::time(0));
-
         std::string uuid = "";
 
         for (size_t i = 0; i < length; i++)
