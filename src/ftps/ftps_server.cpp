@@ -1,7 +1,6 @@
-#include "ftps_server.h"
-#include "session.h"
-#include "session_manager.h"
 #include "../custom_utils.h"
+#include "ftps_server.h"
+#include "ftp_session.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -14,139 +13,28 @@ namespace ftps_server
     using custom_utils::print;
 
     server::server()
+        : m_acceptor(io_ctx, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT)), m_socket(io_ctx)
     {
-        boost::asio::io_context io_ctx;
-        boost::asio::ip::tcp::acceptor acceptor(io_ctx,
-                                                boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT));
-
-        boost::asio::ssl::context ssl_ctx(boost::asio::ssl::context::tlsv13_server);
-
-        ssl_ctx.set_options(boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 |
-                            boost::asio::ssl::context::no_tlsv1 | boost::asio::ssl::context::no_tlsv1_1 |
-                            boost::asio::ssl::context::single_dh_use);
-        ssl_ctx.use_certificate_chain_file("tls/cert.pem");
-        ssl_ctx.use_private_key_file("tls/key.pem", boost::asio::ssl::context::pem);
-        ssl_ctx.use_tmp_dh_file("tls/dh.pem");
-
-        accept_connection(acceptor, io_ctx, ssl_ctx);
+        start_accepting();
 
         print("FTPS server listening on port -> " + std::to_string(PORT) + "\n", "green");
 
-        io_ctx.run(); // blocks until all async operation is finished
+        io_ctx.run(); // start all async operations, blocks until all async operations are done
     }
 
-    void server::accept_connection(boost::asio::ip::tcp::acceptor &acceptor, boost::asio::io_context &io_ctx,
-                                   boost::asio::ssl::context &ssl_ctx)
+    void server::start_accepting()
     {
-        acceptor.async_accept(
-            [this, &acceptor, &io_ctx, &ssl_ctx](boost::system::error_code err, boost::asio::ip::tcp::socket socket) {
-                if (err)
-                {
-                    print("Failed to accept FTPS connection\n", "red");
-                    accept_connection(acceptor, io_ctx, ssl_ctx);
-                    return;
-                }
-                print("FTPS connection accepted\n", "green");
+        m_acceptor.async_accept(m_socket, [this](boost::system::error_code ec) {
+            if (ec)
+            {
+                print("Failed to accept connection -> " + ec.message(), "red");
+                return;
+            }
 
-                bool already_sent_welcome_message = false;
+            std::make_shared<ftp_session::session>(std::move(m_socket))->start();
 
-                custom_utils::stopwatch stopwatch;
-                stopwatch.start();
-
-                // wait for TLS handshake (explicit mode)
-                // give up after WAIT_TIME
-                print("Start explicit mode\n", "green");
-                while (stopwatch.lapMs() < WAIT_TIME)
-                {
-                    // message length longer than this is TLS handshake??
-                    // low priority todo: experiment with different length
-                    if (socket.available() > 30)
-                        break;
-                    custom_utils::sleep(20);
-                }
-
-                // if no TLS handshake initiated by client,
-                // start FTPS implicit mode
-                if (socket.available() == 0)
-                {
-                    print("Explicit mode failed\n", "green");
-                    print("Start implicit mode\n", "green");
-                    // start by sending welcome message
-                    boost::asio::write(socket, boost::asio::buffer(FTP_WELCOMEMESSAGE));
-                    already_sent_welcome_message = true;
-
-                    // within WAIT_TIME,
-                    // if no "AUTH" command is received,
-                    // connection will be terminated
-                    stopwatch.start();
-                    while (stopwatch.lapMs() < WAIT_TIME)
-                    {
-                        // no available message
-                        if (socket.available() == 0)
-                        {
-                            custom_utils::sleep(50);
-                            continue;
-                        }
-
-                        print("len:" + std::to_string(socket.available()) + " -> ");
-
-                        char data[1024] = {0};
-                        size_t bytes_transferred = socket.read_some(boost::asio::buffer(data, 1024));
-                        if (bytes_transferred > 2)
-                        {
-                            bytes_transferred -= 2; // remove "\n"
-                        }
-
-                        std::string sanitizedStr = "";
-                        for (size_t i = 0; i < bytes_transferred; i++)
-                        {
-                            sanitizedStr += data[i];
-                        }
-                        print(sanitizedStr + "\n");
-
-                        // start TLS handshake
-                        if (sanitizedStr == "AUTH TLS" || sanitizedStr == "AUTH SSL")
-                        {
-                            boost::asio::write(socket, boost::asio::buffer("234 OK\r\n"));
-                            break;
-                        }
-                        else
-                        {
-                            // probably non secure FTP clients trying to login
-                            print("Unknown/Not AUTH command -> " + sanitizedStr + "\n");
-                            boost::asio::write(socket, boost::asio::buffer("503 Use AUTH first\r\n"));
-                        }
-                    }
-
-                    // waiting to receive ClientHello handshake
-                    stopwatch.start();
-                    while (stopwatch.lapMs() < WAIT_TIME)
-                    {
-                        if (socket.available() == 0)
-                        {
-                            custom_utils::sleep(50);
-                            continue;
-                        }
-                    }
-
-                    // ClientHello handshake not received,
-                    // terminate connection
-                    if (socket.available() == 0)
-                    {
-                        print("Handshake not received! Client is not initiating the handshake\n", "yellow");
-                        print("Connection rejected\n", "red");
-                        accept_connection(acceptor, io_ctx, ssl_ctx);
-                        return;
-                    }
-                }
-
-                print("Handshake size: " + std::to_string(socket.available()) + "\n");
-
-                // create FTPS session for new connection
-                manager.start(std::make_shared<session::session>(std::move(socket), io_ctx, ssl_ctx),
-                              already_sent_welcome_message);
-
-                accept_connection(acceptor, io_ctx, ssl_ctx);
-            });
+            this->start_accepting();
+        });
     }
+
 } // namespace ftps_server

@@ -1,7 +1,5 @@
 #pragma once
 
-#include "session_manager.h"
-
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
@@ -15,16 +13,13 @@ namespace ftps_server
     private:
         const int PORT = 6921; // port for FTPS server
 
-        // milliseconds to wait for client
-        // if client cannot fulfill request within this window, connection will be discarded
-        const int WAIT_TIME = 200;
+        boost::asio::io_context io_ctx; // io context needed to run async operations
 
-        const std::string FTP_WELCOMEMESSAGE = "220 Hello from my C++ FTPS server!\r\n";
+        boost::asio::ip::tcp::acceptor m_acceptor; // connection acceptor
 
-        session_manager::session_manager manager;
+        boost::asio::ip::tcp::socket m_socket; // a temporary socket for acceptor, which gets moved to a ftp session
 
-        void accept_connection(boost::asio::ip::tcp::acceptor &acceptor, boost::asio::io_context &io_ctx,
-                               boost::asio::ssl::context &ssl_ctx);
+        void start_accepting();
     };
 
 } // namespace ftps_server
