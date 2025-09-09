@@ -49,6 +49,7 @@ namespace ftp_session
 
     void session::send(std::string message)
     {
+        message += "\r\n";
         boost::asio::async_write(m_socket, boost::asio::buffer(message),
                                  [this](boost::system::error_code ec, size_t bytes_written) {
                                      if (ec)
@@ -68,10 +69,14 @@ namespace ftp_session
                                      {
                                          if (ec.message() == "Operation canceled")
                                          {
-                                             m_socket.shutdown(boost::asio::socket_base::shutdown_both);
+                                             print("Client disconnects\n");
+                                             m_socket.close();
+
+                                             // bad file descriptor error
+                                             //  m_socket.shutdown(boost::asio::socket_base::shutdown_both);
                                              return;
                                          }
-                                         print("Uncaught error -> " + ec.message(), "yellow");
+                                         print("Uncaught read_some error -> " + ec.message(), "yellow");
                                          return;
                                      }
 
@@ -91,5 +96,20 @@ namespace ftp_session
 
         std::string FTP_command = split_received_string[0];
         std::string FTP_argument = custom_utils::vectorStrJoin(split_received_string, " ");
+
+        if (FTP_command != "AUTH")
+        {
+            // client not starting a secure connection
+            send("503 Not recognized.");
+        }
+
+        // AUTH command received
+        if (FTP_argument != "TLS" && FTP_argument != "SSL")
+        {
+            // unexpected security extensions
+            send("502 Not supported.");
+        }
+
+        send("234 Proceed.");
     }
 } // namespace ftp_session

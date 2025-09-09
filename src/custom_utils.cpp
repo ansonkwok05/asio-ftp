@@ -91,6 +91,28 @@ namespace custom_utils
         return output;
     }
 
+    std::string strToUpper(const std::string input)
+    {
+        std::string output = "";
+
+        size_t i = 0;
+        while (i < input.size())
+        {
+            if (input.at(i) >= 'a' && input.at(i) <= 'z')
+            {
+                output += input.at(i) - 32;
+            }
+            else
+            {
+                output += input.at(i);
+            }
+
+            i++;
+        }
+
+        return output;
+    }
+
     std::string replaceString(const std::string &original, std::string search, std::string replacement)
     {
         std::string output = "";

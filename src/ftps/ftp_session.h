@@ -15,7 +15,7 @@ namespace ftp_session
     private:
         const int IMPLICIT_TIMEOUT_MS = 500; // time to wait for an implicit connection (tls handshake)
 
-        const std::string FTP_WELCOMEMESSAGE = "220 Welcome.\r\n"; // must start with 220 and ends with \r\n
+        const std::string FTP_WELCOMEMESSAGE = "220 Welcome."; // must start with 220 and ends with \r\n
 
         boost::asio::ip::tcp::socket m_socket;
         std::string m_received_string;
