@@ -7,17 +7,15 @@
 
 namespace custom_utils
 {
-    void print(char character);
     void print(std::string message);
     void print(std::string message, std::string color);
 
-    void printNum(int number);
+    void println();
+    void println(std::string message);
+    void println(std::string message, std::string color);
 
-    /**
-     * @param decimal A decimal number
-     * @param decimalPoints Decimal points to display
-     */
-    void printNum(double decimal, int decimalPoints);
+    const std::map<std::string, int> COLORS = {{"black", 30}, {"red", 31},     {"green", 32}, {"yellow", 33},
+                                               {"blue", 34},  {"magenta", 35}, {"cyan", 36},  {"white", 37}};
 
     /**
      * set the color of cout by using ANSI color code
@@ -26,6 +24,8 @@ namespace custom_utils
     void setPrintColor(std::string color);
 
     void resetPrintColor();
+
+    std::string getTimeString();
 
     std::vector<std::string> splitString(const std::string &inputString, char delimiter);
     std::string vectorStrJoin(std::vector<std::string> inputVector, std::string seperator);

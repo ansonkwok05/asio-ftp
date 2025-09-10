@@ -38,11 +38,11 @@ namespace sqlite_wrapper
         int rc = sqlite3_open("data/storage.db", &db);
         if (rc != SQLITE_OK)
         {
-            print("\n", "red");
-            throw std::runtime_error("Failed to open database.");
+            println("Failed to open database", "red");
+            throw std::runtime_error("sqlite3_open operation failed");
         }
 
-        print("Opened database storage.db\n", "green");
+        println("Opened database storage.db", "green");
     }
 
     bool SQLiteDb::insert_data(std::string table_name, std::vector<std::string> column_vector,
@@ -83,10 +83,10 @@ namespace sqlite_wrapper
         if (rc != SQLITE_OK)
         {
             // could be due to full/corrupted database, or incorrect data/data type is inserted
-            print("\nFailed to insert data\n", "red");
-            print("Query: " + data_insertion_query + "\n", "red");
-            print("Error code -> " + std::to_string(rc) + "\n", "red");
-            print("Error msg -> " + std::string(errMsg) + "\n", "red");
+            println("Failed to insert data", "red");
+            println("Query: " + data_insertion_query, "red");
+            println("Error code -> " + std::to_string(rc), "red");
+            println("Error msg -> " + std::string(errMsg), "red");
 
             return false;
         }
@@ -121,10 +121,10 @@ namespace sqlite_wrapper
         int rc = sqlite3_exec(db, data_selection_query.c_str(), sqlite_callback, &context, &errMsg);
         if (rc != SQLITE_OK)
         {
-            print("\nFailed to read data\n", "red");
-            print("Query: " + data_selection_query + "\n", "red");
-            print("Error code -> " + std::to_string(rc) + "\n", "red");
-            print("Error msg -> " + std::string(errMsg) + "\n", "red");
+            println("Failed to read data", "red");
+            println("Query: " + data_selection_query, "red");
+            println("Error code -> " + std::to_string(rc) + "\n", "red");
+            println("Error msg -> " + std::string(errMsg) + "\n", "red");
 
             return false;
         }
@@ -145,10 +145,10 @@ namespace sqlite_wrapper
         int rc = sqlite3_exec(db, data_deletion_query.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
-            print("\nFailed to delete data\n", "red");
-            print("Query: " + data_deletion_query + "\n", "red");
-            print("Error code -> " + std::to_string(rc) + "\n", "red");
-            print("Error msg -> " + std::string(errMsg) + "\n", "red");
+            println("Failed to delete data", "red");
+            println("Query: " + data_deletion_query, "red");
+            println("Error code -> " + std::to_string(rc), "red");
+            println("Error msg -> " + std::string(errMsg), "red");
 
             return false;
         }
@@ -160,19 +160,19 @@ namespace sqlite_wrapper
         // checking for data directory existance
         if (fs_handler::directory_exists("data"))
         {
-            print("Found data folder\n", "green");
+            println("Found data folder", "green");
             return;
         }
 
-        print("data folder does not exist, creating a new one right now\n", "yellow");
+        println("data folder does not exist, creating a new one right now", "yellow");
         fs_handler::create_directory("data");
 
         if (!fs_handler::directory_exists("data"))
         {
-            print("\n", "red");
-            throw std::runtime_error("Unable to create data folder");
+            println("Unable to create data folder", "red");
+            throw std::runtime_error("create_directory operation failed");
         }
-        print("Created ./data\n", "green");
+        println("Created ./data", "green");
     }
 
     void SQLiteDb::check_db_file_exists()
@@ -180,28 +180,28 @@ namespace sqlite_wrapper
         // checking for db file existance, and connect if found
         if (fs_handler::file_exists("data/storage.db"))
         {
-            print("Found data/storage.db\n", "green");
+            println("Found data/storage.db", "green");
 
             int rc = sqlite3_open("data/storage.db", &db);
             if (rc != SQLITE_OK)
             {
-                print("\n", "red");
-                throw std::runtime_error("Failed to create database.");
+                println("Failed to create database", "red");
+                throw std::runtime_error("sqlite3_open operation failed");
             }
-            print("Connected to data/storage.db\n", "green");
+            println("Connected to data/storage.db", "green");
             return;
         }
 
-        print("data/storage.db does not exist, creating a new one now\n", "yellow");
+        println("data/storage.db does not exist, creating a new one now", "yellow");
 
         int rc = sqlite3_open("data/storage.db", &db);
         if (rc != SQLITE_OK)
         {
-            print("\n", "red");
-            throw std::runtime_error("Failed to create database.");
+            println("Failed to create database", "red");
+            throw std::runtime_error("sqlite3_open operation failed");
         }
 
-        print("Created and connected to data/storage.db\n", "green");
+        println("Created and connected to data/storage.db", "green");
     }
 
     void SQLiteDb::check_tables()
@@ -214,14 +214,14 @@ namespace sqlite_wrapper
             sqlite3_exec(db, "SELECT name FROM sqlite_master WHERE type='table'", sqlite_callback, &context, &errMsg);
         if (rc != SQLITE_OK)
         {
-            print("\nFailed to list all table names\n", "red");
+            println("Failed to list all table names", "red");
             throw std::runtime_error(errMsg);
         }
 
         // if no tables exists, create em all
         if (context.argv.size() == 0)
         {
-            print("No tables found in database\n", "yellow");
+            println("No tables found in database", "yellow");
             for (auto const &[key, val] : TARGET_TABLES)
             {
                 create_table(key);
@@ -242,8 +242,8 @@ namespace sqlite_wrapper
                     TARGET_TABLES.end()) // an unknown table name is found in database
                 {
                     allTableNamesValid = false;
-                    print("\n", "red");
-                    throw std::runtime_error("Unexpected table \"" + context.argv[i] + "\" found in database\n");
+                    println("Unexpected table \"" + context.argv[i] + "\" found in database", "red");
+                    throw std::runtime_error("possible different database version");
                 }
             }
 
@@ -253,7 +253,7 @@ namespace sqlite_wrapper
                 {
                     check_table_structure(context.argv[i]);
                 }
-                print("All tables are validated in database\n", "green");
+                println("All tables are validated in database", "green");
                 return; // table is valid
             }
         }
@@ -263,7 +263,7 @@ namespace sqlite_wrapper
         {
             if (std::find(context.argv.begin(), context.argv.end(), key) == context.argv.end())
             {
-                print("Missing table \"" + key + "\"\n", "yellow");
+                println("Missing table \"" + key + "\"", "yellow");
                 create_table(key);
             }
         }
@@ -278,19 +278,20 @@ namespace sqlite_wrapper
         int rc = sqlite3_exec(db, OPTIMIZATIONS.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
-            print("\nFailed to list all table names\n", "red");
+            println("Failed to list all table names", "red");
             throw std::runtime_error(errMsg);
         }
+        println("Database optimizations set", "green");
     }
 
     void SQLiteDb::create_table(std::string table_name)
     {
-        print("Creating \"" + table_name + "\" table\n", "yellow");
+        println("Creating \"" + table_name + "\" table", "yellow");
 
         if (TARGET_TABLES.find(table_name) == TARGET_TABLES.end())
         {
-            print("\n", "red");
-            throw std::runtime_error("Cannot create table, unknown table name");
+            println("Cannot create table, unknown table name", "red");
+            throw std::runtime_error("create_table operation failed");
         }
 
         std::string table_creation_query = "CREATE TABLE IF NOT EXISTS " + table_name + " (";
@@ -304,14 +305,14 @@ namespace sqlite_wrapper
         }
         table_creation_query += ")";
 
-        print(table_creation_query + "\n", "blue");
+        println(table_creation_query, "blue");
 
         SQLite_Context context; // context for return values
         char *errMsg;           // returned error message
         int rc = sqlite3_exec(db, table_creation_query.c_str(), 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
-            print("\nFailed to create \"" + table_name + "\" table.\n", "red");
+            println("Failed to create \"" + table_name + "\" table.", "red");
             throw std::runtime_error(errMsg);
         }
     }
@@ -325,15 +326,14 @@ namespace sqlite_wrapper
         int rc = sqlite3_exec(db, table_structure_check_query.c_str(), sqlite_callback, &context, &errMsg);
         if (rc != SQLITE_OK)
         {
-            print("\nFailed to check table structure\n", "red");
+            println("Failed to check table structure", "red");
             throw std::runtime_error(errMsg);
         }
 
         if (context.argv.size() != 1)
         {
-            print("\n", "red");
-            throw std::runtime_error(
-                "Unexpected return value from SQLITE, table structure check must return size of 1");
+            println("Unexpected return value from SQLITE, table structure check must return size of 1", "red");
+            throw std::runtime_error("more than one table with the same name??");
         }
 
         std::string table_creation_query = "CREATE TABLE " + table_name + " (";
@@ -350,23 +350,23 @@ namespace sqlite_wrapper
         if (context.argv[0] != table_creation_query)
         {
             // the method used to create this table is different
-            print("\n", "red");
-            throw std::runtime_error("Detected a different table structure in \"" + table_name + "\" table");
+            println("Detected a different table structure in \"" + table_name + "\" table", "red");
+            throw std::runtime_error("possible different table version");
         }
     }
 
-    void SQLiteDb::print(std::string message)
+    void SQLiteDb::println(std::string message)
     {
         if (!allowLogging)
             return;
-        custom_utils::print(message);
+        custom_utils::println(message);
     }
 
-    void SQLiteDb::print(std::string message, std::string color)
+    void SQLiteDb::println(std::string message, std::string color)
     {
         if (!allowLogging)
             return;
-        custom_utils::print(message, color);
+        custom_utils::println(message, color);
     }
 
     int SQLiteDb::sqlite_callback(void *context, int argc, char **argv, char **azColName)
@@ -375,8 +375,8 @@ namespace sqlite_wrapper
         SQLite_Context *c = (SQLite_Context *)context;
         if (!c)
         {
-            custom_utils::print("\n", "red");
-            throw std::runtime_error("Query context error.");
+            custom_utils::println("Query context error", "red");
+            throw std::runtime_error("sqlite_callback operation failed");
         }
 
         // copy argc

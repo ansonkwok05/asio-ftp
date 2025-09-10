@@ -4,7 +4,7 @@
 
 namespace ftp_session
 {
-    class session
+    class session : public std::enable_shared_from_this<session>
     {
     public:
         session(boost::asio::ip::tcp::socket socket);
@@ -19,6 +19,7 @@ namespace ftp_session
 
         boost::asio::ip::tcp::socket m_socket;
         std::string m_received_string;
+        std::vector<int> m_buffer;
 
         void send(std::string message);
         void receive();

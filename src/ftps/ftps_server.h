@@ -19,6 +19,7 @@ namespace ftps_server
 
         boost::asio::ip::tcp::socket m_socket; // a temporary socket for acceptor, which gets moved to a ftp session
 
+        void check_tls_keys();
         void start_accepting();
     };
 

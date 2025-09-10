@@ -12,11 +12,6 @@ namespace custom_utils
 {
     using std::cout;
 
-    void print(char character)
-    {
-        cout << character;
-    }
-
     void print(std::string message)
     {
         cout << message;
@@ -29,27 +24,44 @@ namespace custom_utils
         resetPrintColor();
     }
 
-    void printNum(int number)
+    void println()
     {
-        cout << std::fixed << std::setprecision(0) << number;
+        cout << '[' << getTimeString() << ']' << ' ';
+        cout << "\n";
     }
 
-    void printNum(double decimal, int decimalPoints)
+    void println(std::string message)
     {
-        cout << std::fixed << std::setprecision(decimalPoints) << decimal;
+        cout << '[' << getTimeString() << ']' << ' ';
+        cout << message << "\n";
     }
 
-    const std::map<std::string, int> colorMap = {{"black", 30}, {"red", 31},     {"green", 32}, {"yellow", 33},
-                                                 {"blue", 34},  {"magenta", 35}, {"cyan", 36},  {"white", 37}};
+    void println(std::string message, std::string color)
+    {
+        setPrintColor(color);
+        cout << '[' << getTimeString() << ']' << ' ';
+        cout << message << "\n";
+        resetPrintColor();
+    }
 
     void setPrintColor(std::string color)
     {
-        cout << "\033[" << colorMap.at(color) << "m";
+        cout << "\033[" << COLORS.at(color) << "m";
     }
 
     void resetPrintColor()
     {
         cout << "\033[0m";
+    }
+
+    std::string getTimeString()
+    {
+        auto curretTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
+        std::string current_time_string = std::string(std::ctime(&curretTime));
+
+        std::vector<std::string> split_time_string = splitString(current_time_string, ' ');
+
+        return split_time_string[3];
     }
 
     std::vector<std::string> splitString(const std::string &inputString, char delimiter)

@@ -1,26 +1,32 @@
 #include "../custom_utils.h"
 #include "ftps_session.h"
 
+#include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
+
 namespace ftps_session
 {
     using custom_utils::print;
+    using custom_utils::println;
 
     session::session(boost::asio::ip::tcp::socket socket) : m_socket(std::move(socket))
+    // session::session(boost::asio::ip::tcp::socket socket)
+    // : m_socket(std::move(socket)), m_ssl_context(boost::asio::ssl::context::tlsv13_server)
     {
-        print("ftps_session class construct.\n", "white");
-        // boost::asio::ssl::context ssl_ctx(boost::asio::ssl::context::tlsv13_server);
+        println("FTPS session created", "black");
 
-        // ssl_ctx.set_options(boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 |
-        //                     boost::asio::ssl::context::no_tlsv1 | boost::asio::ssl::context::no_tlsv1_1 |
-        //                     boost::asio::ssl::context::single_dh_use);
-        // ssl_ctx.use_certificate_chain_file("tls/cert.pem");
-        // ssl_ctx.use_private_key_file("tls/key.pem", boost::asio::ssl::context::pem);
-        // ssl_ctx.use_tmp_dh_file("tls/dh.pem");
+        // m_ssl_context.set_options(boost::asio::ssl::context::default_workarounds |
+        // boost::asio::ssl::context::no_sslv2 |
+        //                           boost::asio::ssl::context::no_tlsv1 | boost::asio::ssl::context::no_tlsv1_1 |
+        //                           boost::asio::ssl::context::single_dh_use);
+        // m_ssl_context.use_certificate_chain_file("tls/cert.pem");
+        // m_ssl_context.use_private_key_file("tls/key.pem", boost::asio::ssl::context::pem);
+        // m_ssl_context.use_tmp_dh_file("tls/dh.pem");
     }
 
     session::~session()
     {
-        print("ftps_session class destruct\n", "black");
+        println("FTPS session destroyed", "black");
     }
 
     void session::start()
