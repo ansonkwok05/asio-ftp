@@ -12,7 +12,7 @@ namespace ftp_session
     using custom_utils::print;
     using custom_utils::println;
 
-    session::session(boost::asio::ip::tcp::socket socket) : m_socket(std::move(socket))
+    session::session(boost::asio::ip::tcp::socket socket) : m_socket(std::move(socket)), m_buffer(BUFFER_SIZE)
     {
         println("FTP session created", "black");
     }
@@ -62,7 +62,7 @@ namespace ftp_session
 
     void session::receive()
     {
-        m_socket.async_read_some(boost::asio::buffer(m_buffer),
+        m_socket.async_read_some(boost::asio::buffer(m_buffer, BUFFER_SIZE),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
                                      if (ec)
                                      {

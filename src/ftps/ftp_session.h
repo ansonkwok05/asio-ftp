@@ -18,8 +18,11 @@ namespace ftp_session
         const std::string FTP_WELCOMEMESSAGE = "220 Welcome."; // must start with 220 and ends with \r\n
 
         boost::asio::ip::tcp::socket m_socket;
-        std::string m_received_string;
+
+        const size_t BUFFER_SIZE = 64; // buffer size in bytes
         std::vector<int> m_buffer;
+
+        std::string m_received_string;
 
         void send(std::string message);
         void receive();
