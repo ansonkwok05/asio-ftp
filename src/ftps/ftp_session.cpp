@@ -36,6 +36,7 @@ namespace ftp_session
             if (m_socket.available() > 100)
             {
                 // implicit mode
+                // todo: pass a variable to ftps_session to not send welcome message
                 std::make_shared<ftps_session::session>(std::move(m_socket))->start();
                 return;
             }
@@ -44,6 +45,7 @@ namespace ftp_session
 
         // explicit mode
         send(FTP_WELCOMEMESSAGE);
+        receive();
     }
 
     void session::send(std::string message)
@@ -53,10 +55,9 @@ namespace ftp_session
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
                                      if (ec)
                                      {
-                                         println("Uncaught async_write error -> " + ec.message(), "yellow");
+                                         self->println("Uncaught async_write error -> " + ec.message(), "yellow");
                                          return;
                                      }
-                                     self->receive();
                                  });
     }
 
@@ -71,21 +72,27 @@ namespace ftp_session
                                              // client disconnects
                                              return;
                                          }
-                                         println("Uncaught read_some error -> " + ec.message(), "yellow");
+                                         self->println("Uncaught read_some error -> " + ec.message(), "yellow");
                                          return;
                                      }
 
+                                     self->println("bytes received: " + std::to_string(bytes_received));
+
+                                     self->m_received_string = "";
+
                                      // remove unwanted data
+                                     for (size_t i = 0; i < bytes_received - 2; i++)
+                                     {
+                                         self->m_received_string += self->m_buffer.at(i);
+                                     }
 
-                                     println(std::to_string(bytes_received));
-
-                                     //  self->handle_FTP_command();
+                                     self->handle_FTP_command();
                                  });
     }
 
     void session::handle_FTP_command()
     {
-        println(m_received_string);
+        println("received: " + m_received_string);
 
         std::vector<std::string> split_received_string = custom_utils::splitString(m_received_string, ' ');
 
@@ -109,6 +116,16 @@ namespace ftp_session
         }
 
         send("234 Proceed.");
-        // std::make_shared<ftps_session::session>(std::move(m_socket))->start();
+        std::make_shared<ftps_session::session>(std::move(m_socket))->start();
+    }
+
+    void session::println(std::string message)
+    {
+        custom_utils::println("[FTP] " + message);
+    }
+
+    void session::println(std::string message, std::string color)
+    {
+        custom_utils::println("[FTP] " + message, color);
     }
 } // namespace ftp_session

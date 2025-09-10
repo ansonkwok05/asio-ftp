@@ -2,6 +2,8 @@
 
 #include <boost/asio.hpp>
 
+#include <string>
+
 namespace ftp_session
 {
     class session : public std::enable_shared_from_this<session>
@@ -20,12 +22,15 @@ namespace ftp_session
         boost::asio::ip::tcp::socket m_socket;
 
         const size_t BUFFER_SIZE = 64; // buffer size in bytes
-        std::vector<int> m_buffer;
+        std::vector<char> m_buffer;
 
         std::string m_received_string;
 
         void send(std::string message);
         void receive();
         void handle_FTP_command();
+
+        void println(std::string message);
+        void println(std::string message, std::string color);
     };
 } // namespace ftp_session

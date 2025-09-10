@@ -16,7 +16,7 @@ int main()
         custom_utils::stopwatch performanceWatcher;
         performanceWatcher.start();
 
-        println("Initializing database\n", "green");
+        println("Initializing database", "green");
 
         sqlite_wrapper::SQLiteDb *database = new sqlite_wrapper::SQLiteDb(sqlite_wrapper::ENABLE_LOGGING);
         database->init_db();

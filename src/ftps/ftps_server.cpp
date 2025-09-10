@@ -12,7 +12,6 @@
 
 namespace ftps_server
 {
-    using custom_utils::print;
     using custom_utils::println;
 
     server::server()
