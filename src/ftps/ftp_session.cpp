@@ -14,12 +14,14 @@ namespace ftp_session
 
     session::session(boost::asio::ip::tcp::socket socket) : m_socket(std::move(socket)), m_buffer(BUFFER_SIZE)
     {
-        println("FTP session created", "black");
+        println("session created for " + m_socket.remote_endpoint().address().to_string() + ":" +
+                    std::to_string(m_socket.remote_endpoint().port()),
+                "black");
     }
 
     session::~session()
     {
-        println("FTP session destroyed", "black");
+        println("session destroyed", "black");
     }
 
     void session::start()
@@ -36,8 +38,7 @@ namespace ftp_session
             if (m_socket.available() > 100)
             {
                 // implicit mode
-                // todo: pass a variable to ftps_session to not send welcome message
-                std::make_shared<ftps_session::session>(std::move(m_socket))->start();
+                std::make_shared<ftps_session::session>(std::move(m_socket), true)->start();
                 return;
             }
             custom_utils::sleep(20);
@@ -67,9 +68,9 @@ namespace ftp_session
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
                                      if (ec)
                                      {
-                                         if (ec.message() == "End of file")
+                                         if (ec == boost::asio::error::eof)
                                          {
-                                             // client disconnects
+                                             // client disconnected
                                              return;
                                          }
                                          self->println("Uncaught read_some error -> " + ec.message(), "yellow");
@@ -94,6 +95,12 @@ namespace ftp_session
     {
         println("received: " + m_received_string);
 
+        if (m_received_string.size() == 0)
+        {
+            // no message received
+            return;
+        }
+
         std::vector<std::string> split_received_string = custom_utils::splitString(m_received_string, ' ');
 
         std::string FTP_command = split_received_string[0];
@@ -116,7 +123,7 @@ namespace ftp_session
         }
 
         send("234 Proceed.");
-        std::make_shared<ftps_session::session>(std::move(m_socket))->start();
+        std::make_shared<ftps_session::session>(std::move(m_socket), false)->start();
     }
 
     void session::println(std::string message)
