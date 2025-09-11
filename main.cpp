@@ -10,6 +10,16 @@ using custom_utils::println;
 
 int main()
 {
+    std::string test = "";
+    std::vector<std::string> split = custom_utils::splitString(test, ' ');
+
+    for (int i = 0; i < split.size(); i++)
+    {
+        println("?: " + split.at(i));
+    }
+
+    return 0;
+
     std::srand(std::time(NULL)); // initialize rand
 
     { // database initialization

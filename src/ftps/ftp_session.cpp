@@ -3,6 +3,7 @@
 #include "ftps_session.h"
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include <string>
 #include <vector>
@@ -38,7 +39,7 @@ namespace ftp_session
             if (m_socket.available() > 100)
             {
                 // implicit mode
-                std::make_shared<ftps_session::session>(std::move(m_socket), true)->start();
+                start_ftps_session(true);
                 return;
             }
             custom_utils::sleep(20);
@@ -77,6 +78,19 @@ namespace ftp_session
                                          return;
                                      }
 
+                                     if (bytes_received == 1 || bytes_received == 2)
+                                     {
+                                         self->println("received incomplete message (length " +
+                                                       std::to_string(bytes_received) + "), disconnecting");
+                                         return;
+                                     }
+
+                                     if (bytes_received == 0)
+                                     {
+                                         self->println("received nothing, disconnecting");
+                                         return;
+                                     }
+
                                      self->println("bytes received: " + std::to_string(bytes_received));
 
                                      self->m_received_string = "";
@@ -95,17 +109,17 @@ namespace ftp_session
     {
         println("received: " + m_received_string);
 
-        if (m_received_string.size() == 0)
-        {
-            // no message received
-            return;
-        }
-
         std::vector<std::string> split_received_string = custom_utils::splitString(m_received_string, ' ');
 
         std::string FTP_command = split_received_string[0];
-        std::string FTP_argument = custom_utils::vectorStrJoin(
-            std::vector<std::string>(split_received_string.begin() + 1, split_received_string.end()), " ");
+        std::string FTP_argument = "";
+
+        if (split_received_string.size() > 1)
+        {
+            // received message has argument(s)
+            FTP_argument = custom_utils::vectorStrJoin(
+                std::vector<std::string>(split_received_string.begin() + 1, split_received_string.end()), " ");
+        }
 
         if (FTP_command != "AUTH")
         {
@@ -123,7 +137,12 @@ namespace ftp_session
         }
 
         send("234 Proceed.");
-        std::make_shared<ftps_session::session>(std::move(m_socket), false)->start();
+        start_ftps_session(false);
+    }
+
+    void session::start_ftps_session(bool isImplicit)
+    {
+        std::make_shared<ftps_session::session>(std::move(m_socket), isImplicit)->start();
     }
 
     void session::println(std::string message)

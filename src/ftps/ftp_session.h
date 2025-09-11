@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
+#include <boost/asio/ssl.hpp>
 
 #include <string>
 
@@ -29,6 +30,8 @@ namespace ftp_session
         void send(std::string message);
         void receive();
         void handle_FTP_command();
+
+        void start_ftps_session(bool isImplicit);
 
         void println(std::string message);
         void println(std::string message, std::string color);

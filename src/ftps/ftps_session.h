@@ -8,7 +8,7 @@ namespace ftps_session
     class session : public std::enable_shared_from_this<session>
     {
     public:
-        session(boost::asio::ip::tcp::socket socket, bool send_welcome_message);
+        session(boost::asio::ip::tcp::socket socket, bool isImplicit);
         ~session();
 
         void start();
@@ -16,12 +16,13 @@ namespace ftps_session
     private:
         const std::string FTP_WELCOMEMESSAGE = "220 Welcome.";
 
-        bool m_send_welcome_message;
+        bool m_isImplicit;
 
-        boost::asio::ip::tcp::socket m_control_socket;
+        std::shared_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> m_control_socket;
+        // boost::asio::ssl::stream<boost::asio::ip::tcp::socket> m_control_socket;
         boost::asio::ssl::context m_ssl_context;
 
-        const size_t BUFFER_SIZE = 64; // buffer size in bytes
+        const size_t BUFFER_SIZE = 128; // buffer size in bytes
         std::vector<char> m_buffer;
 
         std::string m_received_string;
