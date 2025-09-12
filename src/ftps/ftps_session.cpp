@@ -437,11 +437,80 @@ namespace ftps_session
                         return;
                     }
 
-                    // todo: check if directory exists
+                    // root always exists, no need to check
+                    // change directory immediately
+                    if (argument == "/")
                     {
+                        println(m_working_directory + " -> /");
+                        m_working_directory = get_last_slash(m_working_directory);
+                        m_working_directory = "/";
+                        control_send("250 Changed working directory.");
+                        control_receive();
+                        return;
                     }
-                    return;
+
+                    // check if directory exists
+                    {
+                        bool is_absolute_path = false;
+                        if (argument.at(0) == '/')
+                        {
+                            is_absolute_path = true;
+                        }
+
+                        std::string path = "";
+                        std::string name = "";
+
+                        if (is_absolute_path)
+                        {
+                            // use the last_slash of argument as path
+                            // and the difference as name
+                            path = get_last_slash(argument);
+
+                            std::vector<std::string> tempVec = custom_utils::splitString(argument, '/');
+                            name = tempVec.at(tempVec.size() - 1);
+                        }
+                        else
+                        {
+                            path = m_working_directory;
+                            name = argument;
+                        }
+
+                        // got the actual path and name now
+                        // next search database for it
+
+                        std::vector<std::string> files_metadatas = get_files_metadatas();
+
+                        println("exists? -> " + path + " <> " + name);
+
+                        size_t i = 0;
+                        while (i < files_metadatas.size())
+                        {
+                            // find for matches for path
+                            if (files_metadatas.at(i + 1) == path)
+                            {
+                                // find for matches for name
+                                if (files_metadatas.at(i) == name)
+                                {
+                                    // found, the requested directory exists
+                                    println(m_working_directory + " -> " + path + name);
+                                    m_working_directory = path + name;
+                                    control_send("250 Changed working directory.");
+                                    control_receive();
+                                    return;
+                                }
+                            }
+                            i += 6;
+                        }
+
+                        // directory doesn't exists
+                        println("Cannot change working directory: " + path + name + ", not found");
+                        control_send("550 No such file or directory.");
+                        control_receive();
+                        return;
+                    }
                 }
+
+                // todo: MKD, RMD and DELE
             }
         }
 
@@ -473,7 +542,6 @@ namespace ftps_session
                             // client disconnected
                             self->println("Data socket disconnected -> " + ec.message(), "yellow");
 
-                            self->m_control_socket->shutdown();
                             self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                             self->m_control_socket->next_layer().close();
                             return;
