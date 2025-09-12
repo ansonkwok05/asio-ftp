@@ -57,7 +57,7 @@ namespace ftp_session
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
                                      if (ec)
                                      {
-                                         self->println("Uncaught async_write error -> " + ec.message(), "yellow");
+                                         self->println("Unknown async_write error -> " + ec.message(), "yellow");
                                          return;
                                      }
                                  });
@@ -72,9 +72,12 @@ namespace ftp_session
                                          if (ec == boost::asio::error::eof)
                                          {
                                              // client disconnected
+
+                                             self->m_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                                             self->m_socket.close();
                                              return;
                                          }
-                                         self->println("Uncaught read_some error -> " + ec.message(), "yellow");
+                                         self->println("Unknown read_some error -> " + ec.message(), "yellow");
                                          return;
                                      }
 
@@ -147,11 +150,11 @@ namespace ftp_session
 
     void session::println(std::string message)
     {
-        custom_utils::println("[FTP] " + message);
+        custom_utils::println("[FTP ] " + message);
     }
 
     void session::println(std::string message, std::string color)
     {
-        custom_utils::println("[FTP] " + message, color);
+        custom_utils::println("[FTP ] " + message, color);
     }
 } // namespace ftp_session
