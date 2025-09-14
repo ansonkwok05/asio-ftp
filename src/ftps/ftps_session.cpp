@@ -1,6 +1,7 @@
 #include "../custom_utils.h"
 #include "ftps_session.h"
 #include "../sqlite/sqlite_wrapper.h"
+#include "../sqlite/fs_handler.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -329,6 +330,7 @@ namespace ftps_session
                     // L 8: Turn the binary flag on.
 
                     // low priority todo: check what is this about
+                    // currently everything is sent in binary
                     control_send("200 OK.");
                     control_receive();
                     return;
@@ -492,6 +494,14 @@ namespace ftps_session
                                 if (files_metadatas.at(i) == name)
                                 {
                                     // found, the requested directory exists
+
+                                    if (path != "/")
+                                    {
+                                        // path is not root, so it doesn't end in '/'
+                                        // must add '/' between path to prevent path and name combining
+                                        path += '/';
+                                    }
+
                                     println(m_working_directory + " -> " + path + name);
                                     m_working_directory = path + name;
                                     control_send("250 Changed working directory.");
@@ -510,7 +520,168 @@ namespace ftps_session
                     }
                 }
 
-                // todo: MKD, RMD and DELE
+                if (command == "MKD")
+                {
+                    if (argument == "")
+                    {
+                        println("Cannot make directory, no arguments", "yellow");
+                        control_send("501 No arguments presented.");
+                        control_receive();
+                        return;
+                    }
+
+                    std::vector<std::string> files_metadatas = get_files_metadatas();
+
+                    // check if folder already exists
+                    size_t i = 0;
+                    while (i < files_metadatas.size())
+                    {
+                        if (files_metadatas.at(i) == argument && files_metadatas.at(i + 1) == m_working_directory)
+                        {
+                            // folder already exists
+                            control_send("550 Directory already exist.");
+                            return;
+                        }
+                        i += 6;
+                    }
+
+                    // create folder
+                    println("Creating virtual directory \"" + m_working_directory + "\" \"" + argument + "\"\n",
+                            "green");
+
+                    std::string folder_id = custom_utils::generate_uuid_string(16);
+
+                    m_database.insert_data("files",
+                                           {
+                                               "file_id",
+                                               "user_id",
+                                           },
+                                           {
+                                               folder_id,
+                                               m_userid,
+                                           });
+
+                    m_database.insert_data("files_metadata",
+                                           {
+                                               "file_name",
+                                               "file_path",
+                                               "file_size",
+                                               "is_directory",
+                                               "file_id",
+                                           },
+                                           {
+                                               argument,
+                                               m_working_directory,
+                                               "0",
+                                               "1",
+                                               folder_id,
+                                           });
+
+                    control_send("250 Directory created.");
+                    control_receive();
+                    return;
+                }
+
+                if (command == "RMD")
+                {
+                    if (argument == "")
+                    { // no argument
+                        control_send("501 No arguments presented.");
+                        control_receive();
+                        return;
+                    }
+
+                    std::vector<std::string> files_metadatas = get_files_metadatas();
+
+                    // search and delete folder
+                    size_t i = 0;
+                    while (i < files_metadatas.size())
+                    {
+                        println(files_metadatas.at(i + 1) + " startsWith? " + m_working_directory + argument + " " +
+                                    std::to_string(custom_utils::strStartsWith(files_metadatas.at(i + 1),
+                                                                               m_working_directory + argument)),
+                                "cyan");
+
+                        // delete target folder
+                        if (files_metadatas.at(i) == argument && files_metadatas.at(i + 1) == m_working_directory)
+                        {
+
+                            if (!m_database.delete_data("files", "file_id", files_metadatas.at(i + 5)) ||
+                                !m_database.delete_data("files_metadata", "file_id", files_metadatas.at(i + 5)))
+                            {
+                                // something went wrong when trying to delete data from database
+                                control_send("550 Backend error.");
+                                control_receive();
+                                return;
+                            }
+                        }
+
+                        // delete files/folders in that target folder
+                        if (custom_utils::strStartsWith(files_metadatas.at(i + 1), m_working_directory + argument))
+                        {
+                            if (!m_database.delete_data("files", "file_id", files_metadatas.at(i + 5)) ||
+                                !m_database.delete_data("files_metadata", "file_id", files_metadatas.at(i + 5)))
+                            {
+                                // something went wrong when trying to delete data from database
+                                control_send("550 Backend error.");
+                                control_receive();
+                                return;
+                            }
+                        }
+                        i += 6;
+                    }
+
+                    control_send("250 Deleted.");
+                    control_receive();
+                    return;
+                }
+
+                if (command == "DELE")
+                {
+                    if (argument == "")
+                    {
+                        control_send("501 No arguments presented.");
+                        control_receive();
+                        return;
+                    }
+
+                    std::vector<std::string> files_metadatas = get_files_metadatas();
+
+                    size_t i = 0;
+                    while (i < files_metadatas.size())
+                    {
+                        if (files_metadatas.at(i) == argument && files_metadatas.at(i + 1) == m_working_directory)
+                        { // found
+                            if (fs_handler::remove_file("data/" + files_metadatas.at(i + 5)))
+                            { // success
+                                if (m_database.delete_data("files", "file_id", files_metadatas.at(i + 5)) &&
+                                    m_database.delete_data("files_metadata", "file_id", files_metadatas.at(i + 5)))
+                                { // if successfully deleted data from database
+                                    control_send("250 Deleted.");
+                                    control_receive();
+                                    return;
+                                }
+
+                                // something went wrong when trying to delete data from database
+                                control_send("550 Backend error.");
+                                control_receive();
+                                return;
+                            }
+
+                            // cannot delete file from os
+                            control_send("550 Unsuccessful delete.");
+                            control_receive();
+                            return;
+                        }
+                        i += 6;
+                    }
+
+                    control_send("550 File not found.");
+                    control_receive();
+                    return;
+                }
+
+                // todo: STOR and RETR
             }
         }
 
@@ -622,6 +793,7 @@ namespace ftps_session
                 if (self->m_pending_read_file != "")
                 {
                     // todo: implement reading file and serving to client
+                    // RETR command
                     return;
                 }
 
@@ -748,8 +920,10 @@ namespace ftps_session
         }
         }
 
-        // adding the day and time
+        // add day
         parsedStr += time_str.substr(8, 2) + " ";
+
+        // add hour:minute
         parsedStr += time_str.substr(11, 5);
 
         return parsedStr;
@@ -819,6 +993,8 @@ namespace ftps_session
                     if (files_metadata.at(i) == file_id_list.at(n))
                     {
                         // low priority todo: remove found file id from file_id_list?
+                        // can this reduce search time?
+                        // cuz every time a file is found, the next search needs to search 1 time less
                         found_file = true;
                         break;
                     }

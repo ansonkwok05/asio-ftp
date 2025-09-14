@@ -42,12 +42,12 @@ namespace ftps_session
                     // directory is returned.
             "CDUP", // Change to Parent Directory.
             "CWD",  // Change working directory.
+            "MKD",  // Make directory.
+            "RMD",  // Remove a directory.
+            "DELE", // Delete file.
 
-            // "RMD",  // Remove a directory.
-            // "MKD",  // Make directory.
             // "STOR", // Accept the data and to store the data as a file at the server site
             // "RETR", // Retrieve a copy of the file
-            // "DELE", // Delete file.
         };
 
         bool m_isImplicit;

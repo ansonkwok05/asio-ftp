@@ -125,6 +125,26 @@ namespace custom_utils
         return output;
     }
 
+    bool strStartsWith(const std::string input, std::string prefix)
+    {
+        if (input.size() < prefix.size())
+        {
+            return false;
+        }
+
+        size_t i = 0;
+        while (i < prefix.size())
+        {
+            if (input.at(i) != prefix.at(i))
+            {
+                return false;
+            }
+            i++;
+        }
+
+        return true;
+    }
+
     std::string replaceString(const std::string &original, std::string search, std::string replacement)
     {
         std::string output = "";
