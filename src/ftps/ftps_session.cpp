@@ -703,7 +703,29 @@ namespace ftps_session
                     control_receive();
                     return;
                 }
-                // todo: RETR
+
+                if (command == "RETR")
+                {
+                    if (argument == "")
+                    {
+                        // no argument
+                        control_send("501 No arguments presented.");
+                        control_receive();
+                        return;
+                    }
+
+                    if (m_pending_read_file != "")
+                    {
+                        println("Previous read operation not finished -> " + m_pending_read_file, "red");
+                        return;
+                    }
+
+                    m_pending_read_file = argument;
+
+                    control_send("150 Waiting for connection");
+                    control_receive();
+                    return;
+                }
             }
         }
 
@@ -717,6 +739,7 @@ namespace ftps_session
                 if (ec)
                 {
                     self->println("data socket acceptor error -> " + ec.message(), "red");
+                    return;
                 }
                 self->println("Data socket accepted", "green");
 
@@ -816,6 +839,50 @@ namespace ftps_session
                 {
                     // todo: implement reading file and serving to client
                     // RETR command
+
+                    // todo: check from database, then read from os
+                    std::vector<std::string> files_metadatas = self->get_files_metadatas();
+                    std::string target_file_id;
+
+                    size_t i = 0;
+                    while (i < files_metadatas.size())
+                    {
+                        if (files_metadatas.at(i) == self->m_pending_read_file &&
+                            files_metadatas.at(i + 1) == self->m_working_directory)
+                        {
+                            // found the target file to send to client
+                            target_file_id = files_metadatas.at(i + 5);
+                            break;
+                        }
+                        i += 6;
+                    }
+
+                    if (target_file_id == "")
+                    {
+                        // file not found
+                        self->println("Cannot find file to send to client", "red");
+                        self->m_data_socket->shutdown();
+                        self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                        self->m_data_socket->next_layer().close();
+                        return;
+                    }
+
+                    self->println("FOUND TARGET FILE TO SEND -> " + target_file_id);
+
+                    // todo: send file to client
+                    // file name is "data/" + target_file_id
+                    // check if exists before send
+                    // boost::asio::write(*self->m_data_socket);
+
+                    self->m_pending_read_file = "";
+
+                    self->control_send("226 Sent.");
+
+                    // close data channel, so client knows operation is done
+                    self->println("Data socket operation done, closing", "green");
+                    self->m_data_socket->shutdown();
+                    self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                    self->m_data_socket->next_layer().close();
                     return;
                 }
 
