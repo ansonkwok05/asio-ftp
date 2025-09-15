@@ -681,7 +681,29 @@ namespace ftps_session
                     return;
                 }
 
-                // todo: STOR and RETR
+                if (command == "STOR")
+                {
+                    if (argument == "")
+                    {
+                        // no argument
+                        control_send("501 No arguments presented.");
+                        control_receive();
+                        return;
+                    }
+
+                    if (m_pending_write_file != "")
+                    {
+                        println("Previous write operation not finished -> " + m_pending_write_file, "red");
+                        return;
+                    }
+
+                    m_pending_write_file = argument;
+
+                    control_send("150 Waiting for connection");
+                    control_receive();
+                    return;
+                }
+                // todo: RETR
             }
         }
 

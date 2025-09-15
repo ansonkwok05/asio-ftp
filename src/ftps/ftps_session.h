@@ -45,8 +45,8 @@ namespace ftps_session
             "MKD",  // Make directory.
             "RMD",  // Remove a directory.
             "DELE", // Delete file.
+            "STOR", // Accept the data and to store the data as a file at the server site
 
-            // "STOR", // Accept the data and to store the data as a file at the server site
             // "RETR", // Retrieve a copy of the file
         };
 
