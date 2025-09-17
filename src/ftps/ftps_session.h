@@ -70,6 +70,24 @@ namespace ftps_session
         std::string m_pending_write_file;
         std::string m_pending_read_file;
 
+        // bug: client cannot retrieve file when >1 concurrent connections
+        // it tries to do RETR multiple times, then fails
+        // 1 concurrent connection works perfectly well tho
+
+        // todo: multiple connection support
+        // use a vector of strings to store m_pending_write_file
+        // use a vector of strings to store m_pending_read_file
+
+        // todo: fix bug when retr
+        // use absolute paths instead of name only
+        // sometimes cannot find file because
+        // working_directory is changed before file is sent,
+        // possible due to read_some is asynchronous
+
+        // todo: do this to stor too
+        // use absolute paths instead of name only
+        // prevent possible async problems
+
         std::vector<std::string> m_data_send_buffer;
 
         void control_send(std::string message);

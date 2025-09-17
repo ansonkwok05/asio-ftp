@@ -58,15 +58,24 @@ namespace ftps_session
     void session::control_send(std::string message)
     {
         message += "\r\n";
-        boost::asio::async_write(*m_control_socket, boost::asio::buffer(message),
-                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
-                                     //  self->println("debug async_write");
-                                     if (ec)
-                                     {
-                                         self->println("Unknown async_write error -> " + ec.message(), "yellow");
-                                         return;
-                                     }
-                                 });
+
+        // boost::asio::async_write(*m_control_socket, boost::asio::buffer(message),
+        //                          [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
+        //                              //  self->println("debug async_write");
+        //                              if (ec)
+        //                              {
+        //                                  self->println("Unknown async_write error -> " + ec.message(), "yellow");
+        //                                  return;
+        //                              }
+        //                          });
+
+        boost::system::error_code ec;
+        boost::asio::write(*m_control_socket, boost::asio::buffer(message), ec);
+        if (ec)
+        {
+            println("Unknown async_write error -> " + ec.message(), "yellow");
+            return;
+        }
     }
 
     void session::control_receive()
@@ -115,6 +124,47 @@ namespace ftps_session
 
                 self->handle_received_string();
             });
+
+        // boost::system::error_code ec;
+        // size_t bytes_received = m_control_socket->read_some(boost::asio::buffer(m_buffer, BUFFER_SIZE), ec);
+        // if (ec)
+        // {
+        //     if (ec == boost::asio::ssl::error::stream_truncated)
+        //     {
+        //         // client disconnected
+        //         println("Client disconnected -> " + ec.message(), "green");
+
+        //         m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+        //         m_control_socket->next_layer().close();
+        //         return;
+        //     }
+        //     println("Unknown read_some error -> " + ec.message(), "yellow");
+        //     return;
+        // }
+
+        // if (bytes_received == 1 || bytes_received == 2)
+        // {
+        //     println("received incomplete message (length " + std::to_string(bytes_received) + "), disconnecting");
+        //     return;
+        // }
+
+        // if (bytes_received == 0)
+        // {
+        //     println("received nothing, disconnecting");
+        //     return;
+        // }
+
+        // println("bytes received: " + std::to_string(bytes_received));
+
+        // m_received_string = "";
+
+        // // remove unwanted data
+        // for (size_t i = 0; i < bytes_received - 2; i++)
+        // {
+        //     m_received_string += m_buffer.at(i);
+        // }
+
+        // handle_received_string();
     }
 
     void session::handle_received_string()
@@ -482,8 +532,6 @@ namespace ftps_session
 
                         std::vector<std::string> files_metadatas = get_files_metadatas();
 
-                        println("exists? -> " + path + " <> " + name);
-
                         size_t i = 0;
                         while (i < files_metadatas.size())
                         {
@@ -513,7 +561,7 @@ namespace ftps_session
                         }
 
                         // directory doesn't exists
-                        println("Cannot change working directory: " + path + name + ", not found");
+                        println("Cannot change working directory: " + path + " -> " + name + ", not found");
                         control_send("550 No such file or directory.");
                         control_receive();
                         return;
@@ -546,8 +594,7 @@ namespace ftps_session
                     }
 
                     // create folder
-                    println("Creating virtual directory \"" + m_working_directory + "\" \"" + argument + "\"\n",
-                            "green");
+                    println("Creating virtual directory \"" + m_working_directory + "\" \"" + argument + "\"", "green");
 
                     std::string folder_id = custom_utils::generate_uuid_string(16);
 
@@ -734,173 +781,193 @@ namespace ftps_session
 
     void session::data_acceptor_start_accept()
     {
-        m_data_socket_acceptor->async_accept(
-            [self = shared_from_this()](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
+        m_data_socket_acceptor->async_accept([self = shared_from_this()](boost::system::error_code ec,
+                                                                         boost::asio::ip::tcp::socket socket) {
+            if (ec)
+            {
+                self->println("data socket acceptor error -> " + ec.message(), "red");
+                return;
+            }
+            self->println("Data socket accepted", "green");
+
+            // create ssl stream socket
+            self->m_data_socket = std::make_unique<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(
+                std::move(socket), self->m_ssl_context);
+
+            // TLS handshake
+            {
+                boost::system::error_code ec;
+                self->m_data_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
                 if (ec)
                 {
-                    self->println("data socket acceptor error -> " + ec.message(), "red");
+                    if (ec == boost::asio::ssl::error::stream_truncated)
+                    {
+                        // client disconnected
+                        self->println("Data socket disconnected -> " + ec.message(), "yellow");
+
+                        self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                        self->m_control_socket->next_layer().close();
+                        return;
+                    }
+                    self->println("Unknown TLS handshake error -> " + ec.message(), "red");
                     return;
                 }
-                self->println("Data socket accepted", "green");
+                self->println("Data socket handshaked", "green");
+            }
 
-                // create ssl stream socket
-                self->m_data_socket = std::make_unique<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(
-                    std::move(socket), self->m_ssl_context);
+            // check if write file
+            if (self->m_pending_write_file != "")
+            {
+                std::string file_id = custom_utils::generate_uuid_string(16);
+                int file_size = 0;
 
-                // TLS handshake
+                std::ofstream output_file_stream("data/" + file_id);
+                if (!output_file_stream.is_open())
+                {
+                    self->println("Error opening output file stream", "red");
+                    return;
+                }
+
+                size_t buffer_size = 1024 * 1024;
+                char data[buffer_size];
+                while (true)
                 {
                     boost::system::error_code ec;
-                    self->m_data_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
-                    if (ec)
-                    {
-                        if (ec == boost::asio::ssl::error::stream_truncated)
-                        {
-                            // client disconnected
-                            self->println("Data socket disconnected -> " + ec.message(), "yellow");
+                    size_t bytes_read =
+                        boost::asio::read(*self->m_data_socket, boost::asio::buffer(data, buffer_size), ec);
 
-                            self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-                            self->m_control_socket->next_layer().close();
-                            return;
-                        }
-                        self->println("Unknown TLS handshake error -> " + ec.message(), "red");
+                    file_size += bytes_read;
+                    output_file_stream.write(data, bytes_read);
+
+                    if (output_file_stream.fail())
+                    {
+                        self->println("Error writing output file stream", "red");
                         return;
                     }
-                    self->println("Data socket handshaked", "green");
+
+                    if (ec.message() == "End of file") // no more file data to read
+                        break;
                 }
 
-                // check if write file
-                if (self->m_pending_write_file != "")
+                output_file_stream.close();
+
+                self->m_database.insert_data("files", {"user_id", "file_id"}, {self->m_userid, file_id});
+
+                self->m_database.insert_data("files_metadata",
+                                             {
+                                                 "file_name",
+                                                 "file_path",
+                                                 "file_size",
+                                                 "is_directory",
+                                                 "file_id",
+                                             },
+                                             {
+                                                 self->m_pending_write_file,
+                                                 self->m_working_directory,
+                                                 std::to_string(file_size),
+                                                 "0",
+                                                 file_id,
+                                             });
+
+                self->m_pending_write_file = "";
+
+                self->control_send("226 Received.");
+
+                // close data channel, so client knows operation is done
+                self->println("Data socket operation done, closing", "green");
+                self->m_data_socket->shutdown();
+                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                self->m_data_socket->next_layer().close();
+                return;
+            }
+
+            // check if read file
+            if (self->m_pending_read_file != "")
+            {
+                // todo: implement reading file and serving to client
+                // RETR command
+
+                // todo: check from database, then read from os
+                std::vector<std::string> files_metadatas = self->get_files_metadatas();
+                std::string target_file_id;
+
+                size_t i = 0;
+                while (i < files_metadatas.size())
                 {
-                    std::string file_id = custom_utils::generate_uuid_string(16);
-                    int file_size = 0;
-
-                    std::ofstream output_file_stream("data/" + file_id);
-                    if (!output_file_stream.is_open())
+                    if (files_metadatas.at(i) == self->m_pending_read_file &&
+                        files_metadatas.at(i + 1) == self->m_working_directory)
                     {
-                        self->println("Error opening output file stream", "red");
-                        return;
+                        // found the target file to send to client
+                        target_file_id = files_metadatas.at(i + 5);
+                        break;
                     }
+                    i += 6;
+                }
 
-                    size_t buffer_size = 1024 * 1024;
-                    char data[buffer_size];
-                    while (true)
-                    {
-                        boost::system::error_code ec;
-                        size_t bytes_read =
-                            boost::asio::read(*self->m_data_socket, boost::asio::buffer(data, buffer_size), ec);
-
-                        file_size += bytes_read;
-                        output_file_stream.write(data, bytes_read);
-
-                        if (output_file_stream.fail())
-                        {
-                            self->println("Error writing output file stream", "red");
-                            return;
-                        }
-
-                        if (ec.message() == "End of file") // no more file data to read
-                            break;
-                    }
-
-                    output_file_stream.close();
-
-                    self->m_database.insert_data("files", {"user_id", "file_id"}, {self->m_userid, file_id});
-
-                    self->m_database.insert_data("files_metadata",
-                                                 {
-                                                     "file_name",
-                                                     "file_path",
-                                                     "file_size",
-                                                     "is_directory",
-                                                     "file_id",
-                                                 },
-                                                 {
-                                                     self->m_pending_write_file,
-                                                     self->m_working_directory,
-                                                     std::to_string(file_size),
-                                                     "0",
-                                                     file_id,
-                                                 });
-
-                    self->m_pending_write_file = "";
-
-                    self->control_send("226 Received.");
-
-                    // close data channel, so client knows operation is done
-                    self->println("Data socket operation done, closing", "green");
+                if (target_file_id == "")
+                {
+                    // file not found
+                    self->println("Cannot find file -> " + self->m_pending_read_file + " to send to client", "red");
+                    self->println(self->m_working_directory + " " + self->m_pending_read_file, "red");
                     self->m_data_socket->shutdown();
                     self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
                     self->m_data_socket->next_layer().close();
                     return;
                 }
 
-                // check if read file
-                if (self->m_pending_read_file != "")
+                self->println("FOUND TARGET FILE TO SEND -> " + target_file_id);
+
+                // todo: send file to client
+
+                if (!fs_handler::file_exists("data/" + target_file_id))
                 {
-                    // todo: implement reading file and serving to client
-                    // RETR command
-
-                    // todo: check from database, then read from os
-                    std::vector<std::string> files_metadatas = self->get_files_metadatas();
-                    std::string target_file_id;
-
-                    size_t i = 0;
-                    while (i < files_metadatas.size())
-                    {
-                        if (files_metadatas.at(i) == self->m_pending_read_file &&
-                            files_metadatas.at(i + 1) == self->m_working_directory)
-                        {
-                            // found the target file to send to client
-                            target_file_id = files_metadatas.at(i + 5);
-                            break;
-                        }
-                        i += 6;
-                    }
-
-                    if (target_file_id == "")
-                    {
-                        // file not found
-                        self->println("Cannot find file to send to client", "red");
-                        self->m_data_socket->shutdown();
-                        self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-                        self->m_data_socket->next_layer().close();
-                        return;
-                    }
-
-                    self->println("FOUND TARGET FILE TO SEND -> " + target_file_id);
-
-                    // todo: send file to client
-                    // file name is "data/" + target_file_id
-                    // check if exists before send
-                    // boost::asio::write(*self->m_data_socket);
-
-                    self->m_pending_read_file = "";
-
-                    self->control_send("226 Sent.");
-
-                    // close data channel, so client knows operation is done
-                    self->println("Data socket operation done, closing", "green");
-                    self->m_data_socket->shutdown();
-                    self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-                    self->m_data_socket->next_layer().close();
+                    self->println("File not found during data socket sending", "red");
                     return;
                 }
 
-                // send directory listing operation
+                std::ifstream readFileStream("data/" + target_file_id);
+
+                const int SEND_BUFFER_SIZE = 64 * 1024;
+                char fileBuffer[SEND_BUFFER_SIZE] = {0};
+
+                int bytes_sent = 0;
+
+                while (!readFileStream.eof())
                 {
-                    self->data_send(""); // use empty string to flush buffer
+                    readFileStream.read(fileBuffer, SEND_BUFFER_SIZE);
 
-                    self->control_send("226 Transferred.");
-
-                    // close data channel, so client knows operation is done
-                    self->println("Data socket operation done, closing", "green");
-
-                    self->m_data_socket->shutdown();
-                    self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-                    self->m_data_socket->next_layer().close();
-                    return;
+                    boost::asio::write(*self->m_data_socket, boost::asio::buffer(fileBuffer, readFileStream.gcount()));
+                    bytes_sent += readFileStream.gcount();
                 }
-            });
+
+                self->m_pending_read_file = "";
+
+                self->control_send("226 Sent.");
+                self->println("bytes sent: " + std::to_string(bytes_sent));
+
+                // close data channel, so client knows operation is done
+                self->println("File sent, closing data socket", "green");
+                self->m_data_socket->shutdown();
+                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                self->m_data_socket->next_layer().close();
+                return;
+            }
+
+            // send directory listing operation
+            {
+                self->data_send(""); // use empty string to flush buffer
+
+                self->control_send("226 Transferred.");
+
+                // close data channel, so client knows operation is done
+                self->println("Directory listing done, closing data socket", "green");
+
+                self->m_data_socket->shutdown();
+                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                self->m_data_socket->next_layer().close();
+                return;
+            }
+        });
     }
 
     void session::data_send(std::string message)
