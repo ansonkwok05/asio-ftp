@@ -3,7 +3,7 @@ QuickSave is a cross-platform C++ application built to provide a fast and straig
 
 ### Current features
 * SQLite database operations - insert, read, delete
-* FTPS server - explicit and implicit mode (currently only TLS handshake is implemented)
+* FTPS server - explicit and implicit mode
 
 ### To be implemented:
 * SFTP server
