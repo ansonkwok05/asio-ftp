@@ -94,8 +94,6 @@ namespace ftp_session
                                          return;
                                      }
 
-                                     self->println("bytes received: " + std::to_string(bytes_received));
-
                                      self->m_received_string = "";
 
                                      // remove unwanted data

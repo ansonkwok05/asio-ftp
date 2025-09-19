@@ -49,6 +49,8 @@ namespace ftps_session
             "RETR", // Retrieve a copy of the file
         };
 
+        std::string m_session_id;
+
         bool m_isImplicit;
 
         boost::asio::ssl::context m_ssl_context;
@@ -70,23 +72,17 @@ namespace ftps_session
         std::string m_pending_write_file;
         std::string m_pending_read_file;
 
-        // bug: client cannot retrieve file when >1 concurrent connections
-        // it tries to do RETR multiple times, then fails
-        // 1 concurrent connection works perfectly well tho
+        // bug: data socket error when transferring a lot of files
+        // only happens when doing lots of files at the same time
 
-        // todo: multiple connection support
+        // possible fix:
         // use a vector of strings to store m_pending_write_file
         // use a vector of strings to store m_pending_read_file
 
-        // todo: fix bug when retr
+        // bug: sometimes cannot find file because
         // use absolute paths instead of name only
-        // sometimes cannot find file because
         // working_directory is changed before file is sent,
         // possible due to read_some is asynchronous
-
-        // todo: do this to stor too
-        // use absolute paths instead of name only
-        // prevent possible async problems
 
         std::vector<std::string> m_data_send_buffer;
 

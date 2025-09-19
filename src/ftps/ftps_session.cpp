@@ -16,6 +16,8 @@ namespace ftps_session
     session::session(boost::asio::ip::tcp::socket socket, bool isImplicit)
         : m_ssl_context(boost::asio::ssl::context::tlsv13_server), m_buffer(BUFFER_SIZE), m_database(false)
     {
+        m_session_id = custom_utils::generate_uuid_string(8);
+
         m_isImplicit = isImplicit;
 
         m_ssl_context.set_options(boost::asio::ssl::context::default_workarounds | boost::asio::ssl::context::no_sslv2 |
@@ -644,11 +646,6 @@ namespace ftps_session
                     size_t i = 0;
                     while (i < files_metadatas.size())
                     {
-                        println(files_metadatas.at(i + 1) + " startsWith? " + m_working_directory + argument + " " +
-                                    std::to_string(custom_utils::strStartsWith(files_metadatas.at(i + 1),
-                                                                               m_working_directory + argument)),
-                                "cyan");
-
                         // delete target folder
                         if (files_metadatas.at(i) == argument && files_metadatas.at(i + 1) == m_working_directory)
                         {
@@ -788,7 +785,6 @@ namespace ftps_session
                 self->println("data socket acceptor error -> " + ec.message(), "red");
                 return;
             }
-            self->println("Data socket accepted", "green");
 
             // create ssl stream socket
             self->m_data_socket = std::make_unique<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(
@@ -812,7 +808,7 @@ namespace ftps_session
                     self->println("Unknown TLS handshake error -> " + ec.message(), "red");
                     return;
                 }
-                self->println("Data socket handshaked", "green");
+                self->println("Data socket accepted and handshaked", "green");
             }
 
             // check if write file
@@ -874,10 +870,17 @@ namespace ftps_session
                 self->control_send("226 Received.");
 
                 // close data channel, so client knows operation is done
-                self->println("Data socket operation done, closing", "green");
-                self->m_data_socket->shutdown();
-                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                self->println("File received, closing data socket", "green");
+
+                boost::system::error_code ec;
+                self->m_data_socket->shutdown(ec);
+                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                if (ec)
+                {
+                    self->println("error during data socket shutdown, possible client sudden disconnect", "red");
+                }
                 self->m_data_socket->next_layer().close();
+
                 return;
             }
 
@@ -947,8 +950,13 @@ namespace ftps_session
 
                 // close data channel, so client knows operation is done
                 self->println("File sent, closing data socket", "green");
-                self->m_data_socket->shutdown();
-                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                boost::system::error_code ec;
+                self->m_data_socket->shutdown(ec);
+                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                if (ec)
+                {
+                    self->println("error during data socket shutdown, possible client sudden disconnect", "red");
+                }
                 self->m_data_socket->next_layer().close();
                 return;
             }
@@ -961,9 +969,13 @@ namespace ftps_session
 
                 // close data channel, so client knows operation is done
                 self->println("Directory listing done, closing data socket", "green");
-
-                self->m_data_socket->shutdown();
-                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                boost::system::error_code ec;
+                self->m_data_socket->shutdown(ec);
+                self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                if (ec)
+                {
+                    self->println("error during data socket shutdown, possible client sudden disconnect", "red");
+                }
                 self->m_data_socket->next_layer().close();
                 return;
             }
@@ -1174,11 +1186,11 @@ namespace ftps_session
 
     void session::println(std::string message)
     {
-        custom_utils::println("[FTPS] " + message);
+        custom_utils::println("[FTPS] [" + m_session_id + "] " + message);
     }
 
     void session::println(std::string message, std::string color)
     {
-        custom_utils::println("[FTPS] " + message, color);
+        custom_utils::println("[FTPS] [" + m_session_id + "] " + message, color);
     }
 } // namespace ftps_session
