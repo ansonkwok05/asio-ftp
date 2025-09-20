@@ -69,21 +69,6 @@ namespace ftps_session
         std::string m_username;
         std::string m_working_directory = "/";
 
-        std::string m_pending_write_file;
-        std::string m_pending_read_file;
-
-        // bug: data socket error when transferring a lot of files
-        // only happens when doing lots of files at the same time
-
-        // possible fix:
-        // use a vector of strings to store m_pending_write_file
-        // use a vector of strings to store m_pending_read_file
-
-        // bug: sometimes cannot find file because
-        // use absolute paths instead of name only
-        // working_directory is changed before file is sent,
-        // possible due to read_some is asynchronous
-
         std::vector<std::string> m_data_send_buffer;
 
         void control_send(std::string message);
@@ -91,8 +76,15 @@ namespace ftps_session
         void handle_received_string();
         void handle_FTP_command(std::string &command, std::string &argument);
 
+        std::string m_pending_directory_list;
+        std::string m_pending_write_file;
+        std::string m_pending_read_file;
+
         void data_acceptor_start_accept();
         void data_send(std::string message);
+        void data_directory_listing();
+        void data_receive_file();
+        void data_send_file();
 
         std::string parse_metadata_time(std::string time_str);
         std::string get_last_slash(std::string directory);
