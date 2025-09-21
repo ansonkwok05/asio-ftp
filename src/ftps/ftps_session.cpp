@@ -405,8 +405,15 @@ namespace ftps_session
 
                     // forming response
                     std::string response_format = "227 Entering Passive Mode (";
+
+                    // todo: check if remote_endpoint() is in the same local network
+                    // maybe check if the first and second number is the same
+                    // if in local network, use current method
+                    // else, get the public ip to pass from ftps_server.cpp
+
                     response_format += custom_utils::replaceString(
-                        m_control_socket->next_layer().remote_endpoint().address().to_string(), ".", ",");
+                        m_control_socket->next_layer().local_endpoint().address().to_string(), ".", ",");
+
                     response_format += "," + std::to_string(port / 256) + "," + std::to_string(port % 256) + ")";
 
                     data_acceptor_start_accept();

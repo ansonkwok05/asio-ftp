@@ -19,7 +19,11 @@ namespace ftps_server
 
         boost::asio::ip::tcp::socket m_socket; // a temporary socket for acceptor, which gets moved to a ftp session
 
+        std::string m_public_ip; // public ip from api
+
         void check_tls_keys();
+        void get_public_ip();
+
         void start_accepting();
     };
 

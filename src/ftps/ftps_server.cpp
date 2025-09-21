@@ -5,6 +5,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/beast.hpp>
 
 #include <string>
 #include <vector>
@@ -17,6 +18,8 @@ namespace ftps_server
     server::server()
         : m_acceptor(io_ctx, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT)), m_socket(io_ctx)
     {
+        // get_public_ip();
+
         check_tls_keys();
 
         start_accepting();
@@ -53,6 +56,47 @@ namespace ftps_server
         }
 
         println("TLS keys checked", "green");
+    }
+
+    void server::get_public_ip()
+    {
+        // todo: do a simple http get request to public ip api
+        // pass it into ftp_session, then into ftps_session
+        // to allow PASV to send correct ip to client
+
+        // boost::asio::io_context io_ctx;
+
+        // boost::asio::ssl::context ssl_ctx(boost::asio::ssl::context::method::sslv23_client);
+        // boost::asio::ssl::stream<boost::asio::ip::tcp::socket> ssl_socket(ssl_ctx, io_ctx);
+
+        // boost::asio::ip::tcp::resolver resolver(ioc);
+
+        // boost::beast::tcp_stream stream(ioc);
+
+        // auto const results = resolver.resolve("icanhazip.com", "80");
+        // stream.connect(results);
+
+        // boost::beast::http::request<boost::beast::http::string_body> req{boost::beast::http::verb::get, "/", 11};
+        // req.set(boost::beast::http::field::host, "icanhazip.com");
+        // req.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+
+        // boost::beast::http::write(stream, req);
+
+        // boost::beast::flat_buffer buffer;
+
+        // boost::beast::http::response<boost::beast::http::dynamic_body> res;
+
+        // boost::beast::http::read(stream, buffer, res);
+
+        // println("\"" + boost::beast::buffers_to_string(buffer.data()) + "\"");
+
+        // boost::beast::error_code ec;
+        // stream.socket().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+
+        // // ignore not_connected
+        // //
+        // if (ec && ec != boost::beast::errc::not_connected)
+        //     throw boost::beast::system_error{ec};
     }
 
     void server::start_accepting()
