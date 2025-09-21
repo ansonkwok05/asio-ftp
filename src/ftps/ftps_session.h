@@ -25,6 +25,7 @@ namespace ftps_session
 
         // list of commands supported
         const std::vector<std::string> FTP_COMMANDS = {
+            "NOOP", // No operation (dummy packet; used mostly on keepalives).
             "SYST", // Return system type
             "QUIT", // Disconnect.
             "USER", // Authentication username
@@ -75,6 +76,10 @@ namespace ftps_session
         void control_receive();
         void handle_received_string();
         void handle_FTP_command(std::string &command, std::string &argument);
+
+        // todo: figure out what is the problem
+        // when client uses multiple connections to transfer, (downloading a folder)
+        // some operations are not done (some files not downloaded, some directory not listed to client)
 
         std::string m_pending_directory_list;
         std::string m_pending_write_file;

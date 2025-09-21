@@ -44,7 +44,13 @@ namespace ftps_session
 
     void session::start()
     {
-        m_control_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server);
+        boost::system::error_code ec;
+        m_control_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
+        if (ec)
+        {
+            println("handshake error", "red");
+            return;
+        }
 
         m_connection_stage = UNAUTHENTICATED;
 
@@ -201,6 +207,13 @@ namespace ftps_session
 
         // UNAUTHENTICATED
         {
+            if (command == "NOOP")
+            {
+                control_send("200 OK.");
+                control_receive();
+                return;
+            }
+
             if (command == "SYST")
             {
                 control_send("215 UNIX Type: L8");
@@ -211,8 +224,18 @@ namespace ftps_session
             if (command == "QUIT")
             {
                 control_send("221 Closing control connection.");
-                m_control_socket->shutdown();
-                m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+
+                boost::system::error_code ec;
+
+                m_control_socket->shutdown(ec);
+                m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+
+                if (ec)
+                {
+                    println("Error during control socket shutdown", "yellow");
+                    return;
+                }
+
                 m_control_socket->next_layer().close();
                 return;
             }
@@ -320,15 +343,13 @@ namespace ftps_session
             {
                 if (command == "FEAT")
                 {
-                    control_send("211-Features:\nUTF8\n211 End");
+                    control_send("211-Features:\r\n AUTH TLS\r\n PASV\r\n PBSZ\r\n PROT\r\n UTF8\r\n211 End");
                     control_receive();
                     return;
                 }
 
                 if (command == "PBSZ")
                 {
-                    // low priority todo: check what is this about
-
                     control_send("200 OK.");
                     control_receive();
                     return;
@@ -336,8 +357,6 @@ namespace ftps_session
 
                 if (command == "PROT")
                 {
-                    // low priority todo: check what is this about
-
                     control_send("200 OK.");
                     control_receive();
                     return;
@@ -345,8 +364,6 @@ namespace ftps_session
 
                 if (command == "OPTS")
                 {
-                    // low priority todo: make a flag that enables UTF8, find out how to implement utf8
-
                     if (argument == "UTF8 ON")
                     {
                         control_send("200 Enabled UTF-8 encoding.");
@@ -377,7 +394,6 @@ namespace ftps_session
                     // I: Turn the binary flag on.
                     // L 8: Turn the binary flag on.
 
-                    // low priority todo: check what is this about
                     // currently everything is sent in binary
                     control_send("200 OK.");
                     control_receive();
@@ -416,11 +432,10 @@ namespace ftps_session
 
                     response_format += "," + std::to_string(port / 256) + "," + std::to_string(port % 256) + ")";
 
-                    data_acceptor_start_accept();
-                    println("FTPS data channel listening on port " + std::to_string(port), "green");
-
                     control_send(response_format);
                     control_receive();
+
+                    println("FTPS data channel listening on port " + std::to_string(port), "green");
                     return;
                 }
 
@@ -429,7 +444,6 @@ namespace ftps_session
                     if (m_pending_directory_list != "")
                     {
                         println("Previous list directory operation not finished -> " + m_pending_directory_list, "red");
-                        custom_utils::sleep(5000); // todo: remove sleep after debugging
                         return;
                     }
 
@@ -448,6 +462,8 @@ namespace ftps_session
 
                     control_send("150 Opening connection.");
                     control_receive();
+
+                    data_acceptor_start_accept();
                     return;
                 }
 
@@ -552,8 +568,14 @@ namespace ftps_session
                             i += 6;
                         }
 
+                        // todo: some clients prefer going to root "/" then using the argument as path
+                        // example:
+                        // working_directory    -> "/"
+                        // argument             -> "test files (small)/one folder inside this folder"
+                        // fix this, perhaps need to break down the argument into chunks, check multiple times
+
                         // directory doesn't exists
-                        println("Cannot change working directory: " + path + " -> " + name + ", not found");
+                        println("Cannot change working directory: " + path + " -> " + name + ", not found", "yellow");
                         control_send("550 No such file or directory.");
                         control_receive();
                         return;
@@ -728,7 +750,6 @@ namespace ftps_session
                     if (m_pending_write_file != "")
                     {
                         println("Previous write operation not finished -> " + m_pending_write_file, "red");
-                        custom_utils::sleep(5000); // todo: remove sleep after debugging
                         return;
                     }
 
@@ -755,6 +776,8 @@ namespace ftps_session
 
                     control_send("150 Waiting for connection");
                     control_receive();
+
+                    data_acceptor_start_accept();
                     return;
                 }
 
@@ -771,7 +794,6 @@ namespace ftps_session
                     if (m_pending_read_file != "")
                     {
                         println("Previous read operation not finished -> " + m_pending_read_file, "red");
-                        custom_utils::sleep(5000); // todo: remove sleep after debugging
                         return;
                     }
 
@@ -798,6 +820,8 @@ namespace ftps_session
 
                     control_send("150 Waiting for connection");
                     control_receive();
+
+                    data_acceptor_start_accept();
                     return;
                 }
             }
@@ -1065,8 +1089,6 @@ namespace ftps_session
             m_data_socket->shutdown();
             m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
             m_data_socket->next_layer().close();
-
-            custom_utils::sleep(5000); // todo: check if this is unintended behavior, remove sleep when checked
             return;
         }
 
@@ -1075,7 +1097,6 @@ namespace ftps_session
         if (!fs_handler::file_exists("data/" + target_file_id))
         {
             println("File not found during data socket sending", "red");
-            custom_utils::sleep(5000); // todo: check
             return;
         }
 
