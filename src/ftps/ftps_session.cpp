@@ -1006,8 +1006,23 @@ namespace ftps_session
                 return;
             }
 
-            if (ec.message() == "End of file") // no more file data to read
+            // good chunks of data received
+            if (ec.message() == "Success")
+                continue;
+
+            // no more file data to read
+            if (ec == boost::asio::error::eof)
                 break;
+
+            // connection canceled/abandoned
+            if (ec == boost::asio::ssl::error::stream_truncated)
+            {
+                println("data connection disconnected mid file receive", "yellow");
+                break;
+            }
+
+            // unexpected error
+            println("error while receiving file data -> " + ec.message(), "yellow");
         }
 
         output_file_stream.close();
@@ -1111,8 +1126,24 @@ namespace ftps_session
         {
             readFileStream.read(fileBuffer, SEND_BUFFER_SIZE);
 
-            boost::asio::write(*m_data_socket, boost::asio::buffer(fileBuffer, readFileStream.gcount()));
+            boost::system::error_code ec;
+            boost::asio::write(*m_data_socket, boost::asio::buffer(fileBuffer, readFileStream.gcount()), ec);
+
             bytes_sent += readFileStream.gcount();
+
+            // good chunks of data received
+            if (ec.message() == "Success")
+                continue;
+
+            // connection canceled/abandoned
+            if (ec == boost::asio::error::broken_pipe)
+            {
+                println("data connection disconnected mid file send", "yellow");
+                break;
+            }
+
+            // unexpected error
+            println("error while receiving file data -> " + ec.message(), "yellow");
         }
 
         m_pending_read_file = "";
