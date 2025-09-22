@@ -1017,12 +1017,12 @@ namespace ftps_session
             return;
         }
 
-        size_t buffer_size = 1024 * 1024;
-        char data[buffer_size];
+        const size_t RECEIVE_BUFFER_SIZE = 1024 * 1024;
+        char data[RECEIVE_BUFFER_SIZE];
         while (true)
         {
             boost::system::error_code ec;
-            size_t bytes_read = boost::asio::read(*m_data_socket, boost::asio::buffer(data, buffer_size), ec);
+            size_t bytes_read = boost::asio::read(*m_data_socket, boost::asio::buffer(data, RECEIVE_BUFFER_SIZE), ec);
 
             file_size += bytes_read;
             output_file_stream.write(data, bytes_read);
@@ -1143,17 +1143,35 @@ namespace ftps_session
         }
 
         std::ifstream readFileStream("data/" + target_file_id);
+        if (!readFileStream.is_open())
+        {
+            println("Unable to open read file stream", "red");
+            return;
+        }
 
-        const int SEND_BUFFER_SIZE = 64 * 1024;
+        const int SEND_BUFFER_SIZE = 1024 * 1024;
         char fileBuffer[SEND_BUFFER_SIZE] = {0};
 
         int bytes_sent = 0;
+        bool error_during_async_write = false;
 
         while (!readFileStream.eof())
         {
             readFileStream.read(fileBuffer, SEND_BUFFER_SIZE);
 
             boost::system::error_code ec;
+
+            // // async write method (not working)
+            // m_data_socket->async_write_some(
+            //     boost::asio::buffer(fileBuffer, readFileStream.gcount()),
+            //     [&error_during_async_write, &ec](boost::system::error_code temp_ec, size_t bytes_written) {
+            //         if (temp_ec)
+            //         {
+            //             error_during_async_write = true;
+            //             ec = temp_ec;
+            //         }
+            //     });
+
             boost::asio::write(*m_data_socket, boost::asio::buffer(fileBuffer, readFileStream.gcount()), ec);
 
             bytes_sent += readFileStream.gcount();
@@ -1172,6 +1190,26 @@ namespace ftps_session
             // unexpected error
             println("error while receiving file data -> " + ec.message(), "yellow");
         }
+
+        // // async write method (not working)
+        // boost::asio::post(m_data_socket->get_executor(), [self = shared_from_this(), &bytes_sent]() {
+        //     self->m_pending_read_file = "";
+
+        //     self->control_send("226 Sent.");
+        //     self->println("bytes sent: " + std::to_string(bytes_sent));
+
+        //     // close data channel, so client knows operation is done
+        //     self->println("File sent, closing data socket", "green");
+
+        //     boost::system::error_code ec;
+        //     self->m_data_socket->shutdown(ec);
+        //     self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        //     if (ec)
+        //     {
+        //         self->println("error during data socket shutdown, possible client sudden disconnect", "red");
+        //     }
+        //     self->m_data_socket->next_layer().close();
+        // });
 
         m_pending_read_file = "";
 
