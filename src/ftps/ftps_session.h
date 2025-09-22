@@ -54,6 +54,8 @@ namespace ftps_session
 
         bool m_isImplicit;
 
+        bool m_isLan;
+
         boost::asio::ssl::context m_ssl_context;
         std::unique_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> m_control_socket;
 
