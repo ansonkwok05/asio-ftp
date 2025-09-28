@@ -96,6 +96,7 @@ namespace ftps_session
         std::string parse_metadata_time(std::string time_str);
         std::string get_last_slash(std::string directory);
         std::vector<std::string> get_files_metadatas();
+        bool does_file_exists(std::string path, std::string filename);
 
         void println(std::string message);
         void println(std::string message, std::string color);

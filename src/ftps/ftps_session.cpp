@@ -1390,6 +1390,10 @@ namespace ftps_session
         return file_metadata_list;
     }
 
+    bool session::does_file_exists(std::string path, std::string filename)
+    {
+    }
+
     void session::println(std::string message)
     {
         custom_utils::println("[FTPS] [" + m_session_id + "] " + message);
