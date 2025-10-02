@@ -10,6 +10,10 @@
 
 namespace custom_utils
 {
+    time_t t = time(NULL);
+    struct tm *time_struct = localtime(&t);
+    int offset_hour = time_struct->tm_gmtoff / 3600;
+
     using std::cout;
 
     void print(std::string message)
@@ -56,12 +60,21 @@ namespace custom_utils
 
     std::string getTimeString()
     {
-        auto curretTime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-        std::string current_time_string = std::string(std::ctime(&curretTime));
+        time_t t = time(NULL);
+        std::string h = std::to_string((t / 3600) % 24 + offset_hour);
+        std::string m = std::to_string((t / 60) % 60);
+        std::string s = std::to_string(t % 60);
 
-        std::vector<std::string> split_time_string = splitString(current_time_string, ' ');
+        if (h.size() < 2)
+            h = '0' + h;
 
-        return split_time_string[3];
+        if (m.size() < 2)
+            m = '0' + m;
+
+        if (s.size() < 2)
+            s = '0' + s;
+
+        return h + ':' + m + ':' + s;
     }
 
     std::vector<std::string> splitString(const std::string &inputString, char delimiter)

@@ -25,65 +25,67 @@ int main()
 
         println();
 
-        { // test database insert data
-            performanceWatcher.start();
-            println("Starting insert test", "blue");
+        // { // test database insert data
+        //     performanceWatcher.start();
+        //     println("Starting insert test", "blue");
 
-            std::string useridStr = "XD";
-            std::string usernameStr = "lmaoxd";
+        //     std::string useridStr = "XD";
+        //     std::string usernameStr = "lmaoxd";
 
-            std::string log = "";
-            for (int i = 0; i < 10; i++)
-            {
-                useridStr += "D";
-                usernameStr += "1";
-                database->insert_data("users", {"user_id", "username", "password"}, {useridStr, usernameStr, "pw"});
-                log += std::to_string(performanceWatcher.lapUs() / 1000) + "ms ";
-            }
-            println(log);
+        //     std::string log = "";
+        //     for (int i = 0; i < 10; i++)
+        //     {
+        //         useridStr += "D";
+        //         usernameStr += "1";
+        //         database->insert_data("users", {"user_id", "username", "password"}, {useridStr, usernameStr,
+        //         "pw"}); log += std::to_string(performanceWatcher.lapUs() / 1000) + "ms ";
+        //     }
+        //     println(log);
 
-            println("10 insert operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
-                    "blue");
-        }
+        //     println("10 insert operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) +
+        //     "ms",
+        //             "blue");
+        // }
 
-        println();
+        // println();
 
-        { // test database read data
-            performanceWatcher.start();
-            println("Starting read test", "blue");
+        // { // test database read data
+        //     performanceWatcher.start();
+        //     println("Starting read test", "blue");
 
-            std::string log = "";
-            for (int i = 0; i < 10; i++)
-            {
-                std::vector<std::string> return_data;
-                database->read_data("users", {}, return_data);
-                log += std::to_string(performanceWatcher.lapUs() / 1000) + "ms ";
-            }
-            println(log);
-            println("10 read operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
-                    "blue");
-        }
+        //     std::string log = "";
+        //     for (int i = 0; i < 10; i++)
+        //     {
+        //         std::vector<std::string> return_data;
+        //         database->read_data("users", {}, return_data);
+        //         log += std::to_string(performanceWatcher.lapUs() / 1000) + "ms ";
+        //     }
+        //     println(log);
+        //     println("10 read operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
+        //             "blue");
+        // }
 
-        println();
+        // println();
 
-        { // test database delete data
-            performanceWatcher.start();
-            println("Starting delete test", "blue");
+        // { // test database delete data
+        //     performanceWatcher.start();
+        //     println("Starting delete test", "blue");
 
-            std::string useridStr = "XD";
+        //     std::string useridStr = "XD";
 
-            std::string log = "";
-            for (int i = 0; i < 10; i++)
-            {
-                useridStr += "D";
-                database->delete_data("users", "user_id", useridStr);
-                log += std::to_string(performanceWatcher.lapUs() / 1000) + "ms ";
-            }
-            println(log);
+        //     std::string log = "";
+        //     for (int i = 0; i < 10; i++)
+        //     {
+        //         useridStr += "D";
+        //         database->delete_data("users", "user_id", useridStr);
+        //         log += std::to_string(performanceWatcher.lapUs() / 1000) + "ms ";
+        //     }
+        //     println(log);
 
-            println("10 delete operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
-                    "blue");
-        }
+        //     println("10 delete operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) +
+        //     "ms",
+        //             "blue");
+        // }
 
         println();
 
@@ -200,7 +202,8 @@ int main()
             //         {
             //             database->insert_data("files_metadata",
             //                                   {"file_name", "file_path", "file_size", "is_directory", "file_id"},
-            //                                   {"yo_iden" + file_idstr, "/example_folder", "21", "0", file_idstr});
+            //                                   {"yo_iden" + file_idstr, "/example_folder", "21", "0",
+            //                                   file_idstr});
             //         }
             //     }
 
@@ -208,7 +211,8 @@ int main()
             //     {
             //         database->insert_data("files_metadata",
             //                               {"file_name", "file_path", "file_size", "is_directory", "file_id"},
-            //                               {"example_folder in a folder", "/example_folder", "0", "1", "folder_id2"});
+            //                               {"example_folder in a folder", "/example_folder", "0", "1",
+            //                               "folder_id2"});
             //     }
 
             //     if (std::find(parsedData.begin(), parsedData.end(), "special_file1") == parsedData.end())

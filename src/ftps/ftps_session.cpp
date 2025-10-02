@@ -1392,6 +1392,8 @@ namespace ftps_session
 
     bool session::does_file_exists(std::string path, std::string filename)
     {
+        // todo: implement
+        return true;
     }
 
     void session::println(std::string message)
