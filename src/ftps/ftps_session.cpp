@@ -1281,6 +1281,10 @@ namespace ftps_session
         case '1': { // >= 10
             switch (time_str.at(6))
             {
+            case '0': { // 10
+                parsedStr += "Oct ";
+                break;
+            }
             case '1': { // 11
                 parsedStr += "Nov ";
                 break;
