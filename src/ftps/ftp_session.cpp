@@ -17,12 +17,12 @@ namespace ftp_session
     {
         println("session created for " + m_socket.remote_endpoint().address().to_string() + ":" +
                     std::to_string(m_socket.remote_endpoint().port()),
-                "black");
+                "brightblack");
     }
 
     session::~session()
     {
-        println("session destroyed", "black");
+        println("session destroyed", "brightblack");
     }
 
     void session::start()

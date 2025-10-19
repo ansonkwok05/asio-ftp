@@ -57,12 +57,12 @@ namespace ftps_session
 
         println("session created for " + m_control_socket->lowest_layer().remote_endpoint().address().to_string() +
                     ":" + std::to_string(m_control_socket->lowest_layer().remote_endpoint().port()),
-                "black");
+                "brightblack");
     }
 
     session::~session()
     {
-        println("session destroyed", "black");
+        println("session destroyed", "brightblack");
     }
 
     void session::start()

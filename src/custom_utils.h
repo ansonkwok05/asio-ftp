@@ -14,8 +14,11 @@ namespace custom_utils
     void println(std::string message);
     void println(std::string message, std::string color);
 
-    const std::map<std::string, int> COLORS = {{"black", 30}, {"red", 31},     {"green", 32}, {"yellow", 33},
-                                               {"blue", 34},  {"magenta", 35}, {"cyan", 36},  {"white", 37}};
+    const std::map<std::string, int> COLORS = {
+        {"black", 30},       {"red", 31},           {"green", 32},       {"yellow", 33},
+        {"blue", 34},        {"magenta", 35},       {"cyan", 36},        {"white", 37},
+        {"brightblack", 90}, {"brightred", 91},     {"brightgreen", 92}, {"brightyellow", 93},
+        {"brightblue", 94},  {"brightmagenta", 95}, {"brightcyan", 96},  {"brightwhite", 97}};
 
     /**
      * set the color of cout by using ANSI color code
