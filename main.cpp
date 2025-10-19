@@ -23,8 +23,6 @@ int main()
 
         println("Database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms", "green");
 
-        println();
-
         // { // test database insert data
         //     performanceWatcher.start();
         //     println("Starting insert test", "blue");
@@ -87,11 +85,7 @@ int main()
         //             "blue");
         // }
 
-        println();
-
-        { // create test data
-            println("Creating test data", "blue");
-
+        {     // create test data
             { // create test data for "users" table
                 std::vector<std::string> return_data;
                 database->read_data("users", {}, return_data);
@@ -230,8 +224,6 @@ int main()
         delete database;
         database = nullptr;
     }
-
-    println();
 
     // launch FTPS server in worker thread
     std::thread ftps_server_thread([]() { ftps_server::server ftps_server = ftps_server::server(); });
