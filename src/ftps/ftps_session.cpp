@@ -496,8 +496,8 @@ namespace ftps_session
 
                 if (command == "CDUP")
                 {
-                    println(m_working_directory + " -> " + get_last_slash(m_working_directory));
-                    m_working_directory = get_last_slash(m_working_directory);
+                    println(m_working_directory + " -> " + return_parent_directory(m_working_directory));
+                    m_working_directory = return_parent_directory(m_working_directory);
 
                     control_send("250 Okay.");
                     control_receive();
@@ -517,96 +517,108 @@ namespace ftps_session
                     // return to last slash
                     if (argument == "..")
                     {
-                        println(m_working_directory + " -> " + get_last_slash(m_working_directory));
-                        m_working_directory = get_last_slash(m_working_directory);
+                        println(m_working_directory + " -> " + return_parent_directory(m_working_directory));
+                        m_working_directory = return_parent_directory(m_working_directory);
                         control_send("250 Changed working directory.");
                         control_receive();
                         return;
                     }
 
-                    // root always exists, no need to check
-                    // change directory immediately
+                    // change directory to root
                     if (argument == "/")
                     {
                         println(m_working_directory + " -> /");
-                        m_working_directory = get_last_slash(m_working_directory);
                         m_working_directory = "/";
                         control_send("250 Changed working directory.");
                         control_receive();
                         return;
                     }
 
-                    // check if directory exists
+                    update_virtual_fs();
+
+                    // handle multiple types of arguments
+                    // type 1 "/test/one"   // absolute path
+                    // type 2 "test/one"    // absolute path using current working directory as parent
+
+                    std::string virtual_path = "";
+                    std::vector<std::string> children;
+
+                    if (argument[0] == '/')
                     {
-                        bool is_absolute_path = false;
-                        if (argument.at(0) == '/')
-                        {
-                            is_absolute_path = true;
-                        }
+                        // type 1
+                        // use root as first path
+                        virtual_path = "/";
 
-                        std::string path = "";
-                        std::string name = "";
-
-                        if (is_absolute_path)
-                        {
-                            // use the last_slash of argument as path
-                            // and the difference as name
-                            path = get_last_slash(argument);
-
-                            std::vector<std::string> tempVec = custom_utils::splitString(argument, '/');
-                            name = tempVec.at(tempVec.size() - 1);
-                        }
-                        else
-                        {
-                            path = m_working_directory;
-                            name = argument;
-                        }
-
-                        // got the actual path and name now
-                        // next search database for it
-
-                        std::vector<std::string> files_metadatas = get_files_metadatas();
-
-                        size_t i = 0;
-                        while (i < files_metadatas.size())
-                        {
-                            // find for matches for path
-                            if (files_metadatas.at(i + 1) == path)
-                            {
-                                // find for matches for name
-                                if (files_metadatas.at(i) == name)
-                                {
-                                    // found, the requested directory exists
-
-                                    if (path != "/")
-                                    {
-                                        // path is not root, so it doesn't end in '/'
-                                        // must add '/' between path to prevent path and name combining
-                                        path += '/';
-                                    }
-
-                                    println(m_working_directory + " -> " + path + name);
-                                    m_working_directory = path + name;
-                                    control_send("250 Changed working directory.");
-                                    control_receive();
-                                    return;
-                                }
-                            }
-                            i += 6;
-                        }
-
-                        // todo: some clients prefer going to root "/" then using the argument as path
-                        // example:
-                        // working_directory    -> "/"
-                        // argument             -> "test files (small)/one folder inside this folder"
-                        // fix this, perhaps need to break down the argument into chunks, check multiple times
-
-                        // directory doesn't exists
-                        println("Cannot change working directory: " + path + " -> " + name + ", not found", "yellow");
-                        control_send("550 No such file or directory.");
-                        control_receive();
-                        return;
+                        // use argument without first char as children
+                        children = custom_utils::splitString(argument.substr(1, argument.size() - 1), '/');
                     }
+                    else
+                    {
+                        // type 2
+                        // use working_directory as first path
+                        virtual_path = m_working_directory;
+
+                        // argument as children
+                        children = custom_utils::splitString(argument, '/');
+                    }
+
+                    // validate if each sub-directory exists
+                    {
+                        size_t i = 0; // path iterator
+
+                        // check first subdirectory
+                        if (!does_file_exists(virtual_path, children[0]))
+                        {
+                            println("Cannot change working directory: " + virtual_path + " -> " + children[0] +
+                                        ", not found",
+                                    "yellow");
+                            control_send("550 No such file or directory.");
+                            control_receive();
+                            return;
+                        }
+
+                        // prepare cumulative_path before processing
+                        // '/' will be added in loop
+                        if (virtual_path == "/")
+                        {
+                            virtual_path.pop_back();
+                        }
+
+                        // check each subdirectory in order
+                        while (i < children.size() - 1)
+                        {
+                            virtual_path += "/" + children[i];
+
+                            if (!does_file_exists(virtual_path, children[i + 1]))
+                            {
+                                println("Cannot change working directory: " + virtual_path + " -> " + children[i + 1] +
+                                            ", not found",
+                                        "yellow");
+                                control_send("550 No such file or directory.");
+                                control_receive();
+                                return;
+                            }
+
+                            i++;
+                        }
+                    }
+
+                    // set new working directory
+                    if (virtual_path == "/")
+                    {
+                        println("change dir type 1 " + m_working_directory + " -> " + virtual_path + children.back());
+                        m_working_directory = virtual_path + children.back();
+                    }
+                    else
+                    {
+                        println("change dir type 2 " + m_working_directory + " -> " + virtual_path + "/" +
+                                children.back());
+                        m_working_directory = virtual_path + "/" + children.back();
+                    }
+
+                    control_send("250 Changed working directory.");
+                    control_receive();
+                    return;
                 }
 
                 if (command == "MKD")
@@ -619,51 +631,18 @@ namespace ftps_session
                         return;
                     }
 
-                    std::vector<std::string> files_metadatas = get_files_metadatas();
+                    update_virtual_fs();
 
-                    // check if folder already exists
-                    size_t i = 0;
-                    while (i < files_metadatas.size())
+                    if (does_file_exists(m_working_directory, argument))
                     {
-                        if (files_metadatas.at(i) == argument && files_metadatas.at(i + 1) == m_working_directory)
-                        {
-                            // folder already exists
-                            control_send("550 Directory already exist.");
-                            return;
-                        }
-                        i += 6;
+                        control_send("550 Directory already exist.");
+                        control_receive();
+                        return;
                     }
 
-                    // create folder
+                    // folder not exists, create one
                     println("Creating virtual directory \"" + m_working_directory + "\" \"" + argument + "\"", "green");
-
-                    std::string folder_id = custom_utils::generate_uuid_string(16);
-
-                    m_database.insert_data("files",
-                                           {
-                                               "file_id",
-                                               "user_id",
-                                           },
-                                           {
-                                               folder_id,
-                                               m_userid,
-                                           });
-
-                    m_database.insert_data("files_metadata",
-                                           {
-                                               "file_name",
-                                               "file_path",
-                                               "file_size",
-                                               "is_directory",
-                                               "file_id",
-                                           },
-                                           {
-                                               argument,
-                                               m_working_directory,
-                                               "0",
-                                               "1",
-                                               folder_id,
-                                           });
+                    create_virtual_folder(argument);
 
                     control_send("250 Directory created.");
                     control_receive();
@@ -1058,7 +1037,7 @@ namespace ftps_session
 
         std::vector<std::string> temp = custom_utils::splitString(m_pending_write_file, '/');
 
-        std::string file_path = get_last_slash(m_pending_write_file);
+        std::string file_path = return_parent_directory(m_pending_write_file);
         std::string file_name = temp.at(temp.size() - 1);
 
         println("storing in db as -> " + file_path + " + " + file_name, "cyan");
@@ -1102,7 +1081,7 @@ namespace ftps_session
     {
         std::vector<std::string> temp = custom_utils::splitString(m_pending_read_file, '/');
 
-        std::string file_path = get_last_slash(m_pending_read_file);
+        std::string file_path = return_parent_directory(m_pending_read_file);
         std::string file_name = temp.at(temp.size() - 1);
 
         // read db records and search for the according file
@@ -1307,38 +1286,6 @@ namespace ftps_session
         return parsedStr;
     }
 
-    std::string session::get_last_slash(std::string directory)
-    {
-        if (directory == "/")
-        { // cannot get last slash when is root directory
-            return "/";
-        }
-
-        std::vector<std::string> split_directory = custom_utils::splitString(directory, '/');
-
-        if (split_directory.size() < 2)
-        { // input doesn't have any '/'
-            return "/";
-        }
-
-        std::string last_slash = "";
-        for (int i = 0; i < split_directory.size() - 1; i++)
-        {
-            if (split_directory.at(i) == "")
-            { // ignore empty strings, they were "/" before splitting
-                continue;
-            }
-            last_slash += "/" + split_directory.at(i);
-        }
-
-        if (last_slash == "")
-        { // root dir
-            return "/";
-        }
-
-        return last_slash;
-    }
-
     std::vector<std::string> session::get_files_metadatas()
     {
         std::vector<std::string> file_id_list;
@@ -1394,9 +1341,140 @@ namespace ftps_session
         return file_metadata_list;
     }
 
+    void session::update_virtual_fs()
+    {
+        std::vector<std::string> file_id_list;
+        { // retrieve a list of file ids of this user's files
+            std::vector<std::string> files;
+            m_database.read_data("files", {"file_id", "user_id"}, files);
+
+            size_t i = 1;
+            while (i < files.size())
+            {
+                if (files.at(i) == m_userid)
+                { // found user's file
+                    file_id_list.push_back(files.at(i - 1));
+                }
+                i += 2;
+            }
+        }
+
+        std::vector<std::string> file_metadata_list;
+        { // get a list of file metadatas that matches this users' file ids
+            std::vector<std::string> files_metadata;
+            m_database.read_data("files_metadata",
+                                 {"file_name", "file_path", "file_size", "modified_time", "is_directory", "file_id"},
+                                 files_metadata);
+
+            size_t i = 5;
+            while (i < files_metadata.size())
+            {
+                bool found_file = false;
+                for (size_t n = 0; n < file_id_list.size(); n++)
+                {
+                    if (files_metadata.at(i) == file_id_list.at(n))
+                    {
+                        // low priority todo: remove found file id from file_id_list?
+                        // can this reduce search time?
+                        // cuz every time a file is found, the next search needs to search 1 time less
+                        found_file = true;
+                        break;
+                    }
+                }
+
+                if (found_file)
+                { // matches
+                    file_metadata_list.push_back(files_metadata.at(i - 5));
+                    file_metadata_list.push_back(files_metadata.at(i - 4));
+                    file_metadata_list.push_back(files_metadata.at(i - 3));
+                    file_metadata_list.push_back(files_metadata.at(i - 2));
+                    file_metadata_list.push_back(files_metadata.at(i - 1));
+                    file_metadata_list.push_back(files_metadata.at(i));
+                }
+                i += 6;
+            }
+        }
+
+        m_virtual_fs = file_metadata_list;
+    }
+
     bool session::does_file_exists(std::string path, std::string filename)
     {
-        // todo: implement
+        println("finding " + path + " " + filename, "brightblue");
+
+        size_t i = 1;
+        while (i < m_virtual_fs.size())
+        {
+            println("check -> " + m_virtual_fs.at(i) + " " + m_virtual_fs.at(i - 1), "brightblue");
+            if (m_virtual_fs.at(i) == path && m_virtual_fs.at(i - 1) == filename)
+                return true;
+            i += 6;
+        }
+
+        return false;
+    }
+
+    std::string session::return_parent_directory(std::string directory)
+    {
+        // return root when already at root directory
+        if (directory == "/")
+            return "/";
+
+        std::vector<std::string> split_directory = custom_utils::splitString(directory, '/');
+
+        // input only have one child
+        // such as "/test" or "/one"
+        if (split_directory.size() <= 2)
+        {
+            return "/";
+        }
+
+        // combine split string except last, adding '/' in between
+        std::string parent = "";
+        for (int i = 0; i < split_directory.size() - 1; i++)
+        {
+            // ignore empty strings, they were "/" before splitting
+            if (split_directory.at(i) == "")
+                continue;
+
+            parent += "/" + split_directory.at(i);
+        }
+
+        return parent;
+    }
+
+    bool session::create_virtual_folder(std::string folder_name)
+    {
+        std::string folder_id = custom_utils::generate_uuid_string(16);
+
+        if (!m_database.insert_data("files",
+                                    {
+                                        "file_id",
+                                        "user_id",
+                                    },
+                                    {
+                                        folder_id,
+                                        m_userid,
+                                    }))
+            return false;
+
+        if (!m_database.insert_data("files_metadata",
+                                    {
+                                        "file_name",
+                                        "file_path",
+                                        "file_size",
+                                        "is_directory",
+                                        "file_id",
+                                    },
+                                    {
+                                        folder_name,
+                                        m_working_directory,
+                                        "0",
+                                        "1",
+                                        folder_id,
+                                    }))
+            return false;
+
         return true;
     }
 
