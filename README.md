@@ -17,6 +17,7 @@ FTPS server | Explicit and implicit encryption mode. Support file upload and dow
 * SQLite3
 * Boost.Asio
 * OpenSSL
+* TLS keys (dh.pem, cert.pem, key.pem)
 
 ## Compilation
 This project is built using CMake, allowing cross-platform compilation across Windows, macOS and Linux.
