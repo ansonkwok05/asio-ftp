@@ -52,7 +52,7 @@ namespace sqlite_wrapper
 
     private:
         /**
-         * TARGET_TABLES[TABLE_NAME] -> VECTOR of COLUMN DEFINITIONS
+         * TARGET_TABLES[TABLE_NAME] -> VECTOR of COLUMN SCHEMAS
          */
         const std::map<std::string, std::vector<std::string>> TARGET_TABLES = {
             {
