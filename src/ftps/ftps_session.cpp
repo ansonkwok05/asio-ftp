@@ -122,7 +122,16 @@ namespace ftps_session
                         // client disconnected
                         self->println("Client disconnected -> " + ec.message(), custom_utils::COLORS::GREEN);
 
-                        self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                        boost::system::error_code shutdownEC;
+                        self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
+                                                                      shutdownEC);
+
+                        if (shutdownEC)
+                        {
+                            self->println("Error during control socket shutdown", custom_utils::COLORS::YELLOW);
+                            return;
+                        }
+
                         self->m_control_socket->next_layer().close();
                         return;
                     }
@@ -827,7 +836,16 @@ namespace ftps_session
                             // client disconnected
                             self->println("Data socket disconnected -> " + ec.message(), custom_utils::COLORS::YELLOW);
 
-                            self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+                            boost::system::error_code shutdownEC;
+                            self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
+                                                                          shutdownEC);
+
+                            if (ec)
+                            {
+                                self->println("Error during data socket shutdown", custom_utils::COLORS::YELLOW);
+                                return;
+                            }
+
                             self->m_control_socket->next_layer().close();
                             return;
                         }
@@ -1079,7 +1097,15 @@ namespace ftps_session
 
             println(m_working_directory + " " + m_pending_read_file, custom_utils::COLORS::RED);
             m_data_socket->shutdown();
-            m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
+
+            boost::system::error_code shutdownEC;
+            m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
+            if (shutdownEC)
+            {
+                println("Error during data socket shutdown", custom_utils::COLORS::YELLOW);
+                return;
+            }
+
             m_data_socket->next_layer().close();
             return;
         }
@@ -1286,28 +1312,24 @@ namespace ftps_session
             size_t i = 5;
             while (i < files_metadata.size())
             {
-                bool found_file = false;
                 for (size_t n = 0; n < file_id_list.size(); n++)
                 {
                     if (files_metadata.at(i) == file_id_list.at(n))
                     {
-                        // low priority todo: remove found file id from file_id_list?
-                        // can this reduce search time?
-                        // cuz every time a file is found, the next search needs to search 1 time less
-                        found_file = true;
+                        // low priority todo: remove found file id from file_id_list
+                        // cannot use vector for this, too slow when removing element middle of nowhere
+                        // need to use another data type first, then try this
+
+                        file_metadata_list.push_back(files_metadata.at(i - 5));
+                        file_metadata_list.push_back(files_metadata.at(i - 4));
+                        file_metadata_list.push_back(files_metadata.at(i - 3));
+                        file_metadata_list.push_back(files_metadata.at(i - 2));
+                        file_metadata_list.push_back(files_metadata.at(i - 1));
+                        file_metadata_list.push_back(files_metadata.at(i));
                         break;
                     }
                 }
 
-                if (found_file)
-                { // matches
-                    file_metadata_list.push_back(files_metadata.at(i - 5));
-                    file_metadata_list.push_back(files_metadata.at(i - 4));
-                    file_metadata_list.push_back(files_metadata.at(i - 3));
-                    file_metadata_list.push_back(files_metadata.at(i - 2));
-                    file_metadata_list.push_back(files_metadata.at(i - 1));
-                    file_metadata_list.push_back(files_metadata.at(i));
-                }
                 i += 6;
             }
         }
