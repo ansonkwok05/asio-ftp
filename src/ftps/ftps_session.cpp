@@ -564,12 +564,12 @@ namespace ftps_session
                         children = custom_utils::splitString(argument, '/');
                     }
 
-                    // validate if each sub-directory exists
+                    // validate if each subdirectory exists
                     {
                         size_t i = 0; // path iterator
 
                         // check first subdirectory
-                        if (!does_file_exists(virtual_path, children[0]))
+                        if (!does_object_exists(virtual_path, children[0]))
                         {
                             println("Cannot change working directory: " + virtual_path + " -> " + children[0] +
                                         ", not found",
@@ -591,7 +591,7 @@ namespace ftps_session
                         {
                             virtual_path += "/" + children[i];
 
-                            if (!does_file_exists(virtual_path, children[i + 1]))
+                            if (!does_object_exists(virtual_path, children[i + 1]))
                             {
                                 println("Cannot change working directory: " + virtual_path + " -> " + children[i + 1] +
                                             ", not found",
@@ -635,17 +635,24 @@ namespace ftps_session
 
                     update_virtual_fs();
 
-                    if (does_file_exists(m_working_directory, argument))
+                    if (does_object_exists(m_working_directory, argument))
                     {
+                        println("Cannot make directory, already exists", custom_utils::COLORS::YELLOW);
                         control_send("550 Directory already exist.");
                         control_receive();
                         return;
                     }
 
                     // folder not exists, create one
-                    println("Creating virtual directory \"" + m_working_directory + "\" \"" + argument + "\"",
+                    if (!create_virtual_folder(m_working_directory, argument))
+                    {
+                        println("Cannot make directory, db fail", custom_utils::COLORS::YELLOW);
+                        control_send("550 Cannot create directory.");
+                        control_receive();
+                        return;
+                    }
+                    println("Created virtual directory \"" + m_working_directory + "\" \"" + argument + "\"",
                             custom_utils::COLORS::GREEN);
-                    create_virtual_folder(argument);
 
                     control_send("250 Directory created.");
                     control_receive();
@@ -661,42 +668,17 @@ namespace ftps_session
                         return;
                     }
 
-                    std::vector<std::string> files_metadatas = get_files_metadatas();
+                    update_virtual_fs();
 
-                    // search and delete folder
-                    size_t i = 0;
-                    while (i < files_metadatas.size())
+                    if (!delete_virtual_object(m_working_directory, argument))
                     {
-                        // delete target folder
-                        if (files_metadatas.at(i) == argument && files_metadatas.at(i + 1) == m_working_directory)
-                        {
-
-                            if (!m_database.delete_data("files", "file_id", files_metadatas.at(i + 5)) ||
-                                !m_database.delete_data("files_metadata", "file_id", files_metadatas.at(i + 5)))
-                            {
-                                // something went wrong when trying to delete data from database
-                                control_send("550 Backend error.");
-                                control_receive();
-                                return;
-                            }
-                        }
-
-                        // delete files/folders in that target folder
-                        if (custom_utils::strStartsWith(files_metadatas.at(i + 1), m_working_directory + argument))
-                        {
-                            if (!m_database.delete_data("files", "file_id", files_metadatas.at(i + 5)) ||
-                                !m_database.delete_data("files_metadata", "file_id", files_metadatas.at(i + 5)))
-                            {
-                                // something went wrong when trying to delete data from database
-                                control_send("550 Backend error.");
-                                control_receive();
-                                return;
-                            }
-                        }
-                        i += 6;
+                        control_send("250 Delete failed.");
+                    }
+                    else
+                    {
+                        control_send("250 Deleted.");
                     }
 
-                    control_send("250 Deleted.");
                     control_receive();
                     return;
                 }
@@ -710,38 +692,17 @@ namespace ftps_session
                         return;
                     }
 
-                    std::vector<std::string> files_metadatas = get_files_metadatas();
+                    update_virtual_fs();
 
-                    size_t i = 0;
-                    while (i < files_metadatas.size())
+                    if (!delete_virtual_object(m_working_directory, argument))
                     {
-                        if (files_metadatas.at(i) == argument && files_metadatas.at(i + 1) == m_working_directory)
-                        { // found
-                            if (fs_handler::remove_file("data/" + files_metadatas.at(i + 5)))
-                            { // success
-                                if (m_database.delete_data("files", "file_id", files_metadatas.at(i + 5)) &&
-                                    m_database.delete_data("files_metadata", "file_id", files_metadatas.at(i + 5)))
-                                { // if successfully deleted data from database
-                                    control_send("250 Deleted.");
-                                    control_receive();
-                                    return;
-                                }
-
-                                // something went wrong when trying to delete data from database
-                                control_send("550 Backend error.");
-                                control_receive();
-                                return;
-                            }
-
-                            // cannot delete file from os
-                            control_send("550 Unsuccessful delete.");
-                            control_receive();
-                            return;
-                        }
-                        i += 6;
+                        control_send("550 Delete failed.");
+                    }
+                    else
+                    {
+                        control_send("250 Deleted.");
                     }
 
-                    control_send("550 File not found.");
                     control_receive();
                     return;
                 }
@@ -943,28 +904,31 @@ namespace ftps_session
 
     void session::data_directory_listing()
     {
-        std::vector<std::string> file_metadata_list = get_files_metadatas();
+        update_virtual_fs();
 
         // send files metadata that is in current working directory
         size_t i = 1;
-        while (i < file_metadata_list.size())
+        while (i < m_virtual_fs.size())
         {
-            if (file_metadata_list.at(i) == m_pending_directory_list)
-            { // send this
+            // match path
+            if (m_virtual_fs.at(i) == m_pending_directory_list)
+            {
                 std::string listing_format = "";
 
-                if (file_metadata_list.at(i + 3) == "0")
-                { // is file
+                if (m_virtual_fs.at(i + 3) == "0")
+                {
+                    // is file
                     listing_format += "-rw-r--r-- 1 ";
                 }
-                else if (file_metadata_list.at(i + 3) == "1")
-                { // is directory
+                else if (m_virtual_fs.at(i + 3) == "1")
+                {
+                    // is directory
                     listing_format += "drwxr-xr-x 1 ";
                 }
                 listing_format += m_username + " " + m_username + " ";
-                listing_format += file_metadata_list.at(i + 1) + " ";                      // file_size
-                listing_format += parse_metadata_time(file_metadata_list.at(i + 2)) + " "; // modified_time
-                listing_format += file_metadata_list.at(i - 1);                            // file_name
+                listing_format += m_virtual_fs.at(i + 1) + " ";                      // file_size
+                listing_format += parse_metadata_time(m_virtual_fs.at(i + 2)) + " "; // modified_time
+                listing_format += m_virtual_fs.at(i - 1);                            // file_name
 
                 data_send(listing_format);
             }
@@ -1092,16 +1056,17 @@ namespace ftps_session
 
         // read db records and search for the according file
 
-        std::vector<std::string> files_metadatas = get_files_metadatas();
+        update_virtual_fs();
+
         std::string target_file_id;
 
-        size_t i = 0;
-        while (i < files_metadatas.size())
+        size_t i = 1;
+        while (i < m_virtual_fs.size())
         {
-            if (files_metadatas.at(i) == file_name && files_metadatas.at(i + 1) == file_path)
+            if (m_virtual_fs.at(i) == file_path && m_virtual_fs.at(i - 1) == file_name)
             {
                 // found the target file to send to client
-                target_file_id = files_metadatas.at(i + 5);
+                target_file_id = m_virtual_fs.at(i + 4);
                 break;
             }
             i += 6;
@@ -1123,7 +1088,7 @@ namespace ftps_session
 
         if (!fs_handler::file_exists("data/" + target_file_id))
         {
-            println("File not found during data socket sending", custom_utils::COLORS::RED);
+            println("Actual file not found on OS", custom_utils::COLORS::RED);
             return;
         }
 
@@ -1216,7 +1181,7 @@ namespace ftps_session
 
     std::string session::parse_metadata_time(std::string time_str)
     {
-        // format: 2025-08-28 05:12:43 -> Jan 22 10:00
+        // format: 2025-08-28 05:12:43 -> Aug 28 05:12
 
         std::string parsedStr = "";
 
@@ -1293,61 +1258,6 @@ namespace ftps_session
         return parsedStr;
     }
 
-    std::vector<std::string> session::get_files_metadatas()
-    {
-        std::vector<std::string> file_id_list;
-        { // get file ids of this user
-            std::vector<std::string> files;
-            m_database.read_data("files", {}, files);
-
-            size_t i = 1;
-            while (i < files.size())
-            {
-                if (files.at(i) == m_userid)
-                { // found user's file
-                    file_id_list.push_back(files.at(i - 1));
-                }
-                i += 2;
-            }
-        }
-
-        std::vector<std::string> file_metadata_list;
-        { // get file metadatas that matches this users' file ids
-            std::vector<std::string> files_metadata;
-            m_database.read_data("files_metadata", {}, files_metadata);
-
-            size_t i = 5;
-            while (i < files_metadata.size())
-            {
-                bool found_file = false;
-                for (size_t n = 0; n < file_id_list.size(); n++)
-                {
-                    if (files_metadata.at(i) == file_id_list.at(n))
-                    {
-                        // low priority todo: remove found file id from file_id_list?
-                        // can this reduce search time?
-                        // cuz every time a file is found, the next search needs to search 1 time less
-                        found_file = true;
-                        break;
-                    }
-                }
-
-                if (found_file)
-                { // matches
-                    file_metadata_list.push_back(files_metadata.at(i - 5));
-                    file_metadata_list.push_back(files_metadata.at(i - 4));
-                    file_metadata_list.push_back(files_metadata.at(i - 3));
-                    file_metadata_list.push_back(files_metadata.at(i - 2));
-                    file_metadata_list.push_back(files_metadata.at(i - 1));
-                    file_metadata_list.push_back(files_metadata.at(i));
-                }
-                i += 6;
-            }
-        }
-
-        return file_metadata_list;
-    }
-
     void session::update_virtual_fs()
     {
         std::vector<std::string> file_id_list;
@@ -1405,21 +1315,6 @@ namespace ftps_session
         m_virtual_fs = file_metadata_list;
     }
 
-    bool session::does_file_exists(std::string path, std::string filename)
-    {
-        println("finding " + path + " " + filename, custom_utils::COLORS::BRIGHTBLUE);
-
-        size_t i = 1;
-        while (i < m_virtual_fs.size())
-        {
-            if (m_virtual_fs.at(i) == path && m_virtual_fs.at(i - 1) == filename)
-                return true;
-            i += 6;
-        }
-
-        return false;
-    }
-
     std::string session::return_parent_directory(std::string directory)
     {
         // return root when already at root directory
@@ -1449,7 +1344,20 @@ namespace ftps_session
         return parent;
     }
 
-    bool session::create_virtual_folder(std::string folder_name)
+    bool session::does_object_exists(std::string path, std::string object_name)
+    {
+        size_t i = 1;
+        while (i < m_virtual_fs.size())
+        {
+            if (m_virtual_fs.at(i) == path && m_virtual_fs.at(i - 1) == object_name)
+                return true;
+            i += 6;
+        }
+
+        return false;
+    }
+
+    bool session::create_virtual_folder(std::string path, std::string folder_name)
     {
         std::string folder_id = custom_utils::generate_uuid_string(16);
 
@@ -1474,7 +1382,7 @@ namespace ftps_session
                                     },
                                     {
                                         folder_name,
-                                        m_working_directory,
+                                        path,
                                         "0",
                                         "1",
                                         folder_id,
@@ -1482,6 +1390,96 @@ namespace ftps_session
             return false;
 
         return true;
+    }
+
+    bool session::delete_virtual_object(std::string path, std::string object_name)
+    {
+        bool deleted_matches = false;
+        bool delete_subdirectories = false;
+
+        size_t i = 1;
+        while (i < m_virtual_fs.size())
+        {
+            // try matching path and object name
+            if (m_virtual_fs.at(i) == path && m_virtual_fs.at(i - 1) == object_name)
+            {
+                if (!m_database.delete_data("files", "file_id", m_virtual_fs.at(i + 4)) ||
+                    !m_database.delete_data("files_metadata", "file_id", m_virtual_fs.at(i + 4)))
+                {
+                    // something went wrong when trying to delete data from database
+                    return false;
+                }
+
+                // check if object is a folder
+                if (m_virtual_fs.at(i + 3) == "1")
+                {
+                    // need to delete possible objects inside this folder
+                    delete_subdirectories = true;
+                }
+                else
+                {
+                    // delete the actual file from OS
+                    if (!fs_handler::remove_file("data/" + m_virtual_fs.at(i + 4)))
+                    {
+                        // failed to delete file from OS
+                        return false;
+                    }
+                }
+
+                // successfully deleted object, end loop early
+                println("deleted match " + path + " & " + object_name, custom_utils::COLORS::GREEN);
+                deleted_matches = true;
+                break;
+            }
+            i += 6;
+        }
+
+        // delete subdirectories
+        if (delete_subdirectories)
+        {
+            std::string subpath;
+            if (path == "/")
+            {
+                subpath = path + object_name;
+            }
+            else
+            {
+                subpath = path + "/" + object_name;
+            }
+
+            size_t i = 1;
+            while (i < m_virtual_fs.size())
+            {
+                // try matching the path inside that folder
+                if (custom_utils::strStartsWith(m_virtual_fs.at(i), subpath))
+                {
+                    if (!m_database.delete_data("files", "file_id", m_virtual_fs.at(i + 4)) ||
+                        !m_database.delete_data("files_metadata", "file_id", m_virtual_fs.at(i + 4)))
+                    {
+                        // something went wrong when trying to delete data from database
+                        return false;
+                    }
+
+                    // check if object is a file
+                    if (m_virtual_fs.at(i + 3) == "0")
+                    {
+                        // delete the actual file from OS
+                        if (!fs_handler::remove_file("data/" + m_virtual_fs.at(i + 4)))
+                        {
+                            // failed to delete file from OS
+                            return false;
+                        }
+                    }
+
+                    println("deleted match in subpath " + subpath + " & " + m_virtual_fs.at(i - 1),
+                            custom_utils::COLORS::GREEN);
+                }
+
+                i += 6;
+            }
+        }
+
+        return deleted_matches;
     }
 
     void session::println(std::string message)

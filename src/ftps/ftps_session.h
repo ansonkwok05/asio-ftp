@@ -94,13 +94,13 @@ namespace ftps_session
         void data_send_file();
 
         std::string parse_metadata_time(std::string time_str);
-        std::vector<std::string> get_files_metadatas();
+        std::string return_parent_directory(std::string directory);
 
         std::vector<std::string> m_virtual_fs;
         void update_virtual_fs();
-        bool does_file_exists(std::string path, std::string filename);
-        std::string return_parent_directory(std::string directory);
-        bool create_virtual_folder(std::string folder_name);
+        bool does_object_exists(std::string path, std::string object_name);
+        bool create_virtual_folder(std::string path, std::string folder_name);
+        bool delete_virtual_object(std::string path, std::string object_name);
 
         void println(std::string message);
         void println(std::string message, int color);
