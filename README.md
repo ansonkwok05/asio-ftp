@@ -7,8 +7,10 @@ Feature | Description
 SQLite database | Stores file metadata (name, path, size, modified time, etc.)
 FTPS server | Explicit and implicit encryption mode. Support file upload and download.
 
-## To be implemented:
+## To be implemented / bug fixes:
 * SFTP server
+* FTPS public ip mode (currently only works in LAN)
+* FTPS concurrent upload (concurrent download works, concurrent upload has missing files)
 
 ## Requirements
 * CMake version 3.10 or higher
