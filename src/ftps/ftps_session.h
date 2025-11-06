@@ -103,6 +103,6 @@ namespace ftps_session
         bool create_virtual_folder(std::string folder_name);
 
         void println(std::string message);
-        void println(std::string message, std::string color);
+        void println(std::string message, int color);
     };
 } // namespace ftps_session

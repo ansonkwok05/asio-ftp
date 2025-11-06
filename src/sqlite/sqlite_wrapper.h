@@ -108,7 +108,7 @@ namespace sqlite_wrapper
         void check_table_structure(std::string table_name);
 
         void println(std::string message);
-        void println(std::string message, std::string color);
+        void println(std::string message, int color);
 
         /**
          * A callback that copys return value into a SQLite_Context

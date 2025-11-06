@@ -16,16 +16,17 @@ int main()
         custom_utils::stopwatch performanceWatcher;
         performanceWatcher.start();
 
-        println("Initializing database", "green");
+        println("Initializing database", custom_utils::COLORS::GREEN);
 
         sqlite_wrapper::SQLiteDb *database = new sqlite_wrapper::SQLiteDb(sqlite_wrapper::ENABLE_LOGGING);
         database->init_db();
 
-        println("Database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms", "green");
+        println("Database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
+                custom_utils::COLORS::GREEN);
 
         // { // test database insert data
         //     performanceWatcher.start();
-        //     println("Starting insert test", "blue");
+        //     println("Starting insert test", custom_utils::COLORS::BLUE);
 
         //     std::string useridStr = "XD";
         //     std::string usernameStr = "lmaoxd";
@@ -42,14 +43,14 @@ int main()
 
         //     println("10 insert operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) +
         //     "ms",
-        //             "blue");
+        //             custom_utils::COLORS::BLUE);
         // }
 
         // println();
 
         // { // test database read data
         //     performanceWatcher.start();
-        //     println("Starting read test", "blue");
+        //     println("Starting read test", custom_utils::COLORS::BLUE);
 
         //     std::string log = "";
         //     for (int i = 0; i < 10; i++)
@@ -60,14 +61,14 @@ int main()
         //     }
         //     println(log);
         //     println("10 read operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
-        //             "blue");
+        //             custom_utils::COLORS::BLUE);
         // }
 
         // println();
 
         // { // test database delete data
         //     performanceWatcher.start();
-        //     println("Starting delete test", "blue");
+        //     println("Starting delete test", custom_utils::COLORS::BLUE);
 
         //     std::string useridStr = "XD";
 
@@ -82,7 +83,7 @@ int main()
 
         //     println("10 delete operation all done in " + std::to_string(performanceWatcher.lapUs() / 1000) +
         //     "ms",
-        //             "blue");
+        //             custom_utils::COLORS::BLUE);
         // }
 
         {     // create test data
@@ -218,7 +219,7 @@ int main()
             //     }
             // }
 
-            println("Test data created", "blue");
+            println("Test data created", custom_utils::COLORS::BLUE);
         }
 
         delete database;
@@ -228,7 +229,7 @@ int main()
     // launch FTPS server in worker thread
     std::thread ftps_server_thread([]() { ftps_server::server ftps_server = ftps_server::server(); });
 
-    println("FTPS server worker thread started", "green");
+    println("FTPS server worker thread started", custom_utils::COLORS::GREEN);
     ftps_server_thread.join(); // prevent main thread to die, while worker thread can do its thing
 
     return 0;

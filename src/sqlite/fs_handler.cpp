@@ -55,7 +55,7 @@ namespace fs_handler
     {
         if (!file_exists)
         {
-            print("File doesn't exists.\n", "red");
+            print("File doesn't exists.\n", custom_utils::COLORS::RED);
             throw std::runtime_error("File path: " + file_name);
         }
 
@@ -76,7 +76,8 @@ namespace fs_handler
             file_signature += " ";
         }
 
-        // print("Unknown file signature -> " + file_signature + "from " + file_name + "\n", "blue");
+        // print("Unknown file signature -> " + file_signature + "from " + file_name + "\n",
+        // custom_utils::COLORS::BLUE);
         return "";
     }
 
@@ -84,7 +85,7 @@ namespace fs_handler
     {
         if (!file_exists)
         {
-            print("File doesn't exists.\n", "red");
+            print("File doesn't exists.\n", custom_utils::COLORS::RED);
             throw std::runtime_error("File path: " + file_name);
         }
 

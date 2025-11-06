@@ -34,6 +34,6 @@ namespace ftp_session
         void start_ftps_session(bool isImplicit);
 
         void println(std::string message);
-        void println(std::string message, std::string color);
+        void println(std::string message, int color);
     };
 } // namespace ftp_session

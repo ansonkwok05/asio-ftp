@@ -17,12 +17,12 @@ namespace ftp_session
     {
         println("session created for " + m_socket.remote_endpoint().address().to_string() + ":" +
                     std::to_string(m_socket.remote_endpoint().port()),
-                "brightblack");
+                custom_utils::COLORS::BRIGHTBLACK);
     }
 
     session::~session()
     {
-        println("session destroyed", "brightblack");
+        println("session destroyed", custom_utils::COLORS::BRIGHTBLACK);
     }
 
     void session::start()
@@ -57,7 +57,8 @@ namespace ftp_session
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
                                      if (ec)
                                      {
-                                         self->println("Unknown async_write error -> " + ec.message(), "yellow");
+                                         self->println("Unknown async_write error -> " + ec.message(),
+                                                       custom_utils::COLORS::YELLOW);
                                          return;
                                      }
                                  });
@@ -77,7 +78,8 @@ namespace ftp_session
                                              self->m_socket.close();
                                              return;
                                          }
-                                         self->println("Unknown read_some error -> " + ec.message(), "yellow");
+                                         self->println("Unknown read_some error -> " + ec.message(),
+                                                       custom_utils::COLORS::YELLOW);
                                          return;
                                      }
 
@@ -151,7 +153,7 @@ namespace ftp_session
         custom_utils::println("[FTP ] " + message);
     }
 
-    void session::println(std::string message, std::string color)
+    void session::println(std::string message, int color)
     {
         custom_utils::println("[FTP ] " + message, color);
     }

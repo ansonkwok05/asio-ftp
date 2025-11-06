@@ -7,24 +7,61 @@
 
 namespace custom_utils
 {
+    /**
+     * print message to console
+     * @param message string to print to console
+     */
     void print(std::string message);
-    void print(std::string message, std::string color);
 
+    /**
+     * print message to console with color
+     * @param message string to print to console
+     * @param color int representing the color (30 - 97)
+     */
+    void print(std::string message, int color);
+
+    /**
+     * print empty line to console
+     */
     void println();
-    void println(std::string message);
-    void println(std::string message, std::string color);
 
-    const std::map<std::string, int> COLORS = {
-        {"black", 30},       {"red", 31},           {"green", 32},       {"yellow", 33},
-        {"blue", 34},        {"magenta", 35},       {"cyan", 36},        {"white", 37},
-        {"brightblack", 90}, {"brightred", 91},     {"brightgreen", 92}, {"brightyellow", 93},
-        {"brightblue", 94},  {"brightmagenta", 95}, {"brightcyan", 96},  {"brightwhite", 97}};
+    /**
+     * print message to console with line break
+     * @param message string to print to console
+     */
+    void println(std::string message);
+
+    /**
+     * print message to console with line break and color
+     * @param message string to print to console
+     */
+    void println(std::string message, int color);
+
+    enum COLORS
+    {
+        BLACK = 30,
+        RED = 31,
+        GREEN = 32,
+        YELLOW = 33,
+        BLUE = 34,
+        MAGENTA = 35,
+        CYAN = 36,
+        WHITE = 37,
+        BRIGHTBLACK = 90,
+        BRIGHTRED = 91,
+        BRIGHTGREEN = 92,
+        BRIGHTYELLOW = 93,
+        BRIGHTBLUE = 94,
+        BRIGHTMAGENTA = 95,
+        BRIGHTCYAN = 96,
+        BRIGHTWHITE = 97,
+    };
 
     /**
      * set the color of cout by using ANSI color code
-     * @param color A string representing the color (black, red, green, yellow, blue, magenta, cyan, white)
+     * @param color int representing the color (30 - 97)
      */
-    void setPrintColor(std::string color);
+    void setPrintColor(int color);
 
     void resetPrintColor();
 
