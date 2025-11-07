@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <unordered_map>
 #include <algorithm>
 #include <fstream>
 
@@ -1286,17 +1287,21 @@ namespace ftps_session
 
     void session::update_virtual_fs()
     {
-        std::vector<std::string> file_id_list;
-        { // retrieve a list of file ids of this user's files
+        std::unordered_map<char, std::vector<std::string>> file_id_hash;
+
+        // hash file ids that belongs to this user
+        {
             std::vector<std::string> files;
             m_database.read_data("files", {"file_id", "user_id"}, files);
 
             size_t i = 1;
             while (i < files.size())
             {
-                if (files.at(i) == m_userid)
-                { // found user's file
-                    file_id_list.push_back(files.at(i - 1));
+                // user's file
+                if (files[i] == m_userid)
+                {
+                    // hash it using the first character of the file_id as index
+                    file_id_hash[files[i - 1][0]].push_back(files[i - 1]);
                 }
                 i += 2;
             }
@@ -1312,20 +1317,16 @@ namespace ftps_session
             size_t i = 5;
             while (i < files_metadata.size())
             {
-                for (size_t n = 0; n < file_id_list.size(); n++)
+                for (size_t n = 0; n < file_id_hash[files_metadata[i][0]].size(); n++)
                 {
-                    if (files_metadata.at(i) == file_id_list.at(n))
+                    if (file_id_hash[files_metadata[i][0]][n] == files_metadata[i])
                     {
-                        // low priority todo: remove found file id from file_id_list
-                        // cannot use vector for this, too slow when removing element middle of nowhere
-                        // need to use another data type first, then try this
-
-                        file_metadata_list.push_back(files_metadata.at(i - 5));
-                        file_metadata_list.push_back(files_metadata.at(i - 4));
-                        file_metadata_list.push_back(files_metadata.at(i - 3));
-                        file_metadata_list.push_back(files_metadata.at(i - 2));
-                        file_metadata_list.push_back(files_metadata.at(i - 1));
-                        file_metadata_list.push_back(files_metadata.at(i));
+                        file_metadata_list.push_back(files_metadata[i - 5]);
+                        file_metadata_list.push_back(files_metadata[i - 4]);
+                        file_metadata_list.push_back(files_metadata[i - 3]);
+                        file_metadata_list.push_back(files_metadata[i - 2]);
+                        file_metadata_list.push_back(files_metadata[i - 1]);
+                        file_metadata_list.push_back(files_metadata[i]);
                         break;
                     }
                 }
