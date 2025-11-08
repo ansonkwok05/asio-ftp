@@ -93,6 +93,8 @@ namespace ftps_session
         void data_receive_file();
         void data_send_file();
 
+        void data_async_send_file(); // experimental, todo
+
         std::string parse_metadata_time(std::string time_str);
         std::string return_parent_directory(std::string directory);
 
