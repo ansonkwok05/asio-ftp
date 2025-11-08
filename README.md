@@ -21,8 +21,8 @@ FTPS server | Explicit and implicit encryption mode. Support file upload and dow
 * OpenSSL
 * TLS keys (dh.pem, cert.pem, key.pem)
 
-## Compilation
-This project is built using CMake, allowing cross-platform compilation across Windows, macOS and Linux.
+## How to compile
+This project can be compiled using CMake, allowing cross-platform compilation across Windows, macOS and Linux.
 
 ### Windows
 Can be built using Visual Studio, or use CMake to generate your own build files.
