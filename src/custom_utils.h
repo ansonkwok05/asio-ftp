@@ -7,37 +7,7 @@
 
 namespace custom_utils
 {
-    /**
-     * print message to console
-     * @param message string to print to console
-     */
-    void print(std::string message);
-
-    /**
-     * print message to console with color
-     * @param message string to print to console
-     * @param color int representing the color (30 - 97)
-     */
-    void print(std::string message, int color);
-
-    /**
-     * print empty line to console
-     */
-    void println();
-
-    /**
-     * print message to console with line break
-     * @param message string to print to console
-     */
-    void println(std::string message);
-
-    /**
-     * print message to console with line break and color
-     * @param message string to print to console
-     */
-    void println(std::string message, int color);
-
-    enum COLORS
+    enum class COLOR : int
     {
         BLACK = 30,
         RED = 31,
@@ -58,10 +28,41 @@ namespace custom_utils
     };
 
     /**
-     * set the color of cout by using ANSI color code
-     * @param color int representing the color (30 - 97)
+     * print message to console
+     * @param message string to print to console
      */
-    void setPrintColor(int color);
+    void print(std::string message);
+
+    /**
+     * print message to console with color
+     * @param message string to print to console
+     * @param color enum representing the color
+     */
+    void print(std::string message, COLOR color);
+
+    /**
+     * print empty line to console
+     */
+    void println();
+
+    /**
+     * print message to console with line break
+     * @param message string to print to console
+     */
+    void println(std::string message);
+
+    /**
+     * print message to console with line break and color
+     * @param message string to print to console
+     * @param color enum representing the color
+     */
+    void println(std::string message, COLOR color);
+
+    /**
+     * set the color of cout by using ANSI color code
+     * @param color enum representing the color
+     */
+    void setPrintColor(COLOR color);
 
     void resetPrintColor();
 

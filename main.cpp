@@ -1,6 +1,8 @@
 #include "src/custom_utils.h"
-#include "src/ftps/ftps_server.h"
 #include "src/sqlite/sqlite_wrapper.h"
+#include "src/user_db.h"
+#include "src/virtual_fs_db.h"
+#include "src/ftps/ftps_server.h"
 
 #include <thread>
 #include <vector>
@@ -12,53 +14,67 @@ int main()
 {
     std::srand(std::time(NULL)); // initialize rand
 
-    { // database initialization
-        custom_utils::stopwatch performanceWatcher;
-        performanceWatcher.start();
+    custom_utils::stopwatch performanceWatcher;
 
-        println("Initializing database", custom_utils::COLORS::GREEN);
+    {
+        performanceWatcher.start();
+        println("Initializing SQLite database", custom_utils::COLOR::GREEN);
 
         sqlite_wrapper::SQLiteDb *database = new sqlite_wrapper::SQLiteDb(sqlite_wrapper::ENABLE_LOGGING);
         database->init_db();
-
-        println("Database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
-                custom_utils::COLORS::GREEN);
-
-        { // create user data if not exists
-            {
-                std::vector<std::string> return_data;
-                database->read_data("users", {}, return_data);
-
-                std::unordered_map<std::string, std::string> parsedData;
-                size_t i = 0;
-                while (i < return_data.size())
-                {
-                    parsedData[return_data.at(i)] = return_data.at(i + 1);
-                    i += 3;
-                }
-
-                if (parsedData.find("numba1") == parsedData.end())
-                {
-                    database->insert_data("users", {"user_id", "username", "password"}, {"numba1", "useless1", "test"});
-                }
-
-                if (parsedData.find("numba2") == parsedData.end())
-                {
-                    database->insert_data("users", {"user_id", "username", "password"}, {"numba2", "useless2", "test"});
-                }
-            }
-
-            println("Test data created", custom_utils::COLORS::BLUE);
-        }
-
         delete database;
         database = nullptr;
+
+        println("SQLite database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
+                custom_utils::COLOR::GREEN);
+    }
+
+    {
+        performanceWatcher.start();
+        println("Initializing user database", custom_utils::COLOR::GREEN);
+
+        user_db::user *user = new user_db::user();
+        user->initialize();
+
+        if (user->get_id_by_name("useless1").size() == 0)
+        {
+            println("Attemping to create user \"useless1\"", custom_utils::COLOR::YELLOW);
+            user->create_user("useless1", "test");
+            println("Created user \"useless1\"", custom_utils::COLOR::GREEN);
+        }
+
+        if (user->get_id_by_name("useless2").size() == 0)
+        {
+            println("Attemping to create user \"useless2\"", custom_utils::COLOR::YELLOW);
+            user->create_user("useless2", "test");
+            println("Created user \"useless2\"", custom_utils::COLOR::GREEN);
+        }
+
+        delete user;
+        user = nullptr;
+
+        println("User database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
+                custom_utils::COLOR::GREEN);
+    }
+
+    {
+        performanceWatcher.start();
+        println("Initializing virtual fs database", custom_utils::COLOR::GREEN);
+
+        virtual_fs_db::virtual_fs *virtual_fs = new virtual_fs_db::virtual_fs();
+        virtual_fs->initialize();
+        delete virtual_fs;
+        virtual_fs = nullptr;
+
+        println("Virtual fs database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) +
+                    "ms",
+                custom_utils::COLOR::GREEN);
     }
 
     // launch FTPS server in worker thread
     std::thread ftps_server_thread([]() { ftps_server::server ftps_server = ftps_server::server(); });
 
-    println("FTPS server worker thread started", custom_utils::COLORS::GREEN);
+    println("FTPS server worker thread started", custom_utils::COLOR::GREEN);
     ftps_server_thread.join(); // prevent main thread to die, while worker thread can do its thing
 
     return 0;

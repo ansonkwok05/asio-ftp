@@ -20,7 +20,7 @@ namespace custom_utils
         cout << message;
     }
 
-    void print(std::string message, int color)
+    void print(std::string message, COLOR color)
     {
         setPrintColor(color);
         cout << message;
@@ -39,7 +39,7 @@ namespace custom_utils
         cout << message << "\n";
     }
 
-    void println(std::string message, int color)
+    void println(std::string message, COLOR color)
     {
         setPrintColor(color);
         cout << '[' << getTimeString() << ']' << ' ';
@@ -47,9 +47,9 @@ namespace custom_utils
         resetPrintColor();
     }
 
-    void setPrintColor(int color)
+    void setPrintColor(COLOR color)
     {
-        cout << "\033[" << color << "m";
+        cout << "\033[" << static_cast<int>(color) << "m";
     }
 
     void resetPrintColor()

@@ -1,7 +1,8 @@
-#include "../custom_utils.h"
 #include "ftps_session.h"
-#include "../sqlite/sqlite_wrapper.h"
+#include "../custom_utils.h"
 #include "../sqlite/fs_handler.h"
+#include "../user_db.h"
+#include "../virtual_fs_db.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -15,7 +16,7 @@
 namespace ftps_session
 {
     session::session(boost::asio::ip::tcp::socket socket, bool isImplicit)
-        : m_ssl_context(boost::asio::ssl::context::tlsv13_server), m_buffer(BUFFER_SIZE), m_database(false)
+        : m_ssl_context(boost::asio::ssl::context::tlsv13_server), m_buffer(BUFFER_SIZE)
     {
         m_session_id = custom_utils::generate_uuid_string(8);
 
@@ -31,8 +32,6 @@ namespace ftps_session
 
         m_control_socket =
             std::make_unique<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(std::move(socket), m_ssl_context);
-
-        m_database.connect();
 
         // check conenction is lan or wan
         {
@@ -58,12 +57,12 @@ namespace ftps_session
 
         println("session created for " + m_control_socket->lowest_layer().remote_endpoint().address().to_string() +
                     ":" + std::to_string(m_control_socket->lowest_layer().remote_endpoint().port()),
-                custom_utils::COLORS::BRIGHTBLACK);
+                custom_utils::COLOR::BRIGHTBLACK);
     }
 
     session::~session()
     {
-        println("session destroyed", custom_utils::COLORS::BRIGHTBLACK);
+        println("session destroyed", custom_utils::COLOR::BRIGHTBLACK);
     }
 
     void session::start()
@@ -72,7 +71,7 @@ namespace ftps_session
         m_control_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
         if (ec)
         {
-            println("handshake error", custom_utils::COLORS::RED);
+            println("handshake error", custom_utils::COLOR::RED);
             return;
         }
 
@@ -97,7 +96,7 @@ namespace ftps_session
         //                              if (ec)
         //                              {
         //                                  self->println("Unknown async_write error -> " + ec.message(),
-        //                                  custom_utils::COLORS::YELLOW); return;
+        //                                  custom_utils::COLOR::YELLOW); return;
         //                              }
         //                          });
 
@@ -105,7 +104,7 @@ namespace ftps_session
         boost::asio::write(*m_control_socket, boost::asio::buffer(message), ec);
         if (ec)
         {
-            println("Unknown async_write error -> " + ec.message(), custom_utils::COLORS::YELLOW);
+            println("Unknown async_write error -> " + ec.message(), custom_utils::COLOR::YELLOW);
             return;
         }
     }
@@ -121,7 +120,7 @@ namespace ftps_session
                     if (ec == boost::asio::ssl::error::stream_truncated)
                     {
                         // client disconnected
-                        self->println("Client disconnected -> " + ec.message(), custom_utils::COLORS::GREEN);
+                        self->println("Client disconnected -> " + ec.message(), custom_utils::COLOR::GREEN);
 
                         boost::system::error_code shutdownEC;
                         self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
@@ -129,14 +128,14 @@ namespace ftps_session
 
                         if (shutdownEC)
                         {
-                            self->println("Error during control socket shutdown", custom_utils::COLORS::YELLOW);
+                            self->println("Error during control socket shutdown", custom_utils::COLOR::YELLOW);
                             return;
                         }
 
                         self->m_control_socket->next_layer().close();
                         return;
                     }
-                    self->println("Unknown read_some error -> " + ec.message(), custom_utils::COLORS::YELLOW);
+                    self->println("Unknown read_some error -> " + ec.message(), custom_utils::COLOR::YELLOW);
                     return;
                 }
 
@@ -171,13 +170,13 @@ namespace ftps_session
         //     if (ec == boost::asio::ssl::error::stream_truncated)
         //     {
         //         // client disconnected
-        //         println("Client disconnected -> " + ec.message(), custom_utils::COLORS::GREEN);
+        //         println("Client disconnected -> " + ec.message(), custom_utils::COLOR::GREEN);
 
         //         m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
         //         m_control_socket->next_layer().close();
         //         return;
         //     }
-        //     println("Unknown read_some error -> " + ec.message(), custom_utils::COLORS::YELLOW);
+        //     println("Unknown read_some error -> " + ec.message(), custom_utils::COLOR::YELLOW);
         //     return;
         // }
 
@@ -220,7 +219,7 @@ namespace ftps_session
                 std::vector<std::string>(split_received_string.begin() + 1, split_received_string.end()), " ");
         }
 
-        println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLORS::BLUE);
+        println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
 
         handle_FTP_command(FTP_command, FTP_argument);
     }
@@ -230,7 +229,7 @@ namespace ftps_session
         // check if command is supported
         if (std::find(FTP_COMMANDS.begin(), FTP_COMMANDS.end(), command) == FTP_COMMANDS.end())
         {
-            println("Unknown command -> " + command, custom_utils::COLORS::YELLOW);
+            println("Unknown command -> " + command, custom_utils::COLOR::YELLOW);
             control_send("502 Command not implemented.");
             control_receive();
             return;
@@ -265,7 +264,7 @@ namespace ftps_session
 
                 if (ec)
                 {
-                    println("Error during control socket shutdown", custom_utils::COLORS::YELLOW);
+                    println("Error during control socket shutdown", custom_utils::COLOR::YELLOW);
                     return;
                 }
 
@@ -278,39 +277,29 @@ namespace ftps_session
                 if (argument == "")
                 {
                     // argument is empty
-                    println("Unknown username -> \"" + argument + "\"", custom_utils::COLORS::YELLOW);
+                    println("Unknown username -> \"" + argument + "\"", custom_utils::COLOR::YELLOW);
                     control_send("530 Invalid username.");
                     control_receive();
                     return;
                 }
 
-                // get user_id, username from database users table
-                std::vector<std::string> users_table;
-                if (!m_database.read_data("users", {"user_id", "username"}, users_table))
+                // get user_id by name from database users table
+                std::vector<std::string> id_results = m_user.get_id_by_name(argument);
+
+                // username does not exist in database
+                if (id_results.size() == 0)
                 {
-                    println("SQLite database read_data error", custom_utils::COLORS::RED);
+                    println("Unknown username -> \"" + argument + "\"", custom_utils::COLOR::YELLOW);
+                    control_send("530 Invalid username.");
+                    control_receive();
                     return;
                 }
 
-                // search if username exists in users table
-                size_t i = 1;
-                while (i < users_table.size())
-                {
-                    if (users_table.at(i) == argument)
-                    {
-                        m_userid = users_table.at(i - 1);
-                        m_username = users_table.at(i);
-                        println("Known username, need password", custom_utils::COLORS::GREEN);
-                        control_send("331 Username okay, password needed.");
-                        control_receive();
-                        return;
-                    }
-                    i += 2;
-                }
+                m_userid = id_results[0];
+                m_username = m_user.get_name_by_id(m_userid)[0];
 
-                // username not found
-                println("Unknown username -> \"" + argument + "\"", custom_utils::COLORS::YELLOW);
-                control_send("530 Invalid username.");
+                println("Known username, need password", custom_utils::COLOR::GREEN);
+                control_send("331 Username okay, password needed.");
                 control_receive();
                 return;
             }
@@ -324,40 +313,18 @@ namespace ftps_session
                     return;
                 }
 
-                // get user_id, password from database users table
-                std::vector<std::string> users_table;
-                if (!m_database.read_data("users", {"user_id", "password"}, users_table))
+                if (m_user.get_password_by_id(m_userid)[0] == argument)
                 {
-                    println("SQLite database read_data error", custom_utils::COLORS::RED);
+                    m_connection_stage = LOGGED_IN;
+                    println("User \"" + m_username + "\" logged in", custom_utils::COLOR::GREEN);
+                    control_send("230 Logged in.");
+                    control_receive();
                     return;
                 }
 
-                // search for user_id and check for password
-                size_t i = 0;
-                while (i < users_table.size())
-                {
-                    // find user_id
-                    if (users_table.at(i) == m_userid)
-                    {
-                        // user_id found, check password
-                        if (users_table.at(i + 1) == argument)
-                        {
-                            m_connection_stage = LOGGED_IN;
-                            println("User id \"" + m_userid + "\" logged in", custom_utils::COLORS::GREEN);
-                            control_send("230 Logged in.");
-                            control_receive();
-                            return;
-                        }
-                        println("Wrong password from client trying to log into \"" + m_userid + "\"",
-                                custom_utils::COLORS::YELLOW);
-                        control_send("530 Wrong password.");
-                        control_receive();
-                        return;
-                    }
-                    i += 2;
-                }
-
-                control_send("530 User not found.");
+                println("Wrong password from client trying to login as \"" + m_username + "\"",
+                        custom_utils::COLOR::YELLOW);
+                control_send("530 Wrong password.");
                 control_receive();
                 return;
             }
@@ -405,7 +372,7 @@ namespace ftps_session
                         return;
                     }
 
-                    println("Unknown OPTS argument -> \"" + argument + "\"", custom_utils::COLORS::YELLOW);
+                    println("Unknown OPTS argument -> \"" + argument + "\"", custom_utils::COLOR::YELLOW);
                     control_receive();
                     return;
                 }
@@ -473,7 +440,7 @@ namespace ftps_session
                     control_send(response_format);
                     control_receive();
 
-                    println("FTPS data channel listening on port " + std::to_string(port), custom_utils::COLORS::GREEN);
+                    println("FTPS data channel listening on port " + std::to_string(port), custom_utils::COLOR::GREEN);
                     return;
                 }
 
@@ -482,7 +449,7 @@ namespace ftps_session
                     if (m_pending_directory_list != "")
                     {
                         println("Previous list directory operation not finished -> " + m_pending_directory_list,
-                                custom_utils::COLORS::RED);
+                                custom_utils::COLOR::RED);
                         return;
                     }
 
@@ -491,7 +458,7 @@ namespace ftps_session
                     // if data socket is already accepted, that means LIST command is received late
                     if (m_data_socket && m_data_socket->lowest_layer().is_open())
                     {
-                        println("late LIST command received", custom_utils::COLORS::YELLOW);
+                        println("late LIST command received", custom_utils::COLOR::YELLOW);
 
                         control_send("150 Opening connection.");
                         data_directory_listing();
@@ -546,8 +513,6 @@ namespace ftps_session
                         return;
                     }
 
-                    update_virtual_fs();
-
                     // handle multiple types of arguments
                     // type 1 "/test/one"   // absolute path
                     // type 2 "test/one"    // absolute path using current working directory as parent
@@ -578,12 +543,12 @@ namespace ftps_session
                     {
                         size_t i = 0; // path iterator
 
-                        // check first subdirectory
-                        if (!does_object_exists(virtual_path, children[0]))
+                        // check if first subdirectory exists
+                        if (m_virtual_fs.get_object(m_userid, children[0], virtual_path).size() == 0)
                         {
                             println("Cannot change working directory: " + virtual_path + " -> " + children[0] +
                                         ", not found",
-                                    custom_utils::COLORS::YELLOW);
+                                    custom_utils::COLOR::YELLOW);
                             control_send("550 No such file or directory.");
                             control_receive();
                             return;
@@ -601,11 +566,11 @@ namespace ftps_session
                         {
                             virtual_path += "/" + children[i];
 
-                            if (!does_object_exists(virtual_path, children[i + 1]))
+                            if (m_virtual_fs.get_object(m_userid, children[i + 1], virtual_path).size() == 0)
                             {
                                 println("Cannot change working directory: " + virtual_path + " -> " + children[i + 1] +
                                             ", not found",
-                                        custom_utils::COLORS::YELLOW);
+                                        custom_utils::COLOR::YELLOW);
                                 control_send("550 No such file or directory.");
                                 control_receive();
                                 return;
@@ -637,32 +602,26 @@ namespace ftps_session
                 {
                     if (argument == "")
                     {
-                        println("Cannot make directory, no arguments", custom_utils::COLORS::YELLOW);
+                        println("Cannot make directory, no arguments", custom_utils::COLOR::YELLOW);
                         control_send("501 No arguments presented.");
                         control_receive();
                         return;
                     }
 
-                    update_virtual_fs();
-
-                    if (does_object_exists(m_working_directory, argument))
+                    // check if object exists
+                    if (m_virtual_fs.get_object(m_userid, argument, m_working_directory).size() != 0)
                     {
-                        println("Cannot make directory, already exists", custom_utils::COLORS::YELLOW);
+                        println("Cannot make directory, already exists", custom_utils::COLOR::YELLOW);
                         control_send("550 Directory already exist.");
                         control_receive();
                         return;
                     }
 
-                    // folder not exists, create one
-                    if (!create_virtual_folder(m_working_directory, argument))
-                    {
-                        println("Cannot make directory, db fail", custom_utils::COLORS::YELLOW);
-                        control_send("550 Cannot create directory.");
-                        control_receive();
-                        return;
-                    }
+                    // folder does not exists, create one
+                    m_virtual_fs.create_virtual_object(m_userid, argument, m_working_directory, 0, true);
+
                     println("Created virtual directory \"" + m_working_directory + "\" \"" + argument + "\"",
-                            custom_utils::COLORS::GREEN);
+                            custom_utils::COLOR::GREEN);
 
                     control_send("250 Directory created.");
                     control_receive();
@@ -678,16 +637,8 @@ namespace ftps_session
                         return;
                     }
 
-                    update_virtual_fs();
-
-                    if (!delete_virtual_object(m_working_directory, argument))
-                    {
-                        control_send("250 Delete failed.");
-                    }
-                    else
-                    {
-                        control_send("250 Deleted.");
-                    }
+                    m_virtual_fs.remove_virtual_object(m_userid, argument, m_working_directory);
+                    control_send("250 Deleted.");
 
                     control_receive();
                     return;
@@ -702,16 +653,13 @@ namespace ftps_session
                         return;
                     }
 
-                    update_virtual_fs();
+                    std::string v_obj_id = m_virtual_fs.remove_virtual_object(m_userid, argument, m_working_directory);
+                    if (v_obj_id != "")
+                    {
+                        fs_handler::remove_file("data/" + v_obj_id);
+                    }
 
-                    if (!delete_virtual_object(m_working_directory, argument))
-                    {
-                        control_send("550 Delete failed.");
-                    }
-                    else
-                    {
-                        control_send("250 Deleted.");
-                    }
+                    control_send("250 Deleted.");
 
                     control_receive();
                     return;
@@ -730,7 +678,7 @@ namespace ftps_session
                     if (m_pending_write_file != "")
                     {
                         println("Previous write operation not finished -> " + m_pending_write_file,
-                                custom_utils::COLORS::RED);
+                                custom_utils::COLOR::RED);
                         return;
                     }
 
@@ -747,7 +695,7 @@ namespace ftps_session
                     // if data socket is already accepted, that means STOR command is received late
                     if (m_data_socket && m_data_socket->lowest_layer().is_open())
                     {
-                        println("late STOR command received", custom_utils::COLORS::YELLOW);
+                        println("late STOR command received", custom_utils::COLOR::YELLOW);
 
                         control_send("150 Opening connection.");
                         data_receive_file();
@@ -775,7 +723,7 @@ namespace ftps_session
                     if (m_pending_read_file != "")
                     {
                         println("Previous read operation not finished -> " + m_pending_read_file,
-                                custom_utils::COLORS::RED);
+                                custom_utils::COLOR::RED);
                         return;
                     }
 
@@ -792,7 +740,7 @@ namespace ftps_session
                     // if data socket is already accepted, that means RETR command is received late
                     if (m_data_socket && m_data_socket->lowest_layer().is_open())
                     {
-                        println("late RETR command received", custom_utils::COLORS::YELLOW);
+                        println("late RETR command received", custom_utils::COLOR::YELLOW);
 
                         control_send("150 Opening connection.");
                         data_send_file();
@@ -810,7 +758,7 @@ namespace ftps_session
             }
         }
 
-        println("Known but unprocessed command -> \"" + command + "\"", custom_utils::COLORS::RED);
+        println("Known but unprocessed command -> \"" + command + "\"", custom_utils::COLOR::RED);
     }
 
     void session::data_acceptor_start_accept()
@@ -819,7 +767,7 @@ namespace ftps_session
             [self = shared_from_this()](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
                 if (ec)
                 {
-                    self->println("data socket acceptor error -> " + ec.message(), custom_utils::COLORS::RED);
+                    self->println("data socket acceptor error -> " + ec.message(), custom_utils::COLOR::RED);
                     return;
                 }
 
@@ -836,7 +784,7 @@ namespace ftps_session
                         if (ec == boost::asio::ssl::error::stream_truncated)
                         {
                             // client disconnected
-                            self->println("Data socket disconnected -> " + ec.message(), custom_utils::COLORS::YELLOW);
+                            self->println("Data socket disconnected -> " + ec.message(), custom_utils::COLOR::YELLOW);
 
                             boost::system::error_code shutdownEC;
                             self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
@@ -844,17 +792,17 @@ namespace ftps_session
 
                             if (ec)
                             {
-                                self->println("Error during data socket shutdown", custom_utils::COLORS::YELLOW);
+                                self->println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
                                 return;
                             }
 
                             self->m_control_socket->next_layer().close();
                             return;
                         }
-                        self->println("Unknown TLS handshake error -> " + ec.message(), custom_utils::COLORS::RED);
+                        self->println("Unknown TLS handshake error -> " + ec.message(), custom_utils::COLOR::RED);
                         return;
                     }
-                    self->println("Data socket accepted and handshaked", custom_utils::COLORS::GREEN);
+                    self->println("Data socket accepted and handshaked", custom_utils::COLOR::GREEN);
                 }
 
                 // check if list directory
@@ -879,7 +827,7 @@ namespace ftps_session
                     return;
                 }
 
-                self->println("Data socket nothing done, possible late commands", custom_utils::COLORS::CYAN);
+                self->println("Data socket nothing done, possible late commands", custom_utils::COLOR::CYAN);
             });
     }
 
@@ -893,7 +841,7 @@ namespace ftps_session
 
         if (!m_data_socket || !m_data_socket->lowest_layer().is_open())
         {
-            // print("data channel not open yet\n", custom_utils::COLORS::YELLOW);
+            // print("data channel not open yet\n", custom_utils::COLOR::YELLOW);
             return;
         }
 
@@ -918,41 +866,41 @@ namespace ftps_session
         //                              if (ec)
         //                              {
         //                                  self->println("Unknown async_write error -> " + ec.message(),
-        //                                  custom_utils::COLORS::YELLOW); return;
+        //                                  custom_utils::COLOR::YELLOW); return;
         //                              }
         //                          });
     }
 
     void session::data_directory_listing()
     {
-        update_virtual_fs();
+        std::vector<std::string> v_object_list = m_virtual_fs.get_object_list(m_userid);
 
-        // send files metadata that is in current working directory
         size_t i = 1;
-        while (i < m_virtual_fs.size())
+        while (i < v_object_list.size())
         {
-            // match path
-            if (m_virtual_fs.at(i) == m_pending_directory_list)
+            if (v_object_list[i] != m_pending_directory_list)
             {
-                std::string listing_format = "";
-
-                if (m_virtual_fs.at(i + 3) == "0")
-                {
-                    // is file
-                    listing_format += "-rw-r--r-- 1 ";
-                }
-                else if (m_virtual_fs.at(i + 3) == "1")
-                {
-                    // is directory
-                    listing_format += "drwxr-xr-x 1 ";
-                }
-                listing_format += m_username + " " + m_username + " ";
-                listing_format += m_virtual_fs.at(i + 1) + " ";                      // file_size
-                listing_format += parse_metadata_time(m_virtual_fs.at(i + 2)) + " "; // modified_time
-                listing_format += m_virtual_fs.at(i - 1);                            // file_name
-
-                data_send(listing_format);
+                i += 6;
+                continue;
             }
+
+            std::string listing_format = "";
+            if (v_object_list[i + 3] == "0")
+            {
+                // is file
+                listing_format += "-rw-r--r-- 1 ";
+            }
+            else if (v_object_list[i + 3] == "1")
+            {
+                // is directory
+                listing_format += "drwxr-xr-x 1 ";
+            }
+            listing_format += m_username + " " + m_username + " ";
+            listing_format += v_object_list[i + 1] + " ";                      // file_size
+            listing_format += parse_metadata_time(v_object_list[i + 2]) + " "; // modified_time
+            listing_format += v_object_list[i - 1];                            // file_name
+
+            data_send(listing_format);
 
             i += 6;
         }
@@ -961,7 +909,7 @@ namespace ftps_session
 
         // close data channel, so client knows operation is done
         println("Directory listing of " + m_pending_directory_list + " done, closing data socket",
-                custom_utils::COLORS::GREEN);
+                custom_utils::COLOR::GREEN);
 
         m_pending_directory_list = "";
 
@@ -970,20 +918,41 @@ namespace ftps_session
         m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
-            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLORS::RED);
+            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
         }
         m_data_socket->next_layer().close();
     }
 
     void session::data_receive_file()
     {
-        std::string file_id = custom_utils::generate_uuid_string(16);
-        int file_size = 0;
+        // create the virtual object if not exists before receiving, file size = 0
+        std::string file_path = return_parent_directory(m_pending_write_file);
+        std::string file_name;
+        std::string file_id;
+
+        {
+            std::vector<std::string> temp = custom_utils::splitString(m_pending_write_file, '/');
+            file_name = temp.at(temp.size() - 1);
+
+            // create virtual object if not exists
+            std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, file_name, file_path);
+            if (v_obj.size() == 0)
+            {
+                println("creating new object in db as -> " + file_path + " + " + file_name, custom_utils::COLOR::CYAN);
+                file_id = m_virtual_fs.create_virtual_object(m_userid, file_name, file_path, 0, false);
+            }
+            else
+            {
+                file_id = v_obj[5];
+            }
+        }
+
+        long long file_size = 0;
 
         std::ofstream output_file_stream("data/" + file_id);
         if (!output_file_stream.is_open())
         {
-            println("Error opening output file stream", custom_utils::COLORS::RED);
+            println("Error opening output file stream", custom_utils::COLOR::RED);
             return;
         }
 
@@ -992,6 +961,8 @@ namespace ftps_session
         while (true)
         {
             boost::system::error_code ec;
+            // todo is it possible to turn this into async_read, or something that async read in order, then write the
+            // buffer to output file stream
             size_t bytes_read = boost::asio::read(*m_data_socket, boost::asio::buffer(data, RECEIVE_BUFFER_SIZE), ec);
 
             file_size += bytes_read;
@@ -999,7 +970,7 @@ namespace ftps_session
 
             if (output_file_stream.fail())
             {
-                println("Error writing output file stream", custom_utils::COLORS::RED);
+                println("Error writing output file stream", custom_utils::COLOR::RED);
                 return;
             }
 
@@ -1014,56 +985,34 @@ namespace ftps_session
             // connection canceled/abandoned
             if (ec == boost::asio::ssl::error::stream_truncated)
             {
-                println("data connection disconnected mid file receive", custom_utils::COLORS::YELLOW);
+                println("data connection disconnected mid file receive", custom_utils::COLOR::YELLOW);
                 break;
             }
 
             // unexpected error
-            println("error while receiving file data -> " + ec.message(), custom_utils::COLORS::YELLOW);
+            println("error while receiving file data -> " + ec.message(), custom_utils::COLOR::YELLOW);
         }
 
         output_file_stream.close();
 
-        // file is written to os, now store the record in database
+        // file is written to os, update the file size of the object in database
+        println("updating object in db -> " + file_path + " + " + file_name, custom_utils::COLOR::CYAN);
+        m_virtual_fs.update_virtual_object(m_userid, file_name, file_path, file_size);
 
-        std::vector<std::string> temp = custom_utils::splitString(m_pending_write_file, '/');
-
-        std::string file_path = return_parent_directory(m_pending_write_file);
-        std::string file_name = temp.at(temp.size() - 1);
-
-        println("storing in db as -> " + file_path + " + " + file_name, custom_utils::COLORS::CYAN);
-
-        m_database.insert_data("files", {"user_id", "file_id"}, {m_userid, file_id});
-
-        m_database.insert_data("files_metadata",
-                               {
-                                   "file_name",
-                                   "file_path",
-                                   "file_size",
-                                   "is_directory",
-                                   "file_id",
-                               },
-                               {
-                                   file_name,
-                                   file_path,
-                                   std::to_string(file_size),
-                                   "0",
-                                   file_id,
-                               });
-
+        // allow another file to be received
         m_pending_write_file = "";
 
         control_send("226 Received.");
 
         // close data channel, so client knows operation is done
-        println("File received, closing data socket", custom_utils::COLORS::GREEN);
+        println("File received, closing data socket", custom_utils::COLOR::GREEN);
 
         boost::system::error_code ec;
         m_data_socket->shutdown(ec);
         m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
-            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLORS::RED);
+            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
         }
         m_data_socket->next_layer().close();
     }
@@ -1077,35 +1026,28 @@ namespace ftps_session
 
         // read db records and search for the according file
 
-        update_virtual_fs();
-
         std::string target_file_id;
 
-        size_t i = 1;
-        while (i < m_virtual_fs.size())
+        std::vector<std::string> v_object = m_virtual_fs.get_object(m_userid, file_name, file_path);
+
+        if (v_object.size() != 0)
         {
-            if (m_virtual_fs.at(i) == file_path && m_virtual_fs.at(i - 1) == file_name)
-            {
-                // found the target file to send to client
-                target_file_id = m_virtual_fs.at(i + 4);
-                break;
-            }
-            i += 6;
+            target_file_id = v_object[5];
         }
 
         if (target_file_id == "")
         {
             // file not found
-            println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLORS::RED);
+            println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLOR::RED);
 
-            println(m_working_directory + " " + m_pending_read_file, custom_utils::COLORS::RED);
+            println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
             m_data_socket->shutdown();
 
             boost::system::error_code shutdownEC;
             m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
             if (shutdownEC)
             {
-                println("Error during data socket shutdown", custom_utils::COLORS::YELLOW);
+                println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
                 return;
             }
 
@@ -1117,14 +1059,14 @@ namespace ftps_session
 
         if (!fs_handler::file_exists("data/" + target_file_id))
         {
-            println("Actual file not found on OS", custom_utils::COLORS::RED);
+            println("Actual file not found on OS", custom_utils::COLOR::RED);
             return;
         }
 
         std::ifstream readFileStream("data/" + target_file_id);
         if (!readFileStream.is_open())
         {
-            println("Unable to open read file stream", custom_utils::COLORS::RED);
+            println("Unable to open read file stream", custom_utils::COLOR::RED);
             return;
         }
 
@@ -1151,12 +1093,12 @@ namespace ftps_session
             // connection canceled/abandoned
             if (ec == boost::asio::error::broken_pipe)
             {
-                println("data connection disconnected mid file send", custom_utils::COLORS::YELLOW);
+                println("data connection disconnected mid file send", custom_utils::COLOR::YELLOW);
                 break;
             }
 
             // unexpected error
-            println("error while receiving file data -> " + ec.message(), custom_utils::COLORS::YELLOW);
+            println("error while receiving file data -> " + ec.message(), custom_utils::COLOR::YELLOW);
         }
 
         m_pending_read_file = "";
@@ -1165,13 +1107,13 @@ namespace ftps_session
         println("bytes sent: " + std::to_string(bytes_sent));
 
         // close data channel, so client knows operation is done
-        println("File sent, closing data socket", custom_utils::COLORS::GREEN);
+        println("File sent, closing data socket", custom_utils::COLOR::GREEN);
         boost::system::error_code ec;
         m_data_socket->shutdown(ec);
         m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
-            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLORS::RED);
+            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
         }
         m_data_socket->next_layer().close();
     }
@@ -1185,35 +1127,28 @@ namespace ftps_session
 
         // read db records and search for the according file
 
-        update_virtual_fs();
-
         std::string target_file_id;
 
-        size_t i = 1;
-        while (i < m_virtual_fs.size())
+        std::vector<std::string> v_object = m_virtual_fs.get_object(m_userid, file_name, file_path);
+
+        if (v_object.size() != 0)
         {
-            if (m_virtual_fs.at(i) == file_path && m_virtual_fs.at(i - 1) == file_name)
-            {
-                // found the target file to send to client
-                target_file_id = m_virtual_fs.at(i + 4);
-                break;
-            }
-            i += 6;
+            target_file_id = v_object[5];
         }
 
         if (target_file_id == "")
         {
             // file not found
-            println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLORS::RED);
+            println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLOR::RED);
 
-            println(m_working_directory + " " + m_pending_read_file, custom_utils::COLORS::RED);
+            println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
             m_data_socket->shutdown();
 
             boost::system::error_code shutdownEC;
             m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
             if (shutdownEC)
             {
-                println("Error during data socket shutdown", custom_utils::COLORS::YELLOW);
+                println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
                 return;
             }
 
@@ -1225,14 +1160,14 @@ namespace ftps_session
 
         if (!fs_handler::file_exists("data/" + target_file_id))
         {
-            println("Actual file not found on OS", custom_utils::COLORS::RED);
+            println("Actual file not found on OS", custom_utils::COLOR::RED);
             return;
         }
 
         std::ifstream readFileStream("data/" + target_file_id);
         if (!readFileStream.is_open())
         {
-            println("Unable to open read file stream", custom_utils::COLORS::RED);
+            println("Unable to open read file stream", custom_utils::COLOR::RED);
             return;
         }
 
@@ -1256,7 +1191,7 @@ namespace ftps_session
                 [self = shared_from_this(), &stop_reading](boost::system::error_code temp_ec, size_t bytes_written) {
                     if (temp_ec)
                     {
-                        self->println("EC ASYNC WRITE SOME", custom_utils::COLORS::YELLOW);
+                        self->println("EC ASYNC WRITE SOME", custom_utils::COLOR::YELLOW);
                         // connection canceled/abandoned
                         if (temp_ec == boost::asio::error::broken_pipe)
                         {
@@ -1275,11 +1210,11 @@ namespace ftps_session
 
             if (stop_reading)
             {
-                self->println("stopped suddenly due to error", custom_utils::COLORS::YELLOW);
+                self->println("stopped suddenly due to error", custom_utils::COLOR::YELLOW);
             }
 
             // close data channel, so client knows operation is done
-            self->println("File sent, closing data socket", custom_utils::COLORS::GREEN);
+            self->println("File sent, closing data socket", custom_utils::COLOR::GREEN);
 
             boost::system::error_code ec;
             self->m_data_socket->shutdown(ec);
@@ -1287,7 +1222,7 @@ namespace ftps_session
             if (ec)
             {
                 self->println("error during data socket shutdown, possible client sudden disconnect",
-                              custom_utils::COLORS::RED);
+                              custom_utils::COLOR::RED);
             }
             self->m_data_socket->next_layer().close();
         });
@@ -1372,59 +1307,6 @@ namespace ftps_session
         return parsedStr;
     }
 
-    void session::update_virtual_fs()
-    {
-        std::unordered_map<char, std::vector<std::string>> file_id_hash;
-
-        // hash file ids that belongs to this user
-        {
-            std::vector<std::string> files;
-            m_database.read_data("files", {"file_id", "user_id"}, files);
-
-            size_t i = 1;
-            while (i < files.size())
-            {
-                // user's file
-                if (files[i] == m_userid)
-                {
-                    // hash it using the first character of the file_id as index
-                    file_id_hash[files[i - 1][0]].push_back(files[i - 1]);
-                }
-                i += 2;
-            }
-        }
-
-        std::vector<std::string> file_metadata_list;
-        { // get a list of file metadatas that matches this users' file ids
-            std::vector<std::string> files_metadata;
-            m_database.read_data("files_metadata",
-                                 {"file_name", "file_path", "file_size", "modified_time", "is_directory", "file_id"},
-                                 files_metadata);
-
-            size_t i = 5;
-            while (i < files_metadata.size())
-            {
-                for (size_t n = 0; n < file_id_hash[files_metadata[i][0]].size(); n++)
-                {
-                    if (file_id_hash[files_metadata[i][0]][n] == files_metadata[i])
-                    {
-                        file_metadata_list.push_back(files_metadata[i - 5]);
-                        file_metadata_list.push_back(files_metadata[i - 4]);
-                        file_metadata_list.push_back(files_metadata[i - 3]);
-                        file_metadata_list.push_back(files_metadata[i - 2]);
-                        file_metadata_list.push_back(files_metadata[i - 1]);
-                        file_metadata_list.push_back(files_metadata[i]);
-                        break;
-                    }
-                }
-
-                i += 6;
-            }
-        }
-
-        m_virtual_fs = file_metadata_list;
-    }
-
     std::string session::return_parent_directory(std::string directory)
     {
         // return root when already at root directory
@@ -1454,150 +1336,12 @@ namespace ftps_session
         return parent;
     }
 
-    bool session::does_object_exists(std::string path, std::string object_name)
-    {
-        size_t i = 1;
-        while (i < m_virtual_fs.size())
-        {
-            if (m_virtual_fs.at(i) == path && m_virtual_fs.at(i - 1) == object_name)
-                return true;
-            i += 6;
-        }
-
-        return false;
-    }
-
-    bool session::create_virtual_folder(std::string path, std::string folder_name)
-    {
-        std::string folder_id = custom_utils::generate_uuid_string(16);
-
-        if (!m_database.insert_data("files",
-                                    {
-                                        "file_id",
-                                        "user_id",
-                                    },
-                                    {
-                                        folder_id,
-                                        m_userid,
-                                    }))
-            return false;
-
-        if (!m_database.insert_data("files_metadata",
-                                    {
-                                        "file_name",
-                                        "file_path",
-                                        "file_size",
-                                        "is_directory",
-                                        "file_id",
-                                    },
-                                    {
-                                        folder_name,
-                                        path,
-                                        "0",
-                                        "1",
-                                        folder_id,
-                                    }))
-            return false;
-
-        return true;
-    }
-
-    bool session::delete_virtual_object(std::string path, std::string object_name)
-    {
-        bool deleted_matches = false;
-        bool delete_subdirectories = false;
-
-        size_t i = 1;
-        while (i < m_virtual_fs.size())
-        {
-            // try matching path and object name
-            if (m_virtual_fs.at(i) == path && m_virtual_fs.at(i - 1) == object_name)
-            {
-                if (!m_database.delete_data("files", "file_id", m_virtual_fs.at(i + 4)) ||
-                    !m_database.delete_data("files_metadata", "file_id", m_virtual_fs.at(i + 4)))
-                {
-                    // something went wrong when trying to delete data from database
-                    return false;
-                }
-
-                // check if object is a folder
-                if (m_virtual_fs.at(i + 3) == "1")
-                {
-                    // need to delete possible objects inside this folder
-                    delete_subdirectories = true;
-                }
-                else
-                {
-                    // delete the actual file from OS
-                    if (!fs_handler::remove_file("data/" + m_virtual_fs.at(i + 4)))
-                    {
-                        // failed to delete file from OS
-                        return false;
-                    }
-                }
-
-                // successfully deleted object, end loop early
-                println("deleted match " + path + " & " + object_name, custom_utils::COLORS::GREEN);
-                deleted_matches = true;
-                break;
-            }
-            i += 6;
-        }
-
-        // delete subdirectories
-        if (delete_subdirectories)
-        {
-            std::string subpath;
-            if (path == "/")
-            {
-                subpath = path + object_name;
-            }
-            else
-            {
-                subpath = path + "/" + object_name;
-            }
-
-            size_t i = 1;
-            while (i < m_virtual_fs.size())
-            {
-                // try matching the path inside that folder
-                if (custom_utils::strStartsWith(m_virtual_fs.at(i), subpath))
-                {
-                    if (!m_database.delete_data("files", "file_id", m_virtual_fs.at(i + 4)) ||
-                        !m_database.delete_data("files_metadata", "file_id", m_virtual_fs.at(i + 4)))
-                    {
-                        // something went wrong when trying to delete data from database
-                        return false;
-                    }
-
-                    // check if object is a file
-                    if (m_virtual_fs.at(i + 3) == "0")
-                    {
-                        // delete the actual file from OS
-                        if (!fs_handler::remove_file("data/" + m_virtual_fs.at(i + 4)))
-                        {
-                            // failed to delete file from OS
-                            return false;
-                        }
-                    }
-
-                    println("deleted match in subpath " + subpath + " & " + m_virtual_fs.at(i - 1),
-                            custom_utils::COLORS::GREEN);
-                }
-
-                i += 6;
-            }
-        }
-
-        return deleted_matches;
-    }
-
     void session::println(std::string message)
     {
         custom_utils::println("[FTPS] [" + m_session_id + "] " + message);
     }
 
-    void session::println(std::string message, int color)
+    void session::println(std::string message, custom_utils::COLOR color)
     {
         custom_utils::println("[FTPS] [" + m_session_id + "] " + message, color);
     }

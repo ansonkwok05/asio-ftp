@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../custom_utils.h"
+
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
@@ -34,6 +36,6 @@ namespace ftp_session
         void start_ftps_session(bool isImplicit);
 
         void println(std::string message);
-        void println(std::string message, int color);
+        void println(std::string message, custom_utils::COLOR color);
     };
 } // namespace ftp_session

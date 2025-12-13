@@ -24,7 +24,7 @@ namespace ftps_server
 
         start_accepting();
 
-        println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLORS::GREEN);
+        println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
 
         io_ctx.run(); // start all async operations, blocks until all async operations are done
     }
@@ -33,29 +33,30 @@ namespace ftps_server
     {
         if (!fs_handler::directory_exists("tls"))
         {
-            println("TLS folder not found, creating one", custom_utils::COLORS::YELLOW);
+            println("TLS folder not found, creating one", custom_utils::COLOR::YELLOW);
             fs_handler::create_directory("tls");
+            throw std::runtime_error("TLS certificate required. (tls/cert.pem, tls/key.pem)");
         }
 
         if (!fs_handler::file_exists("tls/cert.pem"))
         {
-            println("TLS certificate not found", custom_utils::COLORS::RED);
+            println("TLS certificate not found", custom_utils::COLOR::RED);
             throw std::runtime_error("Requires tls/cert.pem");
         }
 
         if (!fs_handler::file_exists("tls/key.pem"))
         {
-            println("TLS private key not found", custom_utils::COLORS::RED);
+            println("TLS private key not found", custom_utils::COLOR::RED);
             throw std::runtime_error("Requires tls/key.pem");
         }
 
         if (!fs_handler::file_exists("tls/dh.pem"))
         {
-            println("TLS dh private key not found", custom_utils::COLORS::RED);
+            println("TLS dh private key not found", custom_utils::COLOR::RED);
             throw std::runtime_error("Requires tls/dh.pem");
         }
 
-        println("TLS keys checked", custom_utils::COLORS::GREEN);
+        println("TLS keys checked", custom_utils::COLOR::GREEN);
     }
 
     void server::get_public_ip()
@@ -104,7 +105,7 @@ namespace ftps_server
         m_acceptor.async_accept(m_socket, [this](boost::system::error_code ec) {
             if (ec)
             {
-                println("Failed to accept connection -> " + ec.message(), custom_utils::COLORS::RED);
+                println("Failed to accept connection -> " + ec.message(), custom_utils::COLOR::RED);
                 return;
             }
 

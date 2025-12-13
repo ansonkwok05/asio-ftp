@@ -1,6 +1,8 @@
 #pragma once
 
-#include "../sqlite/sqlite_wrapper.h"
+#include "../custom_utils.h"
+#include "../user_db.h"
+#include "../virtual_fs_db.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
@@ -67,7 +69,9 @@ namespace ftps_session
 
         int m_connection_stage;
 
-        sqlite_wrapper::SQLiteDb m_database;
+        user_db::user m_user;
+        virtual_fs_db::virtual_fs m_virtual_fs;
+
         std::string m_userid;
         std::string m_username;
         std::string m_working_directory = "/";
@@ -98,13 +102,7 @@ namespace ftps_session
         std::string parse_metadata_time(std::string time_str);
         std::string return_parent_directory(std::string directory);
 
-        std::vector<std::string> m_virtual_fs;
-        void update_virtual_fs();
-        bool does_object_exists(std::string path, std::string object_name);
-        bool create_virtual_folder(std::string path, std::string folder_name);
-        bool delete_virtual_object(std::string path, std::string object_name);
-
         void println(std::string message);
-        void println(std::string message, int color);
+        void println(std::string message, custom_utils::COLOR color);
     };
 } // namespace ftps_session

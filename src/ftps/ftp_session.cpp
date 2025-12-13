@@ -17,12 +17,12 @@ namespace ftp_session
     {
         println("session created for " + m_socket.remote_endpoint().address().to_string() + ":" +
                     std::to_string(m_socket.remote_endpoint().port()),
-                custom_utils::COLORS::BRIGHTBLACK);
+                custom_utils::COLOR::BRIGHTBLACK);
     }
 
     session::~session()
     {
-        println("session destroyed", custom_utils::COLORS::BRIGHTBLACK);
+        println("session destroyed", custom_utils::COLOR::BRIGHTBLACK);
     }
 
     void session::start()
@@ -58,7 +58,7 @@ namespace ftp_session
                                      if (ec)
                                      {
                                          self->println("Unknown async_write error -> " + ec.message(),
-                                                       custom_utils::COLORS::YELLOW);
+                                                       custom_utils::COLOR::YELLOW);
                                          return;
                                      }
                                  });
@@ -79,7 +79,7 @@ namespace ftp_session
                                              return;
                                          }
                                          self->println("Unknown read_some error -> " + ec.message(),
-                                                       custom_utils::COLORS::YELLOW);
+                                                       custom_utils::COLOR::YELLOW);
                                          return;
                                      }
 
@@ -153,7 +153,7 @@ namespace ftp_session
         custom_utils::println("[FTP ] " + message);
     }
 
-    void session::println(std::string message, int color)
+    void session::println(std::string message, custom_utils::COLOR color)
     {
         custom_utils::println("[FTP ] " + message, color);
     }
