@@ -5,21 +5,26 @@
 
 namespace ftps_server
 {
+    // port for FTPS server
+    constexpr int PORT = 6921;
+
     class server
     {
     public:
         server();
 
     private:
-        const int PORT = 6921; // port for FTPS server
+        // io context needed to run async operations
+        boost::asio::io_context io_ctx;
 
-        boost::asio::io_context io_ctx; // io context needed to run async operations
+        // connection acceptor
+        boost::asio::ip::tcp::acceptor m_acceptor;
 
-        boost::asio::ip::tcp::acceptor m_acceptor; // connection acceptor
+        // a temporary socket for acceptor, which gets moved to a ftp session
+        boost::asio::ip::tcp::socket m_socket;
 
-        boost::asio::ip::tcp::socket m_socket; // a temporary socket for acceptor, which gets moved to a ftp session
-
-        std::string m_public_ip; // public ip from api
+        // public ip from api
+        std::string m_public_ip;
 
         void check_tls_keys();
         void get_public_ip();

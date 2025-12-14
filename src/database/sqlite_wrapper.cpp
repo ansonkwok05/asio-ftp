@@ -5,7 +5,6 @@
 #include <sqlite3.h>
 
 #include <stdexcept>
-#include <algorithm>
 #include <string>
 
 namespace sqlite_wrapper
@@ -41,13 +40,16 @@ namespace sqlite_wrapper
         }
 
         println("Opened database storage.db", custom_utils::COLOR::GREEN);
-        set_optimizations(); // optimizations done to improve performance
+
+        // database optimizations for performance improvement
+        set_optimizations();
     }
 
     std::vector<std::string> SQLiteDb::run_query(std::string sql_query)
     {
         SQLite_Context context;
-        char *errMsg; // returned error message
+        char *errMsg;
+
         int rc = sqlite3_exec(db, sql_query.c_str(), sqlite_callback, &context, &errMsg);
         if (rc != SQLITE_OK)
         {
@@ -82,7 +84,7 @@ namespace sqlite_wrapper
             {
                 println("Failed to bind param", custom_utils::COLOR::RED);
                 println("Param: " + params[i], custom_utils::COLOR::RED);
-                println("Param index: " + i, custom_utils::COLOR::RED);
+                println("Param index: " + std::to_string(i), custom_utils::COLOR::RED);
                 println("Error code -> " + std::to_string(rc), custom_utils::COLOR::RED);
 
                 throw std::runtime_error("Failed to bind param");
@@ -105,7 +107,7 @@ namespace sqlite_wrapper
         {
             println("Library misuse", custom_utils::COLOR::RED);
             println("Query: " + sql_query, custom_utils::COLOR::RED);
-            println("Param size: " + params.size(), custom_utils::COLOR::RED);
+            println("Param size: " + std::to_string(params.size()), custom_utils::COLOR::RED);
             println("Error code -> " + std::to_string(rc), custom_utils::COLOR::RED);
 
             throw std::runtime_error("Failed to step through sql query");
@@ -168,8 +170,9 @@ namespace sqlite_wrapper
 
     void SQLiteDb::set_optimizations()
     {
-        SQLite_Context context; // context for return values
-        char *errMsg;           // returned error message
+        SQLite_Context context;
+        char *errMsg;
+
         int rc = sqlite3_exec(db, OPTIMIZATIONS, 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
@@ -203,10 +206,10 @@ namespace sqlite_wrapper
             throw std::runtime_error("sqlite_callback operation failed");
         }
 
-        // copy argc
+        // push argc
         c->argc += argc;
 
-        // copy argv and azColName
+        // push argv and azColName
         for (int i = 0; i < argc; i++)
         {
             c->argv.push_back(argv[i]);

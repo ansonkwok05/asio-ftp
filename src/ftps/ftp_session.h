@@ -9,6 +9,14 @@
 
 namespace ftp_session
 {
+    // time to wait for an implicit connection (tls handshake)
+    constexpr int IMPLICIT_TIMEOUT_MS = 500;
+
+    constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
+
+    // buffer size for messages in bytes
+    constexpr size_t BUFFER_SIZE = 64;
+
     class session : public std::enable_shared_from_this<session>
     {
     public:
@@ -18,13 +26,8 @@ namespace ftp_session
         void start();
 
     private:
-        const int IMPLICIT_TIMEOUT_MS = 500; // time to wait for an implicit connection (tls handshake)
-
-        const std::string FTP_WELCOMEMESSAGE = "220 Welcome.";
-
         boost::asio::ip::tcp::socket m_socket;
 
-        const size_t BUFFER_SIZE = 64; // buffer size in bytes
         std::vector<char> m_buffer;
 
         std::string m_received_string;

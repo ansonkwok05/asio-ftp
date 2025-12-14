@@ -2,10 +2,8 @@
 
 #include <iostream>
 #include <thread>
-#include <iomanip>
 #include <chrono>
 #include <string>
-#include <map>
 
 namespace custom_utils
 {
@@ -166,10 +164,12 @@ namespace custom_utils
         size_t start = 0;
         while (index < original.size())
         {
+            // keep increasing "start" until "start" = search.size() - 1
             if (original.at(index) == search.at(start))
-            { // keep increasing "start" until "start" = search.size() - 1
+            {
+                // found search in original
                 if (start == search.size() - 1)
-                { // found search in original
+                {
                     index++;
                     start = 0;
                     output += replacement;
@@ -180,8 +180,9 @@ namespace custom_utils
                 continue;
             }
 
+            // partial match, add back the partial part to output
             if (start > 0)
-            { // partial match, add back the partial part to output
+            {
                 output += original.substr(index - start, start);
                 start = 0;
             }

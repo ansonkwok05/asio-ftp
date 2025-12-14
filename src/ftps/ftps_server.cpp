@@ -8,7 +8,6 @@
 #include <boost/beast.hpp>
 
 #include <string>
-#include <vector>
 #include <stdexcept>
 
 namespace ftps_server
@@ -26,7 +25,8 @@ namespace ftps_server
 
         println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
 
-        io_ctx.run(); // start all async operations, blocks until all async operations are done
+        // start all async operations, blocks until all async operations are done
+        io_ctx.run();
     }
 
     void server::check_tls_keys()

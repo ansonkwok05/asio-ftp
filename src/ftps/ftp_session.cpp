@@ -10,9 +10,6 @@
 
 namespace ftp_session
 {
-    using custom_utils::print;
-    using custom_utils::println;
-
     session::session(boost::asio::ip::tcp::socket socket) : m_socket(std::move(socket)), m_buffer(BUFFER_SIZE)
     {
         println("session created for " + m_socket.remote_endpoint().address().to_string() + ":" +

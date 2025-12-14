@@ -6,13 +6,13 @@
 
 #include <thread>
 #include <vector>
-#include <unordered_map>
 
 using custom_utils::println;
 
 int main()
 {
-    std::srand(std::time(NULL)); // initialize rand
+    // initialize rand
+    std::srand(std::time(NULL));
 
     custom_utils::stopwatch performanceWatcher;
 
@@ -75,7 +75,9 @@ int main()
     std::thread ftps_server_thread([]() { ftps_server::server ftps_server = ftps_server::server(); });
 
     println("FTPS server worker thread started", custom_utils::COLOR::GREEN);
-    ftps_server_thread.join(); // prevent main thread to die, while worker thread can do its thing
+
+    // prevent main thread to die, while worker threads can do its thing
+    ftps_server_thread.join();
 
     return 0;
 }

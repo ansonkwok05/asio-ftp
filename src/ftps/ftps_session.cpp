@@ -9,7 +9,6 @@
 
 #include <string>
 #include <vector>
-#include <unordered_map>
 #include <algorithm>
 #include <fstream>
 
@@ -67,8 +66,8 @@ namespace ftps_session
 
     void session::start()
     {
-        boost::system::error_code ec;
-        m_control_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
+        boost::system::error_code ec =
+            m_control_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
         if (ec)
         {
             println("handshake error", custom_utils::COLOR::RED);
@@ -122,9 +121,8 @@ namespace ftps_session
                         // client disconnected
                         self->println("Client disconnected -> " + ec.message(), custom_utils::COLOR::GREEN);
 
-                        boost::system::error_code shutdownEC;
-                        self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
-                                                                      shutdownEC);
+                        boost::system::error_code shutdownEC = self->m_control_socket->next_layer().shutdown(
+                            boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
 
                         if (shutdownEC)
                         {
@@ -257,10 +255,8 @@ namespace ftps_session
             {
                 control_send("221 Closing control connection.");
 
-                boost::system::error_code ec;
-
-                m_control_socket->shutdown(ec);
-                m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+                boost::system::error_code ec = m_control_socket->shutdown(ec);
+                ec = m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
 
                 if (ec)
                 {
@@ -407,16 +403,15 @@ namespace ftps_session
                     m_data_socket_acceptor =
                         std::make_unique<boost::asio::ip::tcp::acceptor>(m_control_socket->get_executor());
 
-                    boost::system::error_code ec;
-                    m_data_socket_acceptor->open(boost::asio::ip::tcp::v4(), ec);
+                    boost::system::error_code ec = m_data_socket_acceptor->open(boost::asio::ip::tcp::v4(), ec);
 
                     // choosing a port that isn't in use
                     int port = 6921;
                     do
                     {
                         port++;
-                        m_data_socket_acceptor->bind(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port),
-                                                     ec);
+                        ec = m_data_socket_acceptor->bind(
+                            boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port), ec);
                     } while (ec);
                     m_data_socket_acceptor->listen();
 
@@ -630,8 +625,9 @@ namespace ftps_session
 
                 if (command == "RMD")
                 {
+                    // no argument
                     if (argument == "")
-                    { // no argument
+                    {
                         control_send("501 No arguments presented.");
                         control_receive();
                         return;
@@ -667,9 +663,9 @@ namespace ftps_session
 
                 if (command == "STOR")
                 {
+                    // no argument
                     if (argument == "")
                     {
-                        // no argument
                         control_send("501 No arguments presented.");
                         control_receive();
                         return;
@@ -712,9 +708,9 @@ namespace ftps_session
 
                 if (command == "RETR")
                 {
+                    // no argument
                     if (argument == "")
                     {
-                        // no argument
                         control_send("501 No arguments presented.");
                         control_receive();
                         return;
@@ -777,8 +773,8 @@ namespace ftps_session
 
                 // TLS handshake
                 {
-                    boost::system::error_code ec;
-                    self->m_data_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
+                    boost::system::error_code ec =
+                        self->m_data_socket->handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
                     if (ec)
                     {
                         if (ec == boost::asio::ssl::error::stream_truncated)
@@ -786,9 +782,8 @@ namespace ftps_session
                             // client disconnected
                             self->println("Data socket disconnected -> " + ec.message(), custom_utils::COLOR::YELLOW);
 
-                            boost::system::error_code shutdownEC;
-                            self->m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both,
-                                                                          shutdownEC);
+                            boost::system::error_code shutdownEC = self->m_control_socket->next_layer().shutdown(
+                                boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
 
                             if (ec)
                             {
@@ -845,9 +840,9 @@ namespace ftps_session
             return;
         }
 
+        // buffer is empty, no message to send
         if (m_data_send_buffer.size() == 0)
         {
-            // buffer is empty, no message to send
             return;
         }
 
@@ -885,9 +880,10 @@ namespace ftps_session
             }
 
             std::string listing_format = "";
+
+            // is file
             if (v_object_list[i + 3] == "0")
             {
-                // is file
                 listing_format += "-rw-r--r-- 1 ";
             }
             else if (v_object_list[i + 3] == "1")
@@ -895,10 +891,18 @@ namespace ftps_session
                 // is directory
                 listing_format += "drwxr-xr-x 1 ";
             }
+
+            // file owner
             listing_format += m_username + " " + m_username + " ";
-            listing_format += v_object_list[i + 1] + " ";                      // file_size
-            listing_format += parse_metadata_time(v_object_list[i + 2]) + " "; // modified_time
-            listing_format += v_object_list[i - 1];                            // file_name
+
+            // file_size
+            listing_format += v_object_list[i + 1] + " ";
+
+            // modified_time
+            listing_format += parse_metadata_time(v_object_list[i + 2]) + " ";
+
+            // file_name
+            listing_format += v_object_list[i - 1];
 
             data_send(listing_format);
 
@@ -913,9 +917,8 @@ namespace ftps_session
 
         m_pending_directory_list = "";
 
-        boost::system::error_code ec;
-        m_data_socket->shutdown(ec);
-        m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        boost::system::error_code ec = m_data_socket->shutdown(ec);
+        ec = m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
             println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
@@ -1007,9 +1010,8 @@ namespace ftps_session
         // close data channel, so client knows operation is done
         println("File received, closing data socket", custom_utils::COLOR::GREEN);
 
-        boost::system::error_code ec;
-        m_data_socket->shutdown(ec);
-        m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        boost::system::error_code ec = m_data_socket->shutdown(ec);
+        ec = m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
             println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
@@ -1043,8 +1045,8 @@ namespace ftps_session
             println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
             m_data_socket->shutdown();
 
-            boost::system::error_code shutdownEC;
-            m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
+            boost::system::error_code shutdownEC =
+                m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
             if (shutdownEC)
             {
                 println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
@@ -1108,9 +1110,8 @@ namespace ftps_session
 
         // close data channel, so client knows operation is done
         println("File sent, closing data socket", custom_utils::COLOR::GREEN);
-        boost::system::error_code ec;
-        m_data_socket->shutdown(ec);
-        m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        boost::system::error_code ec = m_data_socket->shutdown(ec);
+        ec = m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
             println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
@@ -1144,8 +1145,8 @@ namespace ftps_session
             println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
             m_data_socket->shutdown();
 
-            boost::system::error_code shutdownEC;
-            m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
+            boost::system::error_code shutdownEC =
+                m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
             if (shutdownEC)
             {
                 println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
@@ -1216,9 +1217,8 @@ namespace ftps_session
             // close data channel, so client knows operation is done
             self->println("File sent, closing data socket", custom_utils::COLOR::GREEN);
 
-            boost::system::error_code ec;
-            self->m_data_socket->shutdown(ec);
-            self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+            boost::system::error_code ec = self->m_data_socket->shutdown(ec);
+            ec = self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
             if (ec)
             {
                 self->println("error during data socket shutdown, possible client sudden disconnect",
@@ -1236,60 +1236,74 @@ namespace ftps_session
 
         switch (time_str.at(5))
         {
-        case '0': { // < 10
+        // < 10
+        case '0': {
             switch (time_str.at(6))
             {
-            case '1': { // 01
+            // 01
+            case '1': {
                 parsedStr += "Jan ";
                 break;
             }
-            case '2': { // 02
+            // 02
+            case '2': {
                 parsedStr += "Feb ";
                 break;
             }
-            case '3': { // 03
+            // 03
+            case '3': {
                 parsedStr += "Mar ";
                 break;
             }
-            case '4': { // 04
+            // 04
+            case '4': {
                 parsedStr += "Apr ";
                 break;
             }
-            case '5': { // 05
+            // 05
+            case '5': {
                 parsedStr += "May ";
                 break;
             }
-            case '6': { // 06
+            // 06
+            case '6': {
                 parsedStr += "Jun ";
                 break;
             }
-            case '7': { // 07
+            // 07
+            case '7': {
                 parsedStr += "July ";
                 break;
             }
-            case '8': { // 08
+            // 08
+            case '8': {
                 parsedStr += "Aug ";
                 break;
             }
-            case '9': { // 09
+            // 09
+            case '9': {
                 parsedStr += "Sep ";
                 break;
             }
             }
             break;
         }
-        case '1': { // >= 10
+        // >= 10
+        case '1': {
             switch (time_str.at(6))
             {
-            case '0': { // 10
+            // 10
+            case '0': {
                 parsedStr += "Oct ";
                 break;
             }
-            case '1': { // 11
+            // 11
+            case '1': {
                 parsedStr += "Nov ";
                 break;
             }
-            case '2': { // 12
+            // 12
+            case '2': {
                 parsedStr += "Dec ";
                 break;
             }

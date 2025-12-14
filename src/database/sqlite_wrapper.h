@@ -6,7 +6,6 @@
 
 #include <string>
 #include <vector>
-#include <map>
 
 namespace sqlite_wrapper
 {
@@ -18,9 +17,14 @@ namespace sqlite_wrapper
 
     struct SQLite_Context
     {
-        int argc = 0;                       // number of columns
-        std::vector<std::string> argv;      // results
-        std::vector<std::string> azColName; // column names
+        // number of columns
+        int argc = 0;
+
+        // results
+        std::vector<std::string> argv;
+
+        // column names
+        std::vector<std::string> azColName;
     };
 
     class SQLiteDb

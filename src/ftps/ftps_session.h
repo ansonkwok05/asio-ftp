@@ -27,29 +27,66 @@ namespace ftps_session
 
         // list of commands supported
         const std::vector<std::string> FTP_COMMANDS = {
-            "NOOP", // No operation (dummy packet; used mostly on keepalives).
-            "SYST", // Return system type
-            "QUIT", // Disconnect.
-            "USER", // Authentication username
-            "PASS", // Authentication password
+            // No operation (dummy packet; used mostly on keepalives).
+            "NOOP",
 
-            "FEAT", // Get the feature list implemented by the server.
-            "PBSZ", // Protection Buffer Size
-            "PROT", // Data Channel Protection Level.
-            "OPTS", // Select options for a feature (for example OPTS UTF8 ON).
+            // Return system type
+            "SYST",
 
-            "PWD",  // Print working directory. Returns the current directory of the host.
-            "TYPE", // Sets the transfer mode (ASCII/Binary).
-            "PASV", // Enter passive mode.
-            "LIST", // Returns information of a file or directory if specified, else information of the current working
-                    // directory is returned.
-            "CDUP", // Change to Parent Directory.
-            "CWD",  // Change working directory.
-            "MKD",  // Make directory.
-            "RMD",  // Remove a directory.
-            "DELE", // Delete file.
-            "STOR", // Accept the data and to store the data as a file at the server site
-            "RETR", // Retrieve a copy of the file
+            // Disconnect.
+            "QUIT",
+
+            // Authentication username
+            "USER",
+
+            // Authentication password
+            "PASS",
+
+            // Get the feature list implemented by the server.
+            "FEAT",
+
+            // Protection Buffer Size
+            "PBSZ",
+
+            // Data Channel Protection Level.
+            "PROT",
+
+            // Select options for a feature (for example OPTS UTF8 ON).
+            "OPTS",
+
+            // Print working directory. Returns the current directory of the host.
+            "PWD",
+
+            // Sets the transfer mode (ASCII/Binary).
+            "TYPE",
+
+            // Enter passive mode.
+            "PASV",
+
+            // Returns information of a file or directory if specified, else information of the current working
+            // directory is returned.
+            "LIST",
+
+            // Change to Parent Directory.
+            "CDUP",
+
+            // Change working directory.
+            "CWD",
+
+            // Make directory.
+            "MKD",
+
+            // Remove a directory.
+            "RMD",
+
+            // Delete file.
+            "DELE",
+
+            // Accept the data and to store the data as a file at the server site
+            "STOR",
+
+            // Retrieve a copy of the file
+            "RETR",
         };
 
         std::string m_session_id;
@@ -86,6 +123,7 @@ namespace ftps_session
         // todo: figure out what is the problem
         // when client uses multiple connections to transfer, (downloading a folder)
         // some operations are not done (some files not downloaded, some directory not listed to client)
+        // progress: seems like async_receive might receive packets in a random order
 
         std::string m_pending_directory_list;
         std::string m_pending_write_file;
