@@ -1,5 +1,2 @@
-.vs
-.vscode
-out/
+.cache
 build
-data/
