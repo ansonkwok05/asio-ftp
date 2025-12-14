@@ -1,7 +1,7 @@
 #include "src/custom_utils.h"
-#include "src/sqlite/sqlite_wrapper.h"
-#include "src/user_db.h"
-#include "src/virtual_fs_db.h"
+#include "src/database/sqlite_wrapper.h"
+#include "src/database/user_db.h"
+#include "src/database/virtual_fs_db.h"
 #include "src/ftps/ftps_server.h"
 
 #include <thread>

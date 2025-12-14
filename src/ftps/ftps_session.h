@@ -1,8 +1,8 @@
 #pragma once
 
 #include "../custom_utils.h"
-#include "../user_db.h"
-#include "../virtual_fs_db.h"
+#include "../database/user_db.h"
+#include "../database/virtual_fs_db.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>

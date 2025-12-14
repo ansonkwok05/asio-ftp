@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sqlite/sqlite_wrapper.h"
+#include "sqlite_wrapper.h"
 
 namespace virtual_fs_db
 {

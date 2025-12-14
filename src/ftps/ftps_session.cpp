@@ -1,8 +1,8 @@
 #include "ftps_session.h"
 #include "../custom_utils.h"
-#include "../sqlite/fs_handler.h"
-#include "../user_db.h"
-#include "../virtual_fs_db.h"
+#include "../database/fs_handler.h"
+#include "../database/user_db.h"
+#include "../database/virtual_fs_db.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
