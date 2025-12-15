@@ -7,6 +7,10 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include <string>
+#include <vector>
+#include <queue>
+
 namespace ftps_session
 {
     constexpr int UNAUTHENTICATED = 0;
@@ -89,6 +93,7 @@ namespace ftps_session
             "RETR",
         };
 
+        // session identifier, for logging purposes
         std::string m_session_id;
 
         bool m_isImplicit;
@@ -115,7 +120,13 @@ namespace ftps_session
 
         std::vector<std::string> m_data_send_buffer;
 
+        void control_send_old(std::string message);
+
+        bool control_send_lock = false;
+        std::queue<std::string> m_control_send_queue;
         void control_send(std::string message);
+        void control_async_write();
+
         void control_receive();
         void handle_received_string();
         void handle_FTP_command(std::string &command, std::string &argument);

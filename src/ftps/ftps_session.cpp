@@ -85,19 +85,9 @@ namespace ftps_session
         control_receive();
     }
 
-    void session::control_send(std::string message)
+    void session::control_send_old(std::string message)
     {
         message += "\r\n";
-
-        // boost::asio::async_write(*m_control_socket, boost::asio::buffer(message),
-        //                          [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
-        //                              //  self->println("debug async_write");
-        //                              if (ec)
-        //                              {
-        //                                  self->println("Unknown async_write error -> " + ec.message(),
-        //                                  custom_utils::COLOR::YELLOW); return;
-        //                              }
-        //                          });
 
         boost::system::error_code ec;
         boost::asio::write(*m_control_socket, boost::asio::buffer(message), ec);
@@ -106,6 +96,45 @@ namespace ftps_session
             println("Unknown async_write error -> " + ec.message(), custom_utils::COLOR::YELLOW);
             return;
         }
+    }
+
+    void session::control_send(std::string message)
+    {
+        message += "\r\n";
+
+        m_control_send_queue.push(message);
+
+        if (control_send_lock)
+            return;
+
+        // initiate a write chain, next async_write is called when the last one is finished
+        control_send_lock = true;
+        control_async_write();
+    }
+
+    void session::control_async_write()
+    {
+        boost::asio::async_write(*m_control_socket, boost::asio::buffer(m_control_send_queue.front()),
+                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
+                                     //  self->println("debug async_write");
+                                     if (ec)
+                                     {
+                                         self->println("Unknown async_write error -> " + ec.message(),
+                                                       custom_utils::COLOR::YELLOW);
+                                         return;
+                                     }
+                                     self->m_control_send_queue.pop();
+
+                                     if (self->m_control_send_queue.size() > 0)
+                                     {
+                                         self->println("continue queue");
+                                         self->control_async_write();
+                                     }
+                                     else
+                                     {
+                                         self->control_send_lock = false;
+                                     }
+                                 });
     }
 
     void session::control_receive()
@@ -648,6 +677,8 @@ namespace ftps_session
                         control_receive();
                         return;
                     }
+
+                    // todo fix unable to delete on samsung phone
 
                     std::string v_obj_id = m_virtual_fs.remove_virtual_object(m_userid, argument, m_working_directory);
                     if (v_obj_id != "")
