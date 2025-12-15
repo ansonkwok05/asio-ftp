@@ -5,6 +5,7 @@
 #include "../database/virtual_fs_db.h"
 
 #include <boost/asio.hpp>
+#include <boost/asio/error.hpp>
 #include <boost/asio/ssl.hpp>
 
 #include <string>
@@ -145,7 +146,8 @@ namespace ftps_session
                 // self->println("debug async_read_some");
                 if (ec)
                 {
-                    if (ec == boost::asio::ssl::error::stream_truncated)
+                    if (ec == boost::asio::ssl::error::stream_truncated || ec == boost::asio::error::connection_reset ||
+                        ec == boost::asio::error::eof)
                     {
                         // client disconnected
                         self->println("Client disconnected -> " + ec.message(), custom_utils::COLOR::GREEN);
@@ -520,7 +522,6 @@ namespace ftps_session
                     // return to last slash
                     if (argument == "..")
                     {
-                        println(m_working_directory + " -> " + return_parent_directory(m_working_directory));
                         m_working_directory = return_parent_directory(m_working_directory);
                         control_send("250 Changed working directory.");
                         control_receive();
@@ -530,7 +531,6 @@ namespace ftps_session
                     // change directory to root
                     if (argument == "/")
                     {
-                        println(m_working_directory + " -> /");
                         m_working_directory = "/";
                         control_send("250 Changed working directory.");
                         control_receive();
@@ -607,13 +607,10 @@ namespace ftps_session
                     // set new working directory
                     if (virtual_path == "/")
                     {
-                        println("change dir type 1 " + m_working_directory + " -> " + virtual_path + children.back());
                         m_working_directory = virtual_path + children.back();
                     }
                     else
                     {
-                        println("change dir type 2 " + m_working_directory + " -> " + virtual_path + "/" +
-                                children.back());
                         m_working_directory = virtual_path + "/" + children.back();
                     }
 
@@ -662,7 +659,28 @@ namespace ftps_session
                         return;
                     }
 
-                    m_virtual_fs.remove_virtual_object(m_userid, argument, m_working_directory);
+                    // handle multiple types of arguments
+                    // type 1 "one"         // object name only
+                    // type 2 "test/one"    // absolute path but missing "/" at front
+                    std::string virtual_path;
+                    std::string object_name;
+
+                    if (custom_utils::splitString(argument, '/').size() == 1)
+                    {
+                        // type 1
+
+                        virtual_path = m_working_directory;
+                        object_name = argument;
+                    }
+                    else
+                    {
+                        // type 2
+
+                        virtual_path = return_parent_directory("/" + argument);
+                        object_name = custom_utils::splitString(argument, '/').back();
+                    }
+
+                    m_virtual_fs.remove_virtual_object(m_userid, object_name, virtual_path);
                     control_send("250 Deleted.");
 
                     control_receive();
@@ -678,9 +696,29 @@ namespace ftps_session
                         return;
                     }
 
-                    // todo fix unable to delete on samsung phone
+                    // handle multiple types of arguments
+                    // type 1 "one"         // object name only
+                    // type 2 "test/one"    // absolute path but missing "/" at front
 
-                    std::string v_obj_id = m_virtual_fs.remove_virtual_object(m_userid, argument, m_working_directory);
+                    std::string virtual_path;
+                    std::string object_name;
+
+                    if (custom_utils::splitString(argument, '/').size() == 1)
+                    {
+                        // type 1
+
+                        virtual_path = m_working_directory;
+                        object_name = argument;
+                    }
+                    else
+                    {
+                        // type 2
+
+                        virtual_path = return_parent_directory("/" + argument);
+                        object_name = custom_utils::splitString(argument, '/').back();
+                    }
+
+                    std::string v_obj_id = m_virtual_fs.remove_virtual_object(m_userid, object_name, virtual_path);
                     if (v_obj_id != "")
                     {
                         fs_handler::remove_file("data/" + v_obj_id);
@@ -887,7 +925,8 @@ namespace ftps_session
 
         boost::asio::write(*m_data_socket, boost::asio::buffer(tempStr));
         // boost::asio::async_write(*m_data_socket, boost::asio::buffer(tempStr),
-        //                          [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
+        //                          [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written)
+        //                          {
         //                              //  self->println("debug async_write");
         //                              if (ec)
         //                              {
@@ -995,8 +1034,8 @@ namespace ftps_session
         while (true)
         {
             boost::system::error_code ec;
-            // todo is it possible to turn this into async_read, or something that async read in order, then write the
-            // buffer to output file stream
+            // todo is it possible to turn this into async_read, or something that async read in order, then write
+            // the buffer to output file stream
             size_t bytes_read = boost::asio::read(*m_data_socket, boost::asio::buffer(data, RECEIVE_BUFFER_SIZE), ec);
 
             file_size += bytes_read;
