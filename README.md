@@ -11,6 +11,7 @@ FTPS server | Explicit and implicit encryption mode. Support file upload and dow
 * SFTP server
 * FTPS public ip mode (currently only works in LAN)
 * FTPS concurrent upload (concurrent download works, concurrent upload has missing files)
+* FTPS mobile download and upload has corrupted files (incorrect size, data)
 
 ## Requirements
 * CMake version 3.10 or higher
