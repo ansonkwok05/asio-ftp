@@ -4,8 +4,7 @@ A lightweight cross-platform file server written in C++.
 ## Current features
 Feature | Description
 ------- | -----------
-SQLite database | Stores file metadata (name, path, size, modified time, etc.)
-FTPS server | Explicit and implicit encryption mode. Support file upload and download.
+FTPS server | Explicit and implicit encryption mode. Support file upload and download. (Only working with FileZilla)
 
 ## To be implemented / bug fixes:
 * SFTP server
