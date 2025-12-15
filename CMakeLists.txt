@@ -6,9 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED On)
 
 # recursively find all .cpp files
-file(GLOB_RECURSE src
-    "src/*.cpp"
-)
+file(GLOB_RECURSE src "src/*.cpp")
 
 add_executable(cpp-fileserver main.cpp ${src})
 
