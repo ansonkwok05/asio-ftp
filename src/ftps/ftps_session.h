@@ -131,11 +131,6 @@ namespace ftps_session
         void handle_received_string();
         void handle_FTP_command(std::string &command, std::string &argument);
 
-        // todo: figure out what is the problem
-        // when client uses multiple connections to transfer, (downloading a folder)
-        // some operations are not done (some files not downloaded, some directory not listed to client)
-        // progress: seems like async_receive might receive packets in a random order
-
         std::string m_pending_directory_list;
         std::string m_pending_write_file;
         std::string m_pending_read_file;

@@ -633,7 +633,7 @@ namespace ftps_session
                     if (m_virtual_fs.get_object(m_userid, argument, m_working_directory).size() != 0)
                     {
                         println("Cannot make directory, already exists", custom_utils::COLOR::YELLOW);
-                        control_send("550 Directory already exist.");
+                        control_send("250 Directory already exist.");
                         control_receive();
                         return;
                     }

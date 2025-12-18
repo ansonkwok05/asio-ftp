@@ -9,7 +9,6 @@ FTPS server | Explicit and implicit encryption mode. Support file upload and dow
 ## To be implemented / bug fixes:
 * SFTP server
 * FTPS public ip mode (currently only works in LAN)
-* FTPS concurrent upload (concurrent download works, concurrent upload has missing files)
 * FTPS mobile download and upload has corrupted files (incorrect size, data)
 
 ## Requirements
