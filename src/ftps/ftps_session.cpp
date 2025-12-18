@@ -77,7 +77,7 @@ namespace ftps_session
             return;
         }
 
-        m_connection_stage = UNAUTHENTICATED;
+        m_connection_stage = CONNECTION_STAGE::UNAUTHENTICATED;
 
         if (m_isImplicit)
         {
@@ -286,7 +286,7 @@ namespace ftps_session
 
                 if (m_user.get_password_by_id(m_userid)[0] == argument)
                 {
-                    m_connection_stage = LOGGED_IN;
+                    m_connection_stage = CONNECTION_STAGE::LOGGED_IN;
                     println("User \"" + m_username + "\" logged in", custom_utils::COLOR::GREEN);
                     control_send("230 Logged in.");
                     control_receive();
@@ -302,7 +302,7 @@ namespace ftps_session
         }
 
         // deny access to unauthenticated clients
-        if (m_connection_stage < LOGGED_IN)
+        if (m_connection_stage != CONNECTION_STAGE::LOGGED_IN)
         {
             control_send("530 Not logged in.");
             control_receive();
@@ -1039,6 +1039,7 @@ namespace ftps_session
 
     void session::data_send_file()
     {
+        // todo: use async
         std::vector<std::string> temp = custom_utils::splitString(m_pending_read_file, '/');
 
         std::string file_path = return_parent_directory(m_pending_read_file);
@@ -1083,7 +1084,6 @@ namespace ftps_session
         char fileBuffer[SEND_BUFFER_SIZE] = {0};
 
         int bytes_sent = 0;
-        // bool error_during_async_write = false;
 
         while (!readFileStream.eof())
         {
@@ -1117,104 +1117,6 @@ namespace ftps_session
 
         // close data channel
         data_close();
-    }
-
-    void session::data_async_send_file()
-    {
-        std::vector<std::string> temp = custom_utils::splitString(m_pending_read_file, '/');
-
-        std::string file_path = return_parent_directory(m_pending_read_file);
-        std::string file_name = temp.at(temp.size() - 1);
-
-        // read db records and search for the according file
-
-        std::string target_file_id;
-
-        std::vector<std::string> v_object = m_virtual_fs.get_object(m_userid, file_name, file_path);
-
-        if (v_object.size() != 0)
-        {
-            target_file_id = v_object[5];
-        }
-
-        if (target_file_id == "")
-        {
-            // file not found
-            println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLOR::RED);
-            println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
-            data_close();
-            return;
-        }
-
-        println("FOUND TARGET FILE TO SEND -> " + target_file_id);
-
-        if (!fs_handler::file_exists("data/" + target_file_id))
-        {
-            println("Actual file not found on OS", custom_utils::COLOR::RED);
-            return;
-        }
-
-        std::ifstream readFileStream("data/" + target_file_id);
-        if (!readFileStream.is_open())
-        {
-            println("Unable to open read file stream", custom_utils::COLOR::RED);
-            return;
-        }
-
-        const int SEND_BUFFER_SIZE = 1024 * 1024;
-        int bytes_read = 0;
-
-        bool stop_reading = false;
-
-        while (!readFileStream.eof() && !stop_reading)
-        {
-            char fileBuffer[SEND_BUFFER_SIZE] = {0};
-            readFileStream.read(fileBuffer, SEND_BUFFER_SIZE);
-
-            bytes_read += readFileStream.gcount();
-
-            // async part
-            // cannot ensure the order of data delivery, async_Write_some does not guarantee order
-            // call readFileStream.read after each async_write to send the next chunk?
-            m_data_socket->async_write_some(
-                boost::asio::buffer(fileBuffer, readFileStream.gcount()),
-                [self = shared_from_this(), &stop_reading](boost::system::error_code temp_ec, size_t bytes_written) {
-                    if (temp_ec)
-                    {
-                        self->println("EC ASYNC WRITE SOME", custom_utils::COLOR::YELLOW);
-                        // connection canceled/abandoned
-                        if (temp_ec == boost::asio::error::broken_pipe)
-                        {
-                            stop_reading = true;
-                            return;
-                        }
-                    }
-                });
-        }
-
-        boost::asio::post(m_data_socket->get_executor(), [self = shared_from_this(), &bytes_read, &stop_reading]() {
-            self->m_pending_read_file = "";
-
-            self->control_send("226 Sent.");
-            self->println("bytes sent: " + std::to_string(bytes_read));
-
-            if (stop_reading)
-            {
-                self->println("stopped suddenly due to error", custom_utils::COLOR::YELLOW);
-            }
-
-            // close data channel, so client knows operation is done
-            self->println("File sent, closing data socket", custom_utils::COLOR::GREEN);
-
-            boost::system::error_code ec = self->m_data_socket->shutdown(ec);
-            ec = self->m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-            if (ec)
-            {
-                self->println("error during data socket shutdown, possible client sudden disconnect",
-                              custom_utils::COLOR::RED);
-            }
-            self->m_data_socket->next_layer().close();
-        });
     }
 
     void session::data_close()

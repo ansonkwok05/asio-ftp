@@ -8,13 +8,17 @@
 #include <boost/asio/ssl.hpp>
 
 #include <string>
+#include <string_view>
 #include <vector>
 #include <queue>
 
 namespace ftps_session
 {
-    constexpr int UNAUTHENTICATED = 0;
-    constexpr int LOGGED_IN = 1;
+    enum class CONNECTION_STAGE
+    {
+        UNAUTHENTICATED,
+        LOGGED_IN
+    };
 
     // 128B buffer size for receiving messages
     constexpr size_t MESSAGE_BUFFER_SIZE = 128;
@@ -23,6 +27,70 @@ namespace ftps_session
     constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 1024 * 16;
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
+
+    // list of commands supported
+    constexpr std::array<std::string_view, 20> FTP_COMMANDS = {
+        // No operation (dummy packet; used mostly on keepalives).
+        "NOOP",
+
+        // Return system type
+        "SYST",
+
+        // Disconnect.
+        "QUIT",
+
+        // Authentication username
+        "USER",
+
+        // Authentication password
+        "PASS",
+
+        // Get the feature list implemented by the server.
+        "FEAT",
+
+        // Protection Buffer Size
+        "PBSZ",
+
+        // Data Channel Protection Level.
+        "PROT",
+
+        // Select options for a feature (for example OPTS UTF8 ON).
+        "OPTS",
+
+        // Print working directory. Returns the current directory of the host.
+        "PWD",
+
+        // Sets the transfer mode (ASCII/Binary).
+        "TYPE",
+
+        // Enter passive mode.
+        "PASV",
+
+        // Returns information of a file or directory if specified, else information of the current working
+        // directory is returned.
+        "LIST",
+
+        // Change to Parent Directory.
+        "CDUP",
+
+        // Change working directory.
+        "CWD",
+
+        // Make directory.
+        "MKD",
+
+        // Remove a directory.
+        "RMD",
+
+        // Delete file.
+        "DELE",
+
+        // Accept the data and to store the data as a file at the server site
+        "STOR",
+
+        // Retrieve a copy of the file
+        "RETR",
+    };
 
     class session : public std::enable_shared_from_this<session>
     {
@@ -33,70 +101,6 @@ namespace ftps_session
         void start();
 
     private:
-        // list of commands supported
-        const std::vector<std::string> FTP_COMMANDS = {
-            // No operation (dummy packet; used mostly on keepalives).
-            "NOOP",
-
-            // Return system type
-            "SYST",
-
-            // Disconnect.
-            "QUIT",
-
-            // Authentication username
-            "USER",
-
-            // Authentication password
-            "PASS",
-
-            // Get the feature list implemented by the server.
-            "FEAT",
-
-            // Protection Buffer Size
-            "PBSZ",
-
-            // Data Channel Protection Level.
-            "PROT",
-
-            // Select options for a feature (for example OPTS UTF8 ON).
-            "OPTS",
-
-            // Print working directory. Returns the current directory of the host.
-            "PWD",
-
-            // Sets the transfer mode (ASCII/Binary).
-            "TYPE",
-
-            // Enter passive mode.
-            "PASV",
-
-            // Returns information of a file or directory if specified, else information of the current working
-            // directory is returned.
-            "LIST",
-
-            // Change to Parent Directory.
-            "CDUP",
-
-            // Change working directory.
-            "CWD",
-
-            // Make directory.
-            "MKD",
-
-            // Remove a directory.
-            "RMD",
-
-            // Delete file.
-            "DELE",
-
-            // Accept the data and to store the data as a file at the server site
-            "STOR",
-
-            // Retrieve a copy of the file
-            "RETR",
-        };
-
         // session identifier, for logging purposes
         std::string m_session_id;
 
@@ -113,7 +117,8 @@ namespace ftps_session
         std::vector<char> m_buffer;
         std::string m_received_string;
 
-        int m_connection_stage;
+        // int m_connection_stage;
+        CONNECTION_STAGE m_connection_stage;
 
         user_db::user m_user;
         virtual_fs_db::virtual_fs m_virtual_fs;
@@ -153,8 +158,6 @@ namespace ftps_session
         void data_async_receive();
 
         void data_send_file();
-
-        void data_async_send_file(); // experimental, todo
 
         void data_close();
 
