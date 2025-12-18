@@ -11,7 +11,6 @@ namespace virtual_fs_db
 {
     virtual_fs::virtual_fs()
     {
-        db = new sqlite_wrapper::SQLiteDb();
         db.connect();
     }
 

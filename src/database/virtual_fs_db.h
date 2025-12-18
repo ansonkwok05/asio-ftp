@@ -28,6 +28,8 @@ namespace virtual_fs_db
         std::string remove_virtual_object(std::string user_id, std::string object_name, std::string object_path);
 
     private:
+        sqlite_wrapper::SQLiteDb db;
+
         void check_table_exists();
 
         void create_objects_table();
@@ -35,6 +37,5 @@ namespace virtual_fs_db
 
         void check_objects_table_structure();
         void check_objects_metadata_table_structure();
-        sqlite_wrapper::SQLiteDb db;
     };
 } // namespace virtual_fs_db
