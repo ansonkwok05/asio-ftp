@@ -10,11 +10,11 @@
 namespace ftp_session
 {
     // time to wait for an implicit connection (tls handshake)
-    constexpr int IMPLICIT_TIMEOUT_MS = 500;
+    constexpr int IMPLICIT_TIMEOUT_MS = 400;
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
 
-    // buffer size for messages in bytes
+    // 16B buffer size for messages
     constexpr size_t BUFFER_SIZE = 64;
 
     class session : public std::enable_shared_from_this<session>

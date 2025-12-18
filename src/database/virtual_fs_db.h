@@ -17,6 +17,7 @@ namespace virtual_fs_db
     {
     public:
         virtual_fs();
+
         void initialize();
 
         std::vector<std::string> get_object(std::string user_id, std::string object_name, std::string object_path);

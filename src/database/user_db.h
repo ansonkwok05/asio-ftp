@@ -13,7 +13,9 @@ namespace user_db
     {
     public:
         user();
+
         void initialize();
+
         std::vector<std::string> get_id_by_name(std::string name);
         std::vector<std::string> get_name_by_id(std::string id);
         std::vector<std::string> get_password_by_id(std::string id);

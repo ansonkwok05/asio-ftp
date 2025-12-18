@@ -30,6 +30,7 @@ namespace ftp_session
         // Explicit/Implicit compatibility
 
         // expect implicit FTPS clients to send TLS handshake immediately
+        // wait for implicit FTPS (TLS ClientHello)
         while (stopwatch.lapMs() < IMPLICIT_TIMEOUT_MS)
         {
             // expect TLS handshake to be longer than 100 bytes
