@@ -8,6 +8,7 @@
 #include <boost/asio/error.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include <ios>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -16,7 +17,8 @@
 namespace ftps_session
 {
     session::session(boost::asio::ip::tcp::socket socket, bool isImplicit)
-        : m_ssl_context(boost::asio::ssl::context::tlsv13_server), m_buffer(BUFFER_SIZE)
+        : m_ssl_context(boost::asio::ssl::context::tlsv13_server), m_buffer(MESSAGE_BUFFER_SIZE),
+          m_receive_buffer(RECEIVE_BUFFER_SIZE)
     {
         m_session_id = custom_utils::generate_uuid_string(8);
 
@@ -86,19 +88,6 @@ namespace ftps_session
         control_receive();
     }
 
-    void session::control_send_old(std::string message)
-    {
-        message += "\r\n";
-
-        boost::system::error_code ec;
-        boost::asio::write(*m_control_socket, boost::asio::buffer(message), ec);
-        if (ec)
-        {
-            println("Unknown async_write error -> " + ec.message(), custom_utils::COLOR::YELLOW);
-            return;
-        }
-    }
-
     void session::control_send(std::string message)
     {
         message += "\r\n";
@@ -115,6 +104,12 @@ namespace ftps_session
 
     void session::control_async_write()
     {
+        if (m_control_send_queue.size() == 0)
+        {
+            control_send_lock = false;
+            return;
+        }
+
         boost::asio::async_write(*m_control_socket, boost::asio::buffer(m_control_send_queue.front()),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
                                      //  self->println("debug async_write");
@@ -125,25 +120,15 @@ namespace ftps_session
                                          return;
                                      }
                                      self->m_control_send_queue.pop();
-
-                                     if (self->m_control_send_queue.size() > 0)
-                                     {
-                                         self->println("continue queue");
-                                         self->control_async_write();
-                                     }
-                                     else
-                                     {
-                                         self->control_send_lock = false;
-                                     }
+                                     self->control_async_write();
                                  });
     }
 
     void session::control_receive()
     {
         m_control_socket->async_read_some(
-            boost::asio::buffer(m_buffer, BUFFER_SIZE),
+            boost::asio::buffer(m_buffer, MESSAGE_BUFFER_SIZE),
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
-                // self->println("debug async_read_some");
                 if (ec)
                 {
                     if (ec == boost::asio::ssl::error::stream_truncated || ec == boost::asio::error::connection_reset ||
@@ -191,47 +176,6 @@ namespace ftps_session
 
                 self->handle_received_string();
             });
-
-        // boost::system::error_code ec;
-        // size_t bytes_received = m_control_socket->read_some(boost::asio::buffer(m_buffer, BUFFER_SIZE), ec);
-        // if (ec)
-        // {
-        //     if (ec == boost::asio::ssl::error::stream_truncated)
-        //     {
-        //         // client disconnected
-        //         println("Client disconnected -> " + ec.message(), custom_utils::COLOR::GREEN);
-
-        //         m_control_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both);
-        //         m_control_socket->next_layer().close();
-        //         return;
-        //     }
-        //     println("Unknown read_some error -> " + ec.message(), custom_utils::COLOR::YELLOW);
-        //     return;
-        // }
-
-        // if (bytes_received == 1 || bytes_received == 2)
-        // {
-        //     println("received incomplete message (length " + std::to_string(bytes_received) + "), disconnecting");
-        //     return;
-        // }
-
-        // if (bytes_received == 0)
-        // {
-        //     println("received nothing, disconnecting");
-        //     return;
-        // }
-
-        // println("bytes received: " + std::to_string(bytes_received));
-
-        // m_received_string = "";
-
-        // // remove unwanted data
-        // for (size_t i = 0; i < bytes_received - 2; i++)
-        // {
-        //     m_received_string += m_buffer.at(i);
-        // }
-
-        // handle_received_string();
     }
 
     void session::handle_received_string()
@@ -897,43 +841,34 @@ namespace ftps_session
 
     void session::data_send(std::string message)
     {
-        if (message != "")
-        {
-            // add message to buffer
-            m_data_send_buffer.push_back(message); // all messages need to end in \r\n
-        }
+        message += "\r\n";
 
-        if (!m_data_socket || !m_data_socket->lowest_layer().is_open())
+        m_data_send_queue.push(message);
+    }
+
+    void session::data_async_write()
+    {
+        if (m_data_send_queue.size() == 0)
         {
-            // print("data channel not open yet\n", custom_utils::COLOR::YELLOW);
+            // inform client through control channel that data channel finished
+            m_pending_directory_list = "";
+            control_send("226 Transferred.");
+            data_close();
             return;
         }
 
-        // buffer is empty, no message to send
-        if (m_data_send_buffer.size() == 0)
-        {
-            return;
-        }
+        boost::asio::async_write(*m_data_socket, boost::asio::buffer(m_data_send_queue.front()),
+                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
+                                     if (ec)
+                                     {
+                                         self->println("Unknown async_write error -> " + ec.message(),
+                                                       custom_utils::COLOR::YELLOW);
+                                         return;
+                                     }
 
-        // flush buffer and send
-        std::string tempStr = "";
-        for (std::string str : m_data_send_buffer)
-        {
-            tempStr += str + "\r\n";
-        }
-        m_data_send_buffer.clear();
-
-        boost::asio::write(*m_data_socket, boost::asio::buffer(tempStr));
-        // boost::asio::async_write(*m_data_socket, boost::asio::buffer(tempStr),
-        //                          [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written)
-        //                          {
-        //                              //  self->println("debug async_write");
-        //                              if (ec)
-        //                              {
-        //                                  self->println("Unknown async_write error -> " + ec.message(),
-        //                                  custom_utils::COLOR::YELLOW); return;
-        //                              }
-        //                          });
+                                     self->m_data_send_queue.pop();
+                                     self->data_async_write();
+                                 });
     }
 
     void session::data_directory_listing()
@@ -979,114 +914,127 @@ namespace ftps_session
             i += 6;
         }
 
-        control_send("226 Transferred.");
-
-        // close data channel, so client knows operation is done
-        println("Directory listing of " + m_pending_directory_list + " done, closing data socket",
-                custom_utils::COLOR::GREEN);
-
-        m_pending_directory_list = "";
-
-        boost::system::error_code ec = m_data_socket->shutdown(ec);
-        ec = m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-        if (ec)
-        {
-            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
-        }
-        m_data_socket->next_layer().close();
+        // start sending
+        data_async_write();
     }
 
     void session::data_receive_file()
     {
-        // create the virtual object if not exists before receiving, file size = 0
-        std::string file_path = return_parent_directory(m_pending_write_file);
-        std::string file_name;
-        std::string file_id;
+        m_receive_file_path = return_parent_directory(m_pending_write_file);
+        m_receive_file_size = 0;
+        bool file_already_exists = false;
 
         {
             std::vector<std::string> temp = custom_utils::splitString(m_pending_write_file, '/');
-            file_name = temp.at(temp.size() - 1);
+            m_receive_file_name = temp.at(temp.size() - 1);
 
             // create virtual object if not exists
-            std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, file_name, file_path);
+            std::vector<std::string> v_obj =
+                m_virtual_fs.get_object(m_userid, m_receive_file_name, m_receive_file_path);
             if (v_obj.size() == 0)
             {
-                println("creating new object in db as -> " + file_path + " + " + file_name, custom_utils::COLOR::CYAN);
-                file_id = m_virtual_fs.create_virtual_object(m_userid, file_name, file_path, 0, false);
+                m_receive_file_id =
+                    m_virtual_fs.create_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
             }
             else
             {
-                file_id = v_obj[5];
+                m_receive_file_id = v_obj[5];
+                m_receive_file_size = std::stoll(v_obj[2]);
+                file_already_exists = true;
             }
         }
 
-        long long file_size = 0;
+        std::ofstream output_file_stream;
 
-        std::ofstream output_file_stream("data/" + file_id);
-        if (!output_file_stream.is_open())
+        // append data to end of file if already exists, else create new file
+        if (file_already_exists)
         {
-            println("Error opening output file stream", custom_utils::COLOR::RED);
-            return;
+            println("appending existing file", custom_utils::COLOR::CYAN);
         }
-
-        const size_t RECEIVE_BUFFER_SIZE = 1024 * 1024;
-        char data[RECEIVE_BUFFER_SIZE];
-        while (true)
+        else
         {
-            boost::system::error_code ec;
-            // todo is it possible to turn this into async_read, or something that async read in order, then write
-            // the buffer to output file stream
-            size_t bytes_read = boost::asio::read(*m_data_socket, boost::asio::buffer(data, RECEIVE_BUFFER_SIZE), ec);
+            println("creating new file", custom_utils::COLOR::CYAN);
 
-            file_size += bytes_read;
-            output_file_stream.write(data, bytes_read);
-
-            if (output_file_stream.fail())
+            output_file_stream.open("data/" + m_receive_file_id);
+            if (!output_file_stream.is_open())
             {
-                println("Error writing output file stream", custom_utils::COLOR::RED);
+                println("Error opening output file stream", custom_utils::COLOR::RED);
                 return;
             }
-
-            // good chunks of data received
-            if (ec.message() == "Success")
-                continue;
-
-            // no more file data to read
-            if (ec == boost::asio::error::eof)
-                break;
-
-            // connection canceled/abandoned
-            if (ec == boost::asio::ssl::error::stream_truncated)
-            {
-                println("data connection disconnected mid file receive", custom_utils::COLOR::YELLOW);
-                break;
-            }
-
-            // unexpected error
-            println("error while receiving file data -> " + ec.message(), custom_utils::COLOR::YELLOW);
         }
 
         output_file_stream.close();
 
-        // file is written to os, update the file size of the object in database
-        println("updating object in db -> " + file_path + " + " + file_name, custom_utils::COLOR::CYAN);
-        m_virtual_fs.update_virtual_object(m_userid, file_name, file_path, file_size);
+        data_async_receive();
+    }
 
-        // allow another file to be received
-        m_pending_write_file = "";
-
-        control_send("226 Received.");
-
-        // close data channel, so client knows operation is done
-        println("File received, closing data socket", custom_utils::COLOR::GREEN);
-
-        boost::system::error_code ec = m_data_socket->shutdown(ec);
-        ec = m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-        if (ec)
+    void session::data_async_receive()
+    {
+        if (m_receive_end)
         {
-            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
+            m_receive_end = false;
+
+            println("updating object metadata in db", custom_utils::COLOR::CYAN);
+            m_virtual_fs.update_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, m_receive_file_size);
+
+            // allow another file to be received
+            m_pending_write_file = "";
+
+            control_send("226 Received.");
+
+            // close data channel
+            data_close();
+            return;
         }
-        m_data_socket->next_layer().close();
+
+        boost::asio::async_read(*m_data_socket, m_receive_buffer,
+                                [self = shared_from_this()](boost::system::error_code ec, size_t bytes_read) {
+                                    self->m_receive_file_size += bytes_read;
+
+                                    std::ofstream output_file_stream;
+
+                                    output_file_stream.open("data/" + self->m_receive_file_id, std::ios_base::app);
+
+                                    if (!output_file_stream.is_open())
+                                    {
+                                        self->println("Error opening output file stream", custom_utils::COLOR::RED);
+                                        return;
+                                    }
+
+                                    if (bytes_read > 0)
+                                    {
+                                        output_file_stream << &self->m_receive_buffer;
+                                    }
+
+                                    if (output_file_stream.fail())
+                                    {
+                                        self->println("Error writing output file stream", custom_utils::COLOR::RED);
+                                        self->m_receive_end = true;
+                                    }
+
+                                    output_file_stream.close();
+
+                                    // no more file data to read
+                                    if (ec == boost::asio::error::eof)
+                                    {
+                                        self->m_receive_end = true;
+                                    }
+                                    else if (ec == boost::asio::ssl::error::stream_truncated)
+                                    {
+                                        // connection canceled/abandoned
+                                        self->println("data connection disconnected mid file receive",
+                                                      custom_utils::COLOR::YELLOW);
+                                        self->m_receive_end = true;
+                                    }
+                                    else if (ec.message() != "Success")
+                                    {
+                                        self->println("Unexpected error while receiving file data -> " + ec.message(),
+                                                      custom_utils::COLOR::YELLOW);
+                                        self->m_receive_end = true;
+                                    }
+
+                                    self->data_async_receive();
+                                });
     }
 
     void session::data_send_file()
@@ -1099,7 +1047,6 @@ namespace ftps_session
         // read db records and search for the according file
 
         std::string target_file_id;
-
         std::vector<std::string> v_object = m_virtual_fs.get_object(m_userid, file_name, file_path);
 
         if (v_object.size() != 0)
@@ -1113,17 +1060,7 @@ namespace ftps_session
             println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLOR::RED);
 
             println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
-            m_data_socket->shutdown();
-
-            boost::system::error_code shutdownEC =
-                m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
-            if (shutdownEC)
-            {
-                println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
-                return;
-            }
-
-            m_data_socket->next_layer().close();
+            data_close();
             return;
         }
 
@@ -1178,15 +1115,8 @@ namespace ftps_session
         control_send("226 Sent.");
         println("bytes sent: " + std::to_string(bytes_sent));
 
-        // close data channel, so client knows operation is done
-        println("File sent, closing data socket", custom_utils::COLOR::GREEN);
-        boost::system::error_code ec = m_data_socket->shutdown(ec);
-        ec = m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-        if (ec)
-        {
-            println("error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
-        }
-        m_data_socket->next_layer().close();
+        // close data channel
+        data_close();
     }
 
     void session::data_async_send_file()
@@ -1211,19 +1141,8 @@ namespace ftps_session
         {
             // file not found
             println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLOR::RED);
-
             println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
-            m_data_socket->shutdown();
-
-            boost::system::error_code shutdownEC =
-                m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, shutdownEC);
-            if (shutdownEC)
-            {
-                println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
-                return;
-            }
-
-            m_data_socket->next_layer().close();
+            data_close();
             return;
         }
 
@@ -1296,6 +1215,20 @@ namespace ftps_session
             }
             self->m_data_socket->next_layer().close();
         });
+    }
+
+    void session::data_close()
+    {
+        // close data channel
+        println("Operation finished, closing data socket", custom_utils::COLOR::GREEN);
+
+        boost::system::error_code ec = m_data_socket->shutdown(ec);
+        ec = m_data_socket->next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        if (ec)
+        {
+            println("Error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
+        }
+        m_data_socket->next_layer().close();
     }
 
     std::string session::parse_metadata_time(std::string time_str)

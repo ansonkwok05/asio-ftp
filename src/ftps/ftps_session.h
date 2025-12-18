@@ -16,6 +16,14 @@ namespace ftps_session
     constexpr int UNAUTHENTICATED = 0;
     constexpr int LOGGED_IN = 1;
 
+    // 128B buffer size for receiving messages
+    constexpr size_t MESSAGE_BUFFER_SIZE = 128;
+
+    // 16MB buffer size for receiving files
+    constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 1024 * 16;
+
+    constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
+
     class session : public std::enable_shared_from_this<session>
     {
     public:
@@ -25,10 +33,6 @@ namespace ftps_session
         void start();
 
     private:
-        const size_t BUFFER_SIZE = 128; // buffer size in bytes, for receiving messages
-
-        const std::string FTP_WELCOMEMESSAGE = "220 Welcome.";
-
         // list of commands supported
         const std::vector<std::string> FTP_COMMANDS = {
             // No operation (dummy packet; used mostly on keepalives).
@@ -118,10 +122,6 @@ namespace ftps_session
         std::string m_username;
         std::string m_working_directory = "/";
 
-        std::vector<std::string> m_data_send_buffer;
-
-        void control_send_old(std::string message);
-
         bool control_send_lock = false;
         std::queue<std::string> m_control_send_queue;
         void control_send(std::string message);
@@ -136,12 +136,27 @@ namespace ftps_session
         std::string m_pending_read_file;
 
         void data_acceptor_start_accept();
+
+        std::queue<std::string> m_data_send_queue;
         void data_send(std::string message);
+        void data_async_write();
+
         void data_directory_listing();
+
+        boost::asio::streambuf m_receive_buffer;
+        std::string m_receive_file_name;
+        std::string m_receive_file_path;
+        std::string m_receive_file_id;
+        long long m_receive_file_size;
+        bool m_receive_end = false;
         void data_receive_file();
+        void data_async_receive();
+
         void data_send_file();
 
         void data_async_send_file(); // experimental, todo
+
+        void data_close();
 
         std::string parse_metadata_time(std::string time_str);
         std::string return_parent_directory(std::string directory);
