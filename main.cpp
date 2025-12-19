@@ -25,7 +25,8 @@ int main()
         delete database;
         database = nullptr;
 
-        println("SQLite database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
+        println("SQLite database initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) +
+                    "ms",
                 custom_utils::COLOR::GREEN);
     }
 
@@ -53,7 +54,7 @@ int main()
         delete user;
         user = nullptr;
 
-        println("User database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) + "ms",
+        println("User database initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
                 custom_utils::COLOR::GREEN);
     }
 
@@ -66,7 +67,7 @@ int main()
         delete virtual_fs;
         virtual_fs = nullptr;
 
-        println("Virtual fs database initialization done in " + std::to_string(performanceWatcher.lapUs() / 1000) +
+        println("Virtual fs database initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) +
                     "ms",
                 custom_utils::COLOR::GREEN);
     }
