@@ -11,7 +11,8 @@ namespace virtual_fs_db
     constexpr char OBJECT_METADATA_TABLE_CREATION_QUERY[] =
         "CREATE TABLE objects_metadata (name VARCHAR(255) NOT NULL, path VARCHAR(1024) NOT NULL, "
         "size BIGINT NOT NULL, modified_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, is_directory INTEGER "
-        "NOT NULL, object_id CHAR(64) NOT NULL, FOREIGN KEY (object_id) REFERENCES files (object_id))";
+        "NOT NULL, object_id CHAR(64) NOT NULL, FOREIGN KEY (object_id) REFERENCES files (object_id), UNIQUE (name, "
+        "path))";
 
     class virtual_fs
     {
