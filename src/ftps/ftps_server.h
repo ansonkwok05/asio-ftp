@@ -1,7 +1,7 @@
 #pragma once
 
 #include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
+#include <memory>
 
 namespace ftps_server
 {
@@ -14,8 +14,10 @@ namespace ftps_server
         server();
 
     private:
+        std::unique_ptr<boost::asio::strand<boost::asio::io_context::executor_type>> m_strand;
+
         // io context needed to run async operations
-        boost::asio::io_context io_ctx;
+        boost::asio::io_context m_io_ctx;
 
         // connection acceptor
         boost::asio::ip::tcp::acceptor m_acceptor;

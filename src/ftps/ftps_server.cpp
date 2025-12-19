@@ -5,8 +5,10 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
+#include <boost/asio/strand.hpp>
 #include <boost/beast.hpp>
 
+#include <memory>
 #include <string>
 #include <stdexcept>
 
@@ -15,7 +17,7 @@ namespace ftps_server
     using custom_utils::println;
 
     server::server()
-        : m_acceptor(io_ctx, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT)), m_socket(io_ctx)
+        : m_acceptor(m_io_ctx, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT)), m_socket(m_io_ctx)
     {
         // get_public_ip();
 
@@ -25,8 +27,21 @@ namespace ftps_server
 
         println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
 
-        // start all async operations, blocks until all async operations are done
-        io_ctx.run();
+        m_strand = std::make_unique<boost::asio::strand<boost::asio::io_context::executor_type>>(
+            boost::asio::make_strand(m_io_ctx.get_executor()));
+
+        // todo: fix multithreading race condition
+        // when multiple "MKD" ftp command is received, the same virtual object is created multiple times
+
+        // // run async operations in worker threads
+        // std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
+        // std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
+        // std::thread io_ctx_thread3([&] { m_io_ctx.run(); });
+        m_io_ctx.run();
+
+        // io_ctx_thread1.join();
+        // io_ctx_thread2.join();
+        // io_ctx_thread3.join();
     }
 
     void server::check_tls_keys()
