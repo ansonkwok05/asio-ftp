@@ -29,7 +29,7 @@ namespace ftp_session
 
     private:
         custom_utils::stopwatch m_stopwatch;
-        boost::asio::steady_timer *timer;
+        std::unique_ptr<boost::asio::steady_timer> timer;
 
         boost::asio::ip::tcp::socket m_socket;
 

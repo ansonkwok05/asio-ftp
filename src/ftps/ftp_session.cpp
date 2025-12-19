@@ -15,8 +15,8 @@ namespace ftp_session
 {
     session::session(boost::asio::ip::tcp::socket socket) : m_socket(std::move(socket)), m_buffer(BUFFER_SIZE)
     {
-        timer = new boost::asio::steady_timer(m_socket.get_executor(),
-                                              std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS));
+        timer = std::make_unique<boost::asio::steady_timer>(m_socket.get_executor(),
+                                                            std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS));
         println("session created for " + m_socket.remote_endpoint().address().to_string() + ":" +
                     std::to_string(m_socket.remote_endpoint().port()),
                 custom_utils::COLOR::BRIGHTBLACK);
@@ -24,7 +24,6 @@ namespace ftp_session
 
     session::~session()
     {
-        delete timer;
         println("session destroyed", custom_utils::COLOR::BRIGHTBLACK);
     }
 
