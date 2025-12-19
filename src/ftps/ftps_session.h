@@ -24,7 +24,7 @@ namespace ftps_session
     constexpr size_t MESSAGE_BUFFER_SIZE = 128;
 
     // 16MB buffer size for receiving files
-    constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 1024 * 16;
+    constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 1024 * 32;
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
 
@@ -117,7 +117,6 @@ namespace ftps_session
         std::vector<char> m_buffer;
         std::string m_received_string;
 
-        // int m_connection_stage;
         CONNECTION_STAGE m_connection_stage;
 
         user_db::user m_user;

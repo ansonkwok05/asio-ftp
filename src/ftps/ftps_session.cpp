@@ -375,6 +375,7 @@ namespace ftps_session
                 if (command == "PASV")
                 {
                     // prepare acceptor for data_socket connection acception
+                    m_data_socket_acceptor.reset();
                     m_data_socket_acceptor =
                         std::make_unique<boost::asio::ip::tcp::acceptor>(m_control_socket->get_executor());
 
@@ -781,6 +782,7 @@ namespace ftps_session
                 }
 
                 // create ssl stream socket
+                self->m_data_socket.reset();
                 self->m_data_socket = std::make_unique<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(
                     std::move(socket), self->m_ssl_context);
 
@@ -1014,7 +1016,7 @@ namespace ftps_session
 
                                     output_file_stream.close();
 
-                                    // no more file data to read
+                                    // no more file data to receive
                                     if (ec == boost::asio::error::eof)
                                     {
                                         self->m_receive_end = true;
