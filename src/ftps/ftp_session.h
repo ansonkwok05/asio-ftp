@@ -3,14 +3,16 @@
 #include "../custom_utils.h"
 
 #include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
 
 #include <string>
 
 namespace ftp_session
 {
+    // interval time to check for client responses
+    constexpr int IMPLICIT_CHECK_INTERVAL_MS = 20;
+
     // time to wait for an implicit connection (tls handshake)
-    constexpr int IMPLICIT_TIMEOUT_MS = 400;
+    constexpr int IMPLICIT_TIMEOUT_MS = 500;
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
 
@@ -26,7 +28,12 @@ namespace ftp_session
         void start();
 
     private:
+        custom_utils::stopwatch m_stopwatch;
+        boost::asio::steady_timer *timer;
+
         boost::asio::ip::tcp::socket m_socket;
+
+        void wait_for_implicit();
 
         std::vector<char> m_buffer;
 

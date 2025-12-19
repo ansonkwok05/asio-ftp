@@ -3,8 +3,11 @@
 #include "ftps_session.h"
 
 #include <boost/asio.hpp>
+#include <boost/asio/detail/chrono.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include <boost/asio/steady_timer.hpp>
+#include <chrono>
 #include <string>
 #include <vector>
 
@@ -12,6 +15,8 @@ namespace ftp_session
 {
     session::session(boost::asio::ip::tcp::socket socket) : m_socket(std::move(socket)), m_buffer(BUFFER_SIZE)
     {
+        timer = new boost::asio::steady_timer(m_socket.get_executor(),
+                                              std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS));
         println("session created for " + m_socket.remote_endpoint().address().to_string() + ":" +
                     std::to_string(m_socket.remote_endpoint().port()),
                 custom_utils::COLOR::BRIGHTBLACK);
@@ -19,33 +24,36 @@ namespace ftp_session
 
     session::~session()
     {
+        delete timer;
         println("session destroyed", custom_utils::COLOR::BRIGHTBLACK);
     }
 
     void session::start()
     {
-        custom_utils::stopwatch stopwatch;
-        stopwatch.start();
+        m_stopwatch.start();
 
-        // Explicit/Implicit compatibility
+        wait_for_implicit();
+    }
 
-        // expect implicit FTPS clients to send TLS handshake immediately
-        // wait for implicit FTPS (TLS ClientHello)
-        while (stopwatch.lapMs() < IMPLICIT_TIMEOUT_MS)
+    void session::wait_for_implicit()
+    {
+        if (m_stopwatch.lapMs() > IMPLICIT_TIMEOUT_MS)
         {
-            // expect TLS handshake to be longer than 100 bytes
-            if (m_socket.available() > 100)
-            {
-                // implicit mode
-                start_ftps_session(true);
-                return;
-            }
-            custom_utils::sleep(20);
+            // timeout, enter explicit mode
+            send(FTP_WELCOMEMESSAGE);
+            receive();
+            return;
         }
 
-        // explicit mode
-        send(FTP_WELCOMEMESSAGE);
-        receive();
+        if (m_socket.available() > 100)
+        {
+            // enter implicit mode
+            start_ftps_session(true);
+            return;
+        }
+
+        timer->expires_at(timer->expiry() + std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS));
+        timer->async_wait([self = shared_from_this()](boost::system::error_code ec) { self->wait_for_implicit(); });
     }
 
     void session::send(std::string message)
