@@ -7,6 +7,7 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 
+#include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -20,11 +21,11 @@ namespace ftps_session
         LOGGED_IN
     };
 
-    // 128B buffer size for receiving messages
+    // 128B buffer for receiving messages
     constexpr size_t MESSAGE_BUFFER_SIZE = 128;
 
-    // 16MB buffer size for receiving files
-    constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 1024 * 32;
+    // 1KB buffer for receiving files
+    constexpr size_t RECEIVE_BUFFER_SIZE = 1024;
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
 
@@ -153,6 +154,7 @@ namespace ftps_session
         std::string m_receive_file_id;
         long long m_receive_file_size;
         bool m_receive_end = false;
+        std::unique_ptr<std::ofstream> m_receive_file_stream;
         void data_receive_file();
         void data_async_receive();
 

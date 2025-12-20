@@ -9,6 +9,7 @@
 #include <boost/asio/ssl.hpp>
 
 #include <ios>
+#include <memory>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -946,26 +947,45 @@ namespace ftps_session
             }
         }
 
-        std::ofstream output_file_stream;
+        // std::ofstream output_file_stream;
 
-        // append data to end of file if already exists, else create new file
+        // // append data to end of file if already exists, else create new file
+        // if (file_already_exists)
+        // {
+        //     println("appending existing file", custom_utils::COLOR::CYAN);
+        // }
+        // else
+        // {
+        //     println("creating new file", custom_utils::COLOR::CYAN);
+
+        //     output_file_stream.open("data/" + m_receive_file_id);
+        //     if (!output_file_stream.is_open())
+        //     {
+        //         println("Error opening output file stream", custom_utils::COLOR::RED);
+        //         return;
+        //     }
+        // }
+
+        // output_file_stream.close();
+
+        // data_async_receive();
+
         if (file_already_exists)
         {
             println("appending existing file", custom_utils::COLOR::CYAN);
+            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + m_receive_file_id);
         }
         else
         {
             println("creating new file", custom_utils::COLOR::CYAN);
-
-            output_file_stream.open("data/" + m_receive_file_id);
-            if (!output_file_stream.is_open())
-            {
-                println("Error opening output file stream", custom_utils::COLOR::RED);
-                return;
-            }
+            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + m_receive_file_id, std::ios_base::app);
         }
 
-        output_file_stream.close();
+        if (!m_receive_file_stream->is_open())
+        {
+            println("Error opening output file stream", custom_utils::COLOR::RED);
+            return;
+        }
 
         data_async_receive();
     }
@@ -975,6 +995,9 @@ namespace ftps_session
         if (m_receive_end)
         {
             m_receive_end = false;
+
+            m_receive_file_stream->close();
+            m_receive_file_stream.reset();
 
             println("updating object metadata in db", custom_utils::COLOR::CYAN);
             m_virtual_fs.update_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, m_receive_file_size);
@@ -993,28 +1016,16 @@ namespace ftps_session
                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_read) {
                                     self->m_receive_file_size += bytes_read;
 
-                                    std::ofstream output_file_stream;
-
-                                    output_file_stream.open("data/" + self->m_receive_file_id, std::ios_base::app);
-
-                                    if (!output_file_stream.is_open())
-                                    {
-                                        self->println("Error opening output file stream", custom_utils::COLOR::RED);
-                                        return;
-                                    }
-
                                     if (bytes_read > 0)
                                     {
-                                        output_file_stream << &self->m_receive_buffer;
+                                        *self->m_receive_file_stream << &self->m_receive_buffer;
                                     }
 
-                                    if (output_file_stream.fail())
+                                    if (self->m_receive_file_stream->fail())
                                     {
                                         self->println("Error writing output file stream", custom_utils::COLOR::RED);
                                         self->m_receive_end = true;
                                     }
-
-                                    output_file_stream.close();
 
                                     // no more file data to receive
                                     if (ec == boost::asio::error::eof)
