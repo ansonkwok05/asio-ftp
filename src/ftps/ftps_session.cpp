@@ -910,7 +910,7 @@ namespace ftps_session
     {
         std::vector<std::string> v_object_list = m_virtual_fs.get_object_list(m_userid);
 
-        size_t i = 1;
+        size_t i = 2;
         while (i < v_object_list.size())
         {
             if (v_object_list[i] != m_pending_directory_list)
@@ -973,8 +973,8 @@ namespace ftps_session
         else
         {
             // virtual object found in db
-            std::string existing_file_id = v_obj[5];
-            m_received_file_size = std::stoll(v_obj[2]);
+            std::string existing_file_id = v_obj[0];
+            m_received_file_size = std::stoll(v_obj[3]);
             println("appending existing file", custom_utils::COLOR::CYAN);
             m_receive_file_stream = std::make_unique<std::ofstream>("data/" + existing_file_id, std::ios::binary);
         }
@@ -1067,7 +1067,7 @@ namespace ftps_session
             return;
         }
 
-        std::string send_file_id = v_obj[5];
+        std::string send_file_id = v_obj[0];
 
         if (!fs_handler::file_exists("data/" + send_file_id))
         {

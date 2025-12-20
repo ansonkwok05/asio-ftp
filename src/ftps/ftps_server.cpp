@@ -30,18 +30,15 @@ namespace ftps_server
         m_strand = std::make_unique<boost::asio::strand<boost::asio::io_context::executor_type>>(
             boost::asio::make_strand(m_io_ctx.get_executor()));
 
-        // todo: fix multithreading race condition
-        // when multiple "MKD" ftp command is received, the same virtual object is created multiple times
-
-        // // run async operations in worker threads
-        // std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
-        // std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
-        // std::thread io_ctx_thread3([&] { m_io_ctx.run(); });
+        // run async operations in worker threads
+        std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
+        std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
+        std::thread io_ctx_thread3([&] { m_io_ctx.run(); });
         m_io_ctx.run();
 
-        // io_ctx_thread1.join();
-        // io_ctx_thread2.join();
-        // io_ctx_thread3.join();
+        io_ctx_thread1.join();
+        io_ctx_thread2.join();
+        io_ctx_thread3.join();
     }
 
     void server::check_tls_keys()

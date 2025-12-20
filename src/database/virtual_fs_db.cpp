@@ -23,17 +23,15 @@ namespace virtual_fs_db
                                                     std::string object_path)
     {
         return db.run_param_query(
-            "SELECT objects_metadata.* FROM objects, objects_metadata WHERE objects.user_id = ? AND "
-            "objects.object_id = objects_metadata.object_id AND objects_metadata.name = ? AND objects_metadata.path = "
-            "?",
+            "SELECT object_id, name, path, size, modified_time, is_directory FROM virtual_objects WHERE "
+            "user_id = ? AND name = ? AND path = ?",
             {user_id, object_name, object_path});
     }
 
     std::vector<std::string> virtual_fs::get_object_list(std::string user_id)
     {
         return db.run_param_query(
-            "SELECT objects_metadata.* FROM objects, objects_metadata WHERE objects.user_id = ? AND "
-            "objects.object_id = objects_metadata.object_id",
+            "SELECT object_id, name, path, size, modified_time, is_directory FROM virtual_objects WHERE user_id = ?",
             {user_id});
     }
 
@@ -41,10 +39,11 @@ namespace virtual_fs_db
                                                   long long object_size, bool is_directory)
     {
         std::string object_id = custom_utils::generate_uuid_string(64);
-        db.run_param_query("INSERT INTO objects (object_id, user_id) VALUES (?, ?)", {object_id, user_id});
+
         db.run_param_query(
-            "INSERT INTO objects_metadata (name, path, size, is_directory, object_id) VALUES (?, ?, ?, ?, ?)",
-            {object_name, object_path, std::to_string(object_size), std::to_string(is_directory), object_id});
+            "INSERT INTO virtual_objects (object_id, name, path, size, is_directory, user_id) VALUES (?, ?, ?, ?, ?, "
+            "?)",
+            {object_id, object_name, object_path, std::to_string(object_size), std::to_string(is_directory), user_id});
 
         return object_id;
     }
@@ -59,11 +58,10 @@ namespace virtual_fs_db
             return "";
         }
 
-        std::string object_id = v_obj[5];
+        std::string object_id = v_obj[0];
 
-        db.run_param_query(
-            "UPDATE objects_metadata SET size = ?, modified_time = CURRENT_TIMESTAMP WHERE object_id = ?",
-            {std::to_string(object_size), object_id});
+        db.run_param_query("UPDATE virtual_objects SET size = ?, modified_time = CURRENT_TIMESTAMP WHERE object_id = ?",
+                           {std::to_string(object_size), object_id});
 
         return object_id;
     }
@@ -77,9 +75,15 @@ namespace virtual_fs_db
             return "";
         }
 
-        std::string object_id = v_obj[5];
-        db.run_param_query("DELETE FROM objects WHERE object_id = ?", {object_id});
-        db.run_param_query("DELETE FROM objects_metadata WHERE object_id = ?", {object_id});
+        std::string object_id = v_obj[0];
+
+        std::vector<std::string> deleted =
+            db.run_param_query("DELETE FROM virtual_objects WHERE object_id = ?", {object_id});
+
+        for (auto col : deleted)
+        {
+            custom_utils::println(col);
+        }
 
         return object_id;
     }
@@ -88,73 +92,43 @@ namespace virtual_fs_db
     {
         std::vector<std::string> result = db.run_query("SELECT name FROM sqlite_master WHERE type='table'");
 
-        bool objects_exists = false;
-        bool objects_metadata_exists = false;
+        bool virtual_objects_table_exists = false;
+
         for (auto table_name : result)
         {
-            if (table_name == "objects")
+            if (table_name == "virtual_objects")
             {
-                objects_exists = true;
-                if (objects_exists && objects_metadata_exists)
-                {
-                    break;
-                }
-            }
-            if (table_name == "objects_metadata")
-            {
-                objects_metadata_exists = true;
-                if (objects_exists && objects_metadata_exists)
-                {
-                    break;
-                }
+                virtual_objects_table_exists = true;
+                break;
             }
         }
 
-        if (!objects_exists)
+        if (!virtual_objects_table_exists)
         {
-            custom_utils::println("Missing \"objects\" table, creating a new one", custom_utils::COLOR::YELLOW);
-            create_objects_table();
+            custom_utils::println("Missing \"virtual_objects\" table, creating a new one", custom_utils::COLOR::YELLOW);
+            create_virtual_objects_table();
         }
         else
         {
-            custom_utils::println("Found \"objects\" table, checking table structure", custom_utils::COLOR::GREEN);
-            check_objects_table_structure();
-        }
-
-        if (!objects_metadata_exists)
-        {
-            custom_utils::println("Missing \"objects_metadata\" table, creating a new one",
-                                  custom_utils::COLOR::YELLOW);
-            create_objects_metadata_table();
-        }
-        else
-        {
-            custom_utils::println("Found \"objects_metadata\" table, checking table structure",
+            custom_utils::println("Found \"virtual_objects\" table, checking table structure",
                                   custom_utils::COLOR::GREEN);
-            check_objects_metadata_table_structure();
+            check_virtual_objects_table_structure();
         }
     }
 
-    void virtual_fs::create_objects_table()
+    void virtual_fs::create_virtual_objects_table()
     {
-        std::vector<std::string> result = db.run_query(OBJECT_TABLE_CREATION_QUERY);
+        std::vector<std::string> result = db.run_query(VIRTUAL_OBJECTS_TABLE_CREATION_QUERY);
 
-        custom_utils::println("Created \"objects\" table, checking table structure", custom_utils::COLOR::GREEN);
-        check_objects_table_structure();
-    }
-
-    void virtual_fs::create_objects_metadata_table()
-    {
-        std::vector<std::string> result = db.run_query(OBJECT_METADATA_TABLE_CREATION_QUERY);
-
-        custom_utils::println("Created \"objects_metadata\" table, checking table structure",
+        custom_utils::println("Created \"virtual_objects\" table, checking table structure",
                               custom_utils::COLOR::GREEN);
-        check_objects_metadata_table_structure();
+
+        check_virtual_objects_table_structure();
     }
 
-    void virtual_fs::check_objects_table_structure()
+    void virtual_fs::check_virtual_objects_table_structure()
     {
-        std::vector<std::string> result = db.run_query("SELECT sql FROM sqlite_master WHERE name = 'objects'");
+        std::vector<std::string> result = db.run_query("SELECT sql FROM sqlite_master WHERE name = 'virtual_objects'");
 
         if (result.size() != 1)
         {
@@ -162,30 +136,12 @@ namespace virtual_fs_db
                 "Unexpected result from SQLite, table structure check did not return result size of 1");
         }
 
-        if (result[0] != OBJECT_TABLE_CREATION_QUERY)
+        if (result[0] != VIRTUAL_OBJECTS_TABLE_CREATION_QUERY)
         {
-            throw std::runtime_error("Detected a different \"objects\" table structure");
+            throw std::runtime_error("Detected a different \"virtual_objects\" table structure");
         }
 
-        custom_utils::println("Verified \"objects\" table structure", custom_utils::COLOR::GREEN);
-    }
-
-    void virtual_fs::check_objects_metadata_table_structure()
-    {
-        std::vector<std::string> result = db.run_query("SELECT sql FROM sqlite_master WHERE name = 'objects_metadata'");
-
-        if (result.size() != 1)
-        {
-            throw std::runtime_error(
-                "Unexpected result from SQLite, table structure check did not return result size of 1");
-        }
-
-        if (result[0] != OBJECT_METADATA_TABLE_CREATION_QUERY)
-        {
-            throw std::runtime_error("Detected a different \"objects_metadata\" table structure");
-        }
-
-        custom_utils::println("Verified \"objects_metadata\" table structure", custom_utils::COLOR::GREEN);
+        custom_utils::println("Verified \"virtual_objects\" table structure", custom_utils::COLOR::GREEN);
     }
 
 } // namespace virtual_fs_db

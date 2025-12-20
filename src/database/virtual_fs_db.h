@@ -4,15 +4,11 @@
 
 namespace virtual_fs_db
 {
-    constexpr char OBJECT_TABLE_CREATION_QUERY[] =
-        "CREATE TABLE objects (object_id CHAR(36) PRIMARY KEY NOT NULL, user_id "
-        "CHAR(64) NOT NULL, FOREIGN KEY (user_id) REFERENCES users (user_id))";
-
-    constexpr char OBJECT_METADATA_TABLE_CREATION_QUERY[] =
-        "CREATE TABLE objects_metadata (name VARCHAR(255) NOT NULL, path VARCHAR(1024) NOT NULL, "
-        "size BIGINT NOT NULL, modified_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, is_directory INTEGER "
-        "NOT NULL, object_id CHAR(64) NOT NULL, FOREIGN KEY (object_id) REFERENCES files (object_id), UNIQUE (name, "
-        "path))";
+    constexpr char VIRTUAL_OBJECTS_TABLE_CREATION_QUERY[] =
+        "CREATE TABLE virtual_objects (object_id CHAR(64) PRIMARY KEY, name VARCHAR(255) NOT NULL, path VARCHAR(1024) "
+        "NOT NULL, size BIGINT NOT NULL, modified_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, is_directory "
+        "INTEGER NOT NULL, user_id CHAR(64) NOT NULL, FOREIGN KEY (user_id) REFERENCES users (user_id), UNIQUE (name, "
+        "path) ON CONFLICT IGNORE)";
 
     class virtual_fs
     {
@@ -34,10 +30,8 @@ namespace virtual_fs_db
 
         void check_table_exists();
 
-        void create_objects_table();
-        void create_objects_metadata_table();
+        void create_virtual_objects_table();
 
-        void check_objects_table_structure();
-        void check_objects_metadata_table_structure();
+        void check_virtual_objects_table_structure();
     };
 } // namespace virtual_fs_db
