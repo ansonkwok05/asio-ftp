@@ -723,6 +723,20 @@ namespace ftps_session
                         m_pending_write_file = m_working_directory + "/" + argument;
                     }
 
+                    // don't allow uploads to a directory that doesn't exists
+                    std::string parent_directory = return_parent_directory(m_pending_write_file);
+                    std::string parent_of_parent_directory = return_parent_directory(parent_directory);
+
+                    std::string parent_directory_name = custom_utils::splitString(parent_directory, '/').back();
+
+                    if (parent_directory != "/" &&
+                        m_virtual_fs.get_object(m_userid, parent_directory_name, parent_of_parent_directory).size() ==
+                            0)
+                    {
+                        println("Parent directory doesn't exists -> " + m_pending_write_file, custom_utils::COLOR::RED);
+                        return;
+                    }
+
                     // if data socket is already accepted, that means STOR command is received late
                     if (m_data_socket && m_data_socket->lowest_layer().is_open())
                     {
