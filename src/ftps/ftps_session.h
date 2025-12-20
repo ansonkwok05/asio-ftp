@@ -21,11 +21,14 @@ namespace ftps_session
         LOGGED_IN
     };
 
-    // 128B buffer for receiving messages
+    // buffer size in Bytes for receiving messages
     constexpr size_t MESSAGE_BUFFER_SIZE = 128;
 
-    // 1KB buffer for receiving files
+    // buffer size in Bytes for receiving files
     constexpr size_t RECEIVE_BUFFER_SIZE = 1024;
+
+    // buffer size in Bytes for receiving files
+    constexpr size_t SEND_BUFFER_SIZE = 1024;
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
 
@@ -151,14 +154,17 @@ namespace ftps_session
         boost::asio::streambuf m_receive_buffer;
         std::string m_receive_file_name;
         std::string m_receive_file_path;
-        std::string m_receive_file_id;
         long long m_received_file_size;
         bool m_receive_end = false;
         std::unique_ptr<std::ofstream> m_receive_file_stream;
         void data_receive_file();
         void data_async_receive();
 
+        char m_send_buffer[SEND_BUFFER_SIZE];
+        bool m_send_end = false;
+        std::unique_ptr<std::ifstream> m_send_file_stream;
         void data_send_file();
+        void data_async_send();
 
         void data_close();
 

@@ -917,7 +917,7 @@ namespace ftps_session
             i += 6;
         }
 
-        // start sending
+        // start sending directory list
         data_async_write();
     }
 
@@ -925,68 +925,35 @@ namespace ftps_session
     {
         m_receive_file_path = return_parent_directory(m_pending_write_file);
         m_received_file_size = 0;
-        bool file_already_exists = false;
+        m_receive_file_name = custom_utils::splitString(m_pending_write_file, '/').back();
 
+        // check if virtual object exists already
+        std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, m_receive_file_name, m_receive_file_path);
+        if (v_obj.size() == 0)
         {
-            std::vector<std::string> temp = custom_utils::splitString(m_pending_write_file, '/');
-            m_receive_file_name = temp.at(temp.size() - 1);
-
-            // create virtual object if not exists
-            std::vector<std::string> v_obj =
-                m_virtual_fs.get_object(m_userid, m_receive_file_name, m_receive_file_path);
-            if (v_obj.size() == 0)
-            {
-                m_receive_file_id =
-                    m_virtual_fs.create_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
-            }
-            else
-            {
-                m_receive_file_id = v_obj[5];
-                m_received_file_size = std::stoll(v_obj[2]);
-                file_already_exists = true;
-            }
-        }
-
-        // std::ofstream output_file_stream;
-
-        // // append data to end of file if already exists, else create new file
-        // if (file_already_exists)
-        // {
-        //     println("appending existing file", custom_utils::COLOR::CYAN);
-        // }
-        // else
-        // {
-        //     println("creating new file", custom_utils::COLOR::CYAN);
-
-        //     output_file_stream.open("data/" + m_receive_file_id);
-        //     if (!output_file_stream.is_open())
-        //     {
-        //         println("Error opening output file stream", custom_utils::COLOR::RED);
-        //         return;
-        //     }
-        // }
-
-        // output_file_stream.close();
-
-        // data_async_receive();
-
-        if (file_already_exists)
-        {
-            println("appending existing file", custom_utils::COLOR::CYAN);
-            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + m_receive_file_id);
+            // virtual object not found, create one
+            std::string created_file_id =
+                m_virtual_fs.create_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
+            println("creating new file", custom_utils::COLOR::CYAN);
+            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + created_file_id, std::ios_base::app);
         }
         else
         {
-            println("creating new file", custom_utils::COLOR::CYAN);
-            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + m_receive_file_id, std::ios_base::app);
+            // virtual object found in db
+            std::string existing_file_id = v_obj[5];
+            m_received_file_size = std::stoll(v_obj[2]);
+            println("appending existing file", custom_utils::COLOR::CYAN);
+            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + existing_file_id);
         }
 
         if (!m_receive_file_stream->is_open())
         {
             println("Error opening output file stream", custom_utils::COLOR::RED);
+            data_close();
             return;
         }
 
+        // start receiving file
         data_async_receive();
     }
 
@@ -1006,6 +973,7 @@ namespace ftps_session
             // allow another file to be received
             m_pending_write_file = "";
 
+            // notify client
             control_send("226 Received.");
 
             // close data channel
@@ -1036,7 +1004,7 @@ namespace ftps_session
                                     else if (ec == boost::asio::ssl::error::stream_truncated)
                                     {
                                         // connection canceled/abandoned
-                                        self->println("data connection disconnected mid file receive",
+                                        self->println("Data channel disconnected mid file receive",
                                                       custom_utils::COLOR::YELLOW);
                                         self->m_receive_end = true;
                                     }
@@ -1053,84 +1021,83 @@ namespace ftps_session
 
     void session::data_send_file()
     {
-        // todo: use async
-        std::vector<std::string> temp = custom_utils::splitString(m_pending_read_file, '/');
-
         std::string file_path = return_parent_directory(m_pending_read_file);
-        std::string file_name = temp.at(temp.size() - 1);
+        std::string file_name = custom_utils::splitString(m_pending_read_file, '/').back();
 
-        // read db records and search for the according file
-
-        std::string target_file_id;
-        std::vector<std::string> v_object = m_virtual_fs.get_object(m_userid, file_name, file_path);
-
-        if (v_object.size() != 0)
+        // check if virtual object exists in db
+        std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, file_name, file_path);
+        if (v_obj.size() == 0)
         {
-            target_file_id = v_object[5];
-        }
-
-        if (target_file_id == "")
-        {
-            // file not found
-            println("Cannot find file -> " + m_pending_read_file + " to send to client", custom_utils::COLOR::RED);
-
-            println(m_working_directory + " " + m_pending_read_file, custom_utils::COLOR::RED);
+            // file does not exists
+            println("Client requested -> " + m_pending_read_file + " which does not exists", custom_utils::COLOR::RED);
             data_close();
             return;
         }
 
-        println("FOUND TARGET FILE TO SEND -> " + target_file_id);
+        std::string send_file_id = v_obj[5];
 
-        if (!fs_handler::file_exists("data/" + target_file_id))
+        if (!fs_handler::file_exists("data/" + send_file_id))
         {
-            println("Actual file not found on OS", custom_utils::COLOR::RED);
+            println("File not found in OS -> \"./data/" + send_file_id + "\"", custom_utils::COLOR::RED);
+            data_close();
             return;
         }
 
-        std::ifstream readFileStream("data/" + target_file_id);
-        if (!readFileStream.is_open())
+        m_send_file_stream = std::make_unique<std::ifstream>("data/" + send_file_id);
+        if (!m_send_file_stream->is_open())
         {
-            println("Unable to open read file stream", custom_utils::COLOR::RED);
+            println("Unable to open read file stream of -> \"./data/" + send_file_id + "\"", custom_utils::COLOR::RED);
+            data_close();
             return;
         }
 
-        const int SEND_BUFFER_SIZE = 1024 * 1024;
-        char fileBuffer[SEND_BUFFER_SIZE] = {0};
+        // start sending file
+        data_async_send();
+    }
 
-        int bytes_sent = 0;
-
-        while (!readFileStream.eof())
+    void session::data_async_send()
+    {
+        if (m_send_end)
         {
-            readFileStream.read(fileBuffer, SEND_BUFFER_SIZE);
+            m_send_end = false;
 
-            boost::system::error_code ec;
+            m_send_file_stream->close();
+            m_send_file_stream.reset();
 
-            boost::asio::write(*m_data_socket, boost::asio::buffer(fileBuffer, readFileStream.gcount()), ec);
+            // allow another file to be sent
+            m_pending_read_file = "";
 
-            bytes_sent += readFileStream.gcount();
+            // notify client
+            control_send("226 Sent.");
 
-            // good chunks of data received
-            if (ec.message() == "Success")
-                continue;
-
-            // connection canceled/abandoned
-            if (ec == boost::asio::error::broken_pipe)
-            {
-                println("data connection disconnected mid file send", custom_utils::COLOR::YELLOW);
-                break;
-            }
-
-            // unexpected error
-            println("error while receiving file data -> " + ec.message(), custom_utils::COLOR::YELLOW);
+            // close data channel
+            data_close();
+            return;
         }
 
-        m_pending_read_file = "";
+        m_send_file_stream->read(m_send_buffer, SEND_BUFFER_SIZE);
 
-        control_send("226 Sent.");
-        println("bytes sent: " + std::to_string(bytes_sent));
+        boost::asio::async_write(*m_data_socket, boost::asio::buffer(m_send_buffer, m_send_file_stream->gcount()),
+                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_sent) {
+                                     if (self->m_send_file_stream->eof())
+                                     {
+                                         self->m_send_end = true;
+                                     }
+                                     else if (ec == boost::asio::error::broken_pipe)
+                                     {
+                                         self->println("Data channel disconnected mid file send",
+                                                       custom_utils::COLOR::YELLOW);
+                                         self->m_send_end = true;
+                                     }
+                                     else if (ec.message() != "Success")
+                                     {
+                                         self->println("Unexpected error while sending file data -> " + ec.message(),
+                                                       custom_utils::COLOR::YELLOW);
+                                         self->m_send_end = true;
+                                     }
 
-        // close data channel
-        data_close();
+                                     self->data_async_send();
+                                 });
     }
 
     void session::data_close()
