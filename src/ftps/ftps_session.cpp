@@ -575,8 +575,28 @@ namespace ftps_session
                         return;
                     }
 
+                    // handle multiple types of arguments
+                    // type 1 "one"         // object name only
+                    // type 2 "test/one"    // absolute path but missing "/" at front
+                    std::string virtual_path;
+                    std::string object_name;
+                    if (custom_utils::splitString(argument, '/').size() == 1)
+                    {
+                        // type 1
+
+                        virtual_path = m_working_directory;
+                        object_name = argument;
+                    }
+                    else
+                    {
+                        // type 2
+
+                        virtual_path = return_parent_directory("/" + argument);
+                        object_name = custom_utils::splitString(argument, '/').back();
+                    }
+
                     // check if object exists
-                    if (m_virtual_fs.get_object(m_userid, argument, m_working_directory).size() != 0)
+                    if (m_virtual_fs.get_object(m_userid, object_name, virtual_path).size() != 0)
                     {
                         println("Cannot make directory, already exists", custom_utils::COLOR::YELLOW);
                         control_send("250 Directory already exist.");
@@ -585,9 +605,9 @@ namespace ftps_session
                     }
 
                     // folder does not exists, create one
-                    m_virtual_fs.create_virtual_object(m_userid, argument, m_working_directory, 0, true);
+                    m_virtual_fs.create_virtual_object(m_userid, object_name, virtual_path, 0, true);
 
-                    println("Created virtual directory \"" + m_working_directory + "\" \"" + argument + "\"",
+                    println("Created virtual directory \"" + virtual_path + "\" \"" + object_name + "\"",
                             custom_utils::COLOR::GREEN);
 
                     control_send("250 Directory created.");
@@ -755,7 +775,6 @@ namespace ftps_session
 
                         control_send("150 Opening connection.");
                         data_send_file();
-                        // data_async_send_file(); // experimental
                         control_receive();
                         return;
                     }
@@ -834,7 +853,6 @@ namespace ftps_session
                 if (self->m_pending_read_file != "")
                 {
                     self->data_send_file();
-                    // self->data_async_send_file(); // experimental
                     return;
                 }
 
@@ -935,7 +953,8 @@ namespace ftps_session
             std::string created_file_id =
                 m_virtual_fs.create_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
             println("creating new file", custom_utils::COLOR::CYAN);
-            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + created_file_id, std::ios_base::app);
+            m_receive_file_stream =
+                std::make_unique<std::ofstream>("data/" + created_file_id, std::ios_base::app | std::ios::binary);
         }
         else
         {
@@ -943,7 +962,7 @@ namespace ftps_session
             std::string existing_file_id = v_obj[5];
             m_received_file_size = std::stoll(v_obj[2]);
             println("appending existing file", custom_utils::COLOR::CYAN);
-            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + existing_file_id);
+            m_receive_file_stream = std::make_unique<std::ofstream>("data/" + existing_file_id, std::ios::binary);
         }
 
         if (!m_receive_file_stream->is_open())
@@ -1043,7 +1062,7 @@ namespace ftps_session
             return;
         }
 
-        m_send_file_stream = std::make_unique<std::ifstream>("data/" + send_file_id);
+        m_send_file_stream = std::make_unique<std::ifstream>("data/" + send_file_id, std::ios::binary);
         if (!m_send_file_stream->is_open())
         {
             println("Unable to open read file stream of -> \"./data/" + send_file_id + "\"", custom_utils::COLOR::RED);
