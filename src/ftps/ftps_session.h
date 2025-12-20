@@ -152,7 +152,7 @@ namespace ftps_session
         std::string m_receive_file_name;
         std::string m_receive_file_path;
         std::string m_receive_file_id;
-        long long m_receive_file_size;
+        long long m_received_file_size;
         bool m_receive_end = false;
         std::unique_ptr<std::ofstream> m_receive_file_stream;
         void data_receive_file();

@@ -924,7 +924,7 @@ namespace ftps_session
     void session::data_receive_file()
     {
         m_receive_file_path = return_parent_directory(m_pending_write_file);
-        m_receive_file_size = 0;
+        m_received_file_size = 0;
         bool file_already_exists = false;
 
         {
@@ -942,7 +942,7 @@ namespace ftps_session
             else
             {
                 m_receive_file_id = v_obj[5];
-                m_receive_file_size = std::stoll(v_obj[2]);
+                m_received_file_size = std::stoll(v_obj[2]);
                 file_already_exists = true;
             }
         }
@@ -1000,7 +1000,8 @@ namespace ftps_session
             m_receive_file_stream.reset();
 
             println("updating object metadata in db", custom_utils::COLOR::CYAN);
-            m_virtual_fs.update_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, m_receive_file_size);
+            m_virtual_fs.update_virtual_object(m_userid, m_receive_file_name, m_receive_file_path,
+                                               m_received_file_size);
 
             // allow another file to be received
             m_pending_write_file = "";
@@ -1014,7 +1015,7 @@ namespace ftps_session
 
         boost::asio::async_read(*m_data_socket, m_receive_buffer,
                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_read) {
-                                    self->m_receive_file_size += bytes_read;
+                                    self->m_received_file_size += bytes_read;
 
                                     if (bytes_read > 0)
                                     {
