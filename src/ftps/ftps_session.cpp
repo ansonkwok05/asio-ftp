@@ -447,7 +447,6 @@ namespace ftps_session
 
                 if (command == "CDUP")
                 {
-                    println(m_working_directory + " -> " + return_parent_directory(m_working_directory));
                     m_working_directory = return_parent_directory(m_working_directory);
 
                     control_send("250 Okay.");

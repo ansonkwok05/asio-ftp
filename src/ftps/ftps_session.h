@@ -27,7 +27,7 @@ namespace ftps_session
     // buffer size in Bytes for receiving files
     constexpr size_t RECEIVE_BUFFER_SIZE = 1024;
 
-    // buffer size in Bytes for receiving files
+    // buffer size in Bytes for sending files
     constexpr size_t SEND_BUFFER_SIZE = 1024;
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";

@@ -74,7 +74,6 @@ int main()
 
     // launch FTPS server in worker thread
     std::thread ftps_server_thread([]() { ftps_server::server ftps_server = ftps_server::server(); });
-
     println("FTPS server worker thread started", custom_utils::COLOR::GREEN);
 
     // prevent main thread to die, while worker threads can do its thing

@@ -27,15 +27,17 @@ namespace ftps_server
 
         println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
 
-        m_strand = std::make_unique<boost::asio::strand<boost::asio::io_context::executor_type>>(
-            boost::asio::make_strand(m_io_ctx.get_executor()));
+        // todo fix some downloads super slow when concurrent downloads (10 at same time)
+        // this behavior only happens on multithreaded io_context
+        // normally download speed is evenly distributed (async operations are evenly distributed)
+        // progrss: if i put print on ifstream read, it works normally
+        // progrss: but if i remove print on ifstream read, problem appear again
 
-        // run async operations in worker threads
         std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
         std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
         std::thread io_ctx_thread3([&] { m_io_ctx.run(); });
-        m_io_ctx.run();
 
+        m_io_ctx.run();
         io_ctx_thread1.join();
         io_ctx_thread2.join();
         io_ctx_thread3.join();
