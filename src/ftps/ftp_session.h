@@ -16,8 +16,8 @@ namespace ftp_session
 
     constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome.";
 
-    // 16B buffer size for messages
-    constexpr size_t BUFFER_SIZE = 64;
+    // buffer size in Bytes for receiving ftp messages
+    constexpr size_t BUFFER_SIZE = 512;
 
     class session : public std::enable_shared_from_this<session>
     {
@@ -35,7 +35,7 @@ namespace ftp_session
 
         void wait_for_implicit();
 
-        std::vector<char> m_buffer;
+        std::vector<uint8_t> m_buffer;
 
         std::string m_received_string;
 

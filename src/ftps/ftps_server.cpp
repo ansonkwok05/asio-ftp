@@ -5,7 +5,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-#include <boost/asio/strand.hpp>
 #include <boost/beast.hpp>
 
 #include <memory>

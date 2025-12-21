@@ -4,6 +4,7 @@
 #include <thread>
 #include <chrono>
 #include <string>
+#include <mutex>
 
 namespace custom_utils
 {
@@ -12,6 +13,8 @@ namespace custom_utils
     int offset_hour = time_struct->tm_gmtoff / 3600;
 
     using std::cout;
+
+    std::mutex print_mutex;
 
     void print(std::string message)
     {
@@ -33,16 +36,24 @@ namespace custom_utils
 
     void println(std::string message)
     {
+        print_mutex.lock();
+
         cout << '[' << getTimeString() << ']' << ' ';
         cout << message << "\n";
+
+        print_mutex.unlock();
     }
 
     void println(std::string message, COLOR color)
     {
+        print_mutex.lock();
+
         setPrintColor(color);
         cout << '[' << getTimeString() << ']' << ' ';
         cout << message << "\n";
         resetPrintColor();
+
+        print_mutex.unlock();
     }
 
     void setPrintColor(COLOR color)

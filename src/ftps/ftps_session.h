@@ -21,8 +21,8 @@ namespace ftps_session
         LOGGED_IN
     };
 
-    // buffer size in Bytes for receiving messages
-    constexpr size_t MESSAGE_BUFFER_SIZE = 128;
+    // buffer size in Bytes for receiving ftp messages
+    constexpr size_t MESSAGE_BUFFER_SIZE = 512;
 
     // buffer size in Bytes for receiving files
     constexpr size_t RECEIVE_BUFFER_SIZE = 1024;
@@ -96,6 +96,8 @@ namespace ftps_session
         "RETR",
     };
 
+    constexpr int DATA_CHANNEL_BEGIN_PORT = 7000;
+
     class session : public std::enable_shared_from_this<session>
     {
     public:
@@ -118,7 +120,7 @@ namespace ftps_session
         std::unique_ptr<boost::asio::ip::tcp::acceptor> m_data_socket_acceptor;
         std::unique_ptr<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>> m_data_socket;
 
-        std::vector<char> m_buffer;
+        std::vector<uint8_t> m_buffer;
         std::string m_received_string;
 
         CONNECTION_STAGE m_connection_stage;

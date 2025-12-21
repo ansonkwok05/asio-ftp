@@ -5,7 +5,6 @@
 #include "../database/virtual_fs_db.h"
 
 #include <boost/asio.hpp>
-#include <boost/asio/error.hpp>
 #include <boost/asio/ssl.hpp>
 
 #include <ios>
@@ -382,14 +381,19 @@ namespace ftps_session
 
                     boost::system::error_code ec = m_data_socket_acceptor->open(boost::asio::ip::tcp::v4(), ec);
 
-                    // choosing a port that isn't in use
-                    int port = 6921;
-                    do
+                    // choosing a port starting from this
+                    int port = DATA_CHANNEL_BEGIN_PORT;
+                    while (true)
                     {
-                        port++;
                         ec = m_data_socket_acceptor->bind(
                             boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port), ec);
-                    } while (ec);
+
+                        // break when successfully bind to a usable port
+                        if (!ec)
+                            break;
+
+                        port++;
+                    }
                     m_data_socket_acceptor->listen();
 
                     // forming response

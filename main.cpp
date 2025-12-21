@@ -3,6 +3,7 @@
 #include "src/database/user_db.h"
 #include "src/database/virtual_fs_db.h"
 #include "src/ftps/ftps_server.h"
+#include "src/sftp/sftp_server.h"
 
 #include <thread>
 #include <vector>
@@ -76,8 +77,12 @@ int main()
     std::thread ftps_server_thread([]() { ftps_server::server ftps_server = ftps_server::server(); });
     println("FTPS server worker thread started", custom_utils::COLOR::GREEN);
 
+    std::thread sftp_server_thread([]() { sftp_server::server sftp_server = sftp_server::server(); });
+    println("SFTP server worker thread started", custom_utils::COLOR::GREEN);
+
     // prevent main thread to die, while worker threads can do its thing
     ftps_server_thread.join();
+    sftp_server_thread.join();
 
     return 0;
 }
