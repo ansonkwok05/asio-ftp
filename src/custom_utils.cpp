@@ -18,42 +18,37 @@ namespace custom_utils
 
     void print(std::string message)
     {
+        print_mutex.lock();
+
         cout << message;
+
+        print_mutex.unlock();
     }
 
     void print(std::string message, COLOR color)
     {
+        print_mutex.lock();
+
         setPrintColor(color);
         cout << message;
         resetPrintColor();
+
+        print_mutex.unlock();
     }
 
     void println()
     {
-        cout << '[' << getTimeString() << ']' << ' ';
-        cout << "\n";
+        print("[" + getTimeString() + "] \n");
     }
 
     void println(std::string message)
     {
-        print_mutex.lock();
-
-        cout << '[' << getTimeString() << ']' << ' ';
-        cout << message << "\n";
-
-        print_mutex.unlock();
+        print("[" + getTimeString() + "] " + message + "\n");
     }
 
     void println(std::string message, COLOR color)
     {
-        print_mutex.lock();
-
-        setPrintColor(color);
-        cout << '[' << getTimeString() << ']' << ' ';
-        cout << message << "\n";
-        resetPrintColor();
-
-        print_mutex.unlock();
+        print("[" + getTimeString() + "] " + message + "\n", color);
     }
 
     void setPrintColor(COLOR color)

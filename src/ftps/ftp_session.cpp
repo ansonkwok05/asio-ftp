@@ -116,7 +116,7 @@ namespace ftp_session
 
     void session::handle_FTP_command()
     {
-        println("received: " + m_received_string);
+        println("received: " + m_received_string, custom_utils::COLOR::BLUE);
 
         std::vector<std::string> split_received_string = custom_utils::splitString(m_received_string, ' ');
 

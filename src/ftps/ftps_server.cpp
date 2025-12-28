@@ -26,12 +26,6 @@ namespace ftps_server
 
         println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
 
-        // todo fix some downloads super slow when concurrent downloads (10 at same time)
-        // this behavior only happens on multithreaded io_context
-        // normally download speed is evenly distributed (async operations are evenly distributed)
-        // progrss: if i put print on ifstream read, it works normally
-        // progrss: but if i remove print on ifstream read, problem appear again
-
         std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
         std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
         std::thread io_ctx_thread3([&] { m_io_ctx.run(); });

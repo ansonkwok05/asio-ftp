@@ -375,7 +375,6 @@ namespace ftps_session
                 if (command == "PASV")
                 {
                     // prepare acceptor for data_socket connection acception
-                    m_data_socket_acceptor.reset();
                     m_data_socket_acceptor =
                         std::make_unique<boost::asio::ip::tcp::acceptor>(m_control_socket->get_executor());
 
@@ -389,7 +388,7 @@ namespace ftps_session
                             boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port), ec);
 
                         // break when successfully bind to a usable port
-                        if (!ec)
+                        if (ec.message() == "Success")
                             break;
 
                         port++;
@@ -819,9 +818,11 @@ namespace ftps_session
                 }
 
                 // create ssl stream socket
-                self->m_data_socket.reset();
                 self->m_data_socket = std::make_unique<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(
                     std::move(socket), self->m_ssl_context);
+
+                self->m_data_socket_acceptor->close();
+                self->m_data_socket_acceptor.reset();
 
                 // TLS handshake
                 {
@@ -1148,6 +1149,7 @@ namespace ftps_session
             println("Error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
         }
         m_data_socket->next_layer().close();
+        m_data_socket.reset();
     }
 
     std::string session::parse_metadata_time(std::string time_str)
