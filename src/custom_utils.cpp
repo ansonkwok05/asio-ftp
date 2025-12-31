@@ -64,7 +64,7 @@ namespace custom_utils
     std::string getTimeString()
     {
         time_t t = time(NULL);
-        std::string h = std::to_string((t / 3600) % 24 + offset_hour);
+        std::string h = std::to_string(((t / 3600) + offset_hour) % 24);
         std::string m = std::to_string((t / 60) % 60);
         std::string s = std::to_string(t % 60);
 
