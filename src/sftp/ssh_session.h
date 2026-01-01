@@ -80,12 +80,15 @@ namespace sftp_session
         struct key_exchange_ecdh_init_packet
         {
             static constexpr uint8_t SSH_MSG_KEX_ECDH_INIT = 30;
-            std::string Q_C;
+            std::vector<uint8_t> Q_C;
         };
         struct key_exchange_ecdh_reply_packet
         {
             static constexpr uint8_t SSH_MSG_KEX_ECDH_REPLY = 31;
+            static constexpr char HOST_KEY_TYPE[] = "ecdsa-sha2-nistp256";
         };
+        std::string m_ecdsa_p256_public_key;
+        std::string m_ecdsa_p256_private_key;
         void key_exchange_ecdh_init();
 
         void close_connection();
