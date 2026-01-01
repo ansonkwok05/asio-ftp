@@ -6,7 +6,9 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
 #include <memory>
+#include <openssl/bio.h>
 #include <openssl/core.h>
 #include <openssl/ec.h>
 #include <openssl/evp.h>
@@ -33,70 +35,75 @@ namespace sftp_session
     void session::start()
     {
         // prepare ecdsa-sha2-nistp256 privatekey and publickey;
-        // {
-        // std::ifstream private_pem("./ssh_keys/ecdsa_p256_private.pem");
+        {
+            std::ifstream private_pem("./ssh_keys/ecdsa_p256_private.pem");
 
-        // {
-        //     std::ifstream public_pem("./ssh_keys/ecdsa_p256_public.pem");
+            {
+                std::ifstream public_pem("./ssh_keys/ecdsa_p256_public.pem");
 
-        //     std::string temp_line;
-        //     while (std::getline(public_pem, temp_line))
-        //     {
-        //         m_ecdsa_p256_public_key += temp_line;
-        //     }
+                std::string temp_line;
+                while (std::getline(public_pem, temp_line))
+                {
+                    m_ecdsa_p256_public_key += temp_line;
+                }
 
-        //     int rc;
+                int rc;
 
-        //     BIO *bio = BIO_new(BIO_s_mem());
-        //     BIO_write(bio, m_ecdsa_p256_public_key.c_str(), m_ecdsa_p256_public_key.length());
+                BIO *bio = BIO_new(BIO_s_mem());
+                BIO_write(bio, m_ecdsa_p256_public_key.c_str(), m_ecdsa_p256_public_key.length());
 
-        //     EVP_PKEY *pkey = EVP_PKEY_new();
-        //     PEM_read_bio_PUBKEY(bio, &pkey, nullptr, nullptr);
+                EVP_PKEY *pkey = EVP_PKEY_new();
+                PEM_read_bio_PUBKEY(bio, &pkey, nullptr, nullptr);
+                BIO_free(bio);
 
-        //     size_t pkey_size;
-        //     rc = EVP_PKEY_get_octet_string_param(pkey, "ecdsa_p256", NULL, 0, &pkey_size);
-        //     println(std::to_string(rc));
-        //     println(std::to_string(pkey_size));
+                size_t pkey_size;
+                rc = EVP_PKEY_get_octet_string_param(pkey, "pub", NULL, 0, &pkey_size);
+                println(std::to_string(rc));
+                println(std::to_string(pkey_size));
 
-        // unsigned char buf[100];
+                // todo
+                // stuck trying to extract ec point from ecdsa public key
+                return;
 
-        // std::string temp;
-        // for (auto s : buf)
-        // {
-        //     // temp += std::to_string(s) + " ";
-        //     temp += (char)(s);
-        //     // temp += "";
-        // }
-        // println(temp);
+                // unsigned char buf[100];
 
-        // if (content.size() < 3)
-        // {
-        //     println("Public key missing content", custom_utils::COLOR::RED);
-        //     throw std::runtime_error("Incorrect ecdsa_p256 public key");
-        // }
+                // std::string temp;
+                // for (auto s : buf)
+                // {
+                //     // temp += std::to_string(s) + " ";
+                //     temp += (char)(s);
+                //     // temp += "";
+                // }
+                // println(temp);
 
-        // if (content.front() != "-----BEGIN PUBLIC KEY-----")
-        // {
-        //     println("Public key missing header", custom_utils::COLOR::RED);
-        //     throw std::runtime_error("Incorrect ecdsa_p256 public key");
-        // }
+                // if (content.size() < 3)
+                // {
+                //     println("Public key missing content", custom_utils::COLOR::RED);
+                //     throw std::runtime_error("Incorrect ecdsa_p256 public key");
+                // }
 
-        // if (content.back() != "-----END PUBLIC KEY-----")
-        // {
-        //     println("Public key missing footer", custom_utils::COLOR::RED);
-        //     throw std::runtime_error("Incorrect ecdsa_p256 public key");
-        // }
+                // if (content.front() != "-----BEGIN PUBLIC KEY-----")
+                // {
+                //     println("Public key missing header", custom_utils::COLOR::RED);
+                //     throw std::runtime_error("Incorrect ecdsa_p256 public key");
+                // }
 
-        // std::vector<std::string>::iterator content_it = content.begin() + 1;
-        // while (content_it < content.end() - 1)
-        // {
-        //     b64_public_key += *content_it;
-        //     content_it++;
-        // }
-        // }
+                // if (content.back() != "-----END PUBLIC KEY-----")
+                // {
+                //     println("Public key missing footer", custom_utils::COLOR::RED);
+                //     throw std::runtime_error("Incorrect ecdsa_p256 public key");
+                // }
 
-        // todo parse pem -> ignore header/footer, decode the base64 payload
-        // }
+                // std::vector<std::string>::iterator content_it = content.begin() + 1;
+                // while (content_it < content.end() - 1)
+                // {
+                //     b64_public_key += *content_it;
+                //     content_it++;
+                // }
+            }
+
+            // todo parse pem -> ignore header/footer, decode the base64 payload
+        }
 
         m_stopwatch.start();
         timer = std::make_unique<boost::asio::steady_timer>(m_socket.get_executor(),
