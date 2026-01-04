@@ -577,6 +577,13 @@ namespace ftps_session
                         return;
                     }
 
+                    // todo recursively create directory
+                    // e.g.
+                    // working_directory = "/test files (small)/New Folder"
+                    // argument = "test"
+                    // check "/" has "test files (small)", if not then create
+                    // check "/test files (small)" has "/test files (small)/New Folder", if not then create
+
                     // handle multiple types of arguments
                     // type 1 "one"         // object name only
                     // type 2 "test/one"    // absolute path but missing "/" at front
@@ -630,6 +637,7 @@ namespace ftps_session
                     // handle multiple types of arguments
                     // type 1 "one"         // object name only
                     // type 2 "test/one"    // absolute path but missing "/" at front
+                    // type 3 "/test"       // absolute path
                     std::string virtual_path;
                     std::string object_name;
 
@@ -642,10 +650,22 @@ namespace ftps_session
                     }
                     else
                     {
-                        // type 2
+                        // type 2, 3
 
-                        virtual_path = return_parent_directory("/" + argument);
-                        object_name = custom_utils::splitString(argument, '/').back();
+                        if (argument[0] != '/')
+                        {
+                            // type 2
+
+                            virtual_path = return_parent_directory("/" + argument);
+                            object_name = custom_utils::splitString(argument, '/').back();
+                        }
+                        else
+                        {
+                            // type 3
+
+                            virtual_path = virtual_path = return_parent_directory(argument);
+                            object_name = custom_utils::splitString(argument, '/').back();
+                        }
                     }
 
                     m_virtual_fs.remove_virtual_object(m_userid, object_name, virtual_path);
@@ -774,14 +794,27 @@ namespace ftps_session
                         return;
                     }
 
+                    // handle multiple types of arguments
+                    // type 2 "one"         // object name only
+                    // type 1 "/test/one"   // absolute path
+
                     // set to path
-                    if (m_working_directory == "/")
+                    if (custom_utils::splitString(argument, '/').size() == 1)
                     {
-                        m_pending_read_file = m_working_directory + argument;
+                        // type 1
+                        if (m_working_directory == "/")
+                        {
+                            m_pending_read_file = m_working_directory + argument;
+                        }
+                        else
+                        {
+                            m_pending_read_file = m_working_directory + "/" + argument;
+                        }
                     }
                     else
                     {
-                        m_pending_read_file = m_working_directory + "/" + argument;
+                        // type 2
+                        m_pending_read_file = argument;
                     }
 
                     // if data socket is already accepted, that means RETR command is received late
