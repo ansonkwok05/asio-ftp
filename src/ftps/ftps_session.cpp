@@ -58,6 +58,7 @@ namespace ftps_session
         //         i++;
         //     }
         // }
+        m_isLan = true;
 
         println("session created for " + m_control_socket->lowest_layer().remote_endpoint().address().to_string() +
                     ":" + std::to_string(m_control_socket->lowest_layer().remote_endpoint().port()),
