@@ -35,27 +35,29 @@ namespace ftps_session
         m_control_socket =
             std::make_unique<boost::asio::ssl::stream<boost::asio::ip::tcp::socket>>(std::move(socket), m_ssl_context);
 
-        // check conenction is lan or wan
-        {
-            std::vector<std::string> local_ip_vector =
-                custom_utils::splitString(m_control_socket->next_layer().local_endpoint().address().to_string(), '.');
-            std::vector<std::string> remote_ip_vector =
-                custom_utils::splitString(m_control_socket->next_layer().remote_endpoint().address().to_string(), '.');
+        // // check conenction is lan or wan
+        // {
+        //     std::vector<std::string> local_ip_vector =
+        //         custom_utils::splitString(m_control_socket->next_layer().local_endpoint().address().to_string(),
+        //         '.');
+        //     std::vector<std::string> remote_ip_vector =
+        //         custom_utils::splitString(m_control_socket->next_layer().remote_endpoint().address().to_string(),
+        //         '.');
 
-            m_isLan = true;
+        //     m_isLan = true;
 
-            // if first three numbers matches, connection is in lan
-            size_t i = 0;
-            while (i < 3)
-            {
-                if (local_ip_vector.at(i) != remote_ip_vector.at(i))
-                {
-                    m_isLan = false;
-                    break;
-                }
-                i++;
-            }
-        }
+        //     // if first three numbers matches, connection is in lan
+        //     size_t i = 0;
+        //     while (i < 3)
+        //     {
+        //         if (local_ip_vector.at(i) != remote_ip_vector.at(i))
+        //         {
+        //             m_isLan = false;
+        //             break;
+        //         }
+        //         i++;
+        //     }
+        // }
 
         println("session created for " + m_control_socket->lowest_layer().remote_endpoint().address().to_string() +
                     ":" + std::to_string(m_control_socket->lowest_layer().remote_endpoint().port()),
