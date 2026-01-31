@@ -176,9 +176,10 @@ namespace sqlite_wrapper
         int rc = sqlite3_exec(db, OPTIMIZATIONS, 0, 0, &errMsg);
         if (rc != SQLITE_OK)
         {
-            println("Failed to list all table names", custom_utils::COLOR::RED);
+            println("Failed to set optimizations", custom_utils::COLOR::RED);
             throw std::runtime_error(errMsg);
         }
+
         println("Database optimizations set", custom_utils::COLOR::GREEN);
     }
 

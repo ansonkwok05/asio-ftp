@@ -41,3 +41,6 @@ if (OpenSSL_FOUND)
 else()
     message(FATAL_ERROR "OpenSSL not found. Please install it using a package manager")
 endif()
+
+# Set sqlite3 to threadsafe
+target_compile_options(cpp-fileserver PRIVATE "-DTHREADSAFE=1")
