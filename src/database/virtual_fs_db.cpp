@@ -1,5 +1,6 @@
 #include "virtual_fs_db.h"
 #include "sqlite_wrapper.h"
+#include "fs_handler.h"
 
 #include "../custom_utils.h"
 
@@ -38,7 +39,35 @@ namespace virtual_fs_db
     std::string virtual_fs::create_virtual_object(std::string user_id, std::string object_name, std::string object_path,
                                                   long long object_size, bool is_directory)
     {
+        // check if object path exists, when object path is not root directory
+        if (object_path != "/")
+        {
+            std::vector<std::string> v_object = get_object(user_id, custom_utils::splitString(object_path, '/').back(),
+                                                           return_parent_directory(object_path));
+
+            if (v_object.size() == 0)
+            {
+                // not found, return empty string
+                return "";
+            }
+
+            if (v_object[5] == "0")
+            {
+                // found, but not a directory
+                return "";
+            }
+        }
+
+        // check if object already exists, to prevent recreating same object
+        if (get_object(user_id, object_name, object_path).size() != 0)
+        {
+            return "";
+        }
+
         std::string object_id = custom_utils::generate_uuid_string(64);
+
+        // todo: use fs_handler to create file
+        // manage it all here, move code from ftps_session
 
         db.run_param_query(
             "INSERT INTO virtual_objects (object_id, name, path, size, is_directory, user_id) VALUES (?, ?, ?, ?, ?, "
@@ -66,26 +95,45 @@ namespace virtual_fs_db
         return object_id;
     }
 
-    std::string virtual_fs::remove_virtual_object(std::string user_id, std::string object_name, std::string object_path)
+    bool virtual_fs::remove_virtual_object(std::string user_id, std::string object_name, std::string object_path)
     {
         std::vector<std::string> v_obj = get_object(user_id, object_name, object_path);
 
         if (v_obj.size() == 0)
         {
-            return "";
+            return false;
         }
 
         std::string object_id = v_obj[0];
 
-        std::vector<std::string> deleted =
-            db.run_param_query("DELETE FROM virtual_objects WHERE object_id = ?", {object_id});
-
-        for (auto col : deleted)
+        // if object is a directory, recursively delete all objects inside
+        if (v_obj[5] == "1")
         {
-            custom_utils::println(col);
+            std::string match;
+            if (object_path == "/")
+            {
+                match = object_path + object_name + "%";
+            }
+            else
+            {
+                match = object_path + "/" + object_name + "%";
+            }
+
+            std::vector<std::string> obj_idlist = db.run_param_query(
+                "SELECT object_id FROM virtual_objects WHERE user_id = ? AND path LIKE ?", {user_id, match});
+
+            for (std::string obj_id : obj_idlist)
+            {
+                fs_handler::remove_file("data/" + obj_id);
+            }
+
+            db.run_param_query("DELETE FROM virtual_objects WHERE user_id = ? AND path LIKE ?", {user_id, match});
         }
 
-        return object_id;
+        fs_handler::remove_file("data/" + object_id);
+        db.run_param_query("DELETE FROM virtual_objects WHERE object_id = ?", {object_id});
+
+        return true;
     }
 
     void virtual_fs::check_table_exists()
@@ -142,6 +190,35 @@ namespace virtual_fs_db
         }
 
         custom_utils::println("Verified \"virtual_objects\" table structure", custom_utils::COLOR::GREEN);
+    }
+
+    std::string virtual_fs::return_parent_directory(std::string directory)
+    {
+        // return root when already at root directory
+        if (directory == "/")
+            return "/";
+
+        std::vector<std::string> split_directory = custom_utils::splitString(directory, '/');
+
+        // input only have one child
+        // such as "/test" or "/one"
+        if (split_directory.size() <= 2)
+        {
+            return "/";
+        }
+
+        // combine split string except last, adding '/' in between
+        std::string parent = "";
+        for (int i = 0; i < split_directory.size() - 1; i++)
+        {
+            // ignore empty strings, they were "/" before splitting
+            if (split_directory.at(i) == "")
+                continue;
+
+            parent += "/" + split_directory.at(i);
+        }
+
+        return parent;
     }
 
 } // namespace virtual_fs_db

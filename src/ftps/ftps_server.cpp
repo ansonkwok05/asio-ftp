@@ -26,14 +26,18 @@ namespace ftps_server
 
         println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
 
-        std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
-        std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
-        std::thread io_ctx_thread3([&] { m_io_ctx.run(); });
+        // std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
+        // std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
+        // std::thread io_ctx_thread3([&] { m_io_ctx.run(); });
+        // std::thread io_ctx_thread4([&] { m_io_ctx.run(); });
+        // std::thread io_ctx_thread5([&] { m_io_ctx.run(); });
 
         m_io_ctx.run();
-        io_ctx_thread1.join();
-        io_ctx_thread2.join();
-        io_ctx_thread3.join();
+        // io_ctx_thread1.join();
+        // io_ctx_thread2.join();
+        // io_ctx_thread3.join();
+        // io_ctx_thread4.join();
+        // io_ctx_thread5.join();
     }
 
     void server::check_tls_keys()

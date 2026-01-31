@@ -3,7 +3,6 @@
 #include "sqlite_wrapper.h"
 
 #include <string>
-#include <vector>
 
 namespace user_db
 {
@@ -16,9 +15,8 @@ namespace user_db
 
         void initialize();
 
-        std::vector<std::string> get_id_by_name(std::string name);
-        std::vector<std::string> get_name_by_id(std::string id);
-        std::vector<std::string> get_password_by_id(std::string id);
+        std::string get_id_by_name(std::string name);
+        bool check_password(std::string id, std::string password);
         void create_user(std::string name, std::string password);
 
     private:

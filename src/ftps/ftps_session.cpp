@@ -1,6 +1,5 @@
 #include "ftps_session.h"
 #include "../custom_utils.h"
-#include "../database/fs_handler.h"
 #include "../database/user_db.h"
 #include "../database/virtual_fs_db.h"
 
@@ -258,19 +257,19 @@ namespace ftps_session
                 }
 
                 // get user_id by name from database users table
-                std::vector<std::string> id_results = m_user.get_id_by_name(argument);
+                std::string uid = m_user.get_id_by_name(argument);
 
-                // username does not exist in database
-                if (id_results.size() == 0)
+                if (uid == "")
                 {
+                    // username does not exist in database
                     println("Unknown username -> \"" + argument + "\"", custom_utils::COLOR::YELLOW);
                     control_send("530 Invalid username.");
                     control_receive();
                     return;
                 }
 
-                m_userid = id_results[0];
-                m_username = m_user.get_name_by_id(m_userid)[0];
+                m_userid = uid;
+                m_username = argument;
 
                 println("Known username, need password", custom_utils::COLOR::GREEN);
                 control_send("331 Username okay, password needed.");
@@ -287,7 +286,7 @@ namespace ftps_session
                     return;
                 }
 
-                if (m_user.get_password_by_id(m_userid)[0] == argument)
+                if (m_user.check_password(m_userid, argument))
                 {
                     m_connection_stage = CONNECTION_STAGE::LOGGED_IN;
                     println("User \"" + m_username + "\" logged in", custom_utils::COLOR::GREEN);
@@ -580,7 +579,7 @@ namespace ftps_session
                         return;
                     }
 
-                    // todo recursively create directory
+                    // todo: recursively create directory
                     // e.g.
                     // working_directory = "/test files (small)/New Folder"
                     // argument = "test"
@@ -607,17 +606,17 @@ namespace ftps_session
                         object_name = custom_utils::splitString(argument, '/').back();
                     }
 
-                    // check if object exists
-                    if (m_virtual_fs.get_object(m_userid, object_name, virtual_path).size() != 0)
+                    std::string vobj_id =
+                        m_virtual_fs.create_virtual_object(m_userid, object_name, virtual_path, 0, true);
+
+                    // check if created successfully
+                    if (vobj_id == "")
                     {
-                        println("Cannot make directory, already exists", custom_utils::COLOR::YELLOW);
-                        control_send("250 Directory already exist.");
+                        println("Unable to create virtual object", custom_utils::COLOR::YELLOW);
+                        control_send("250 Failed.");
                         control_receive();
                         return;
                     }
-
-                    // folder does not exists, create one
-                    m_virtual_fs.create_virtual_object(m_userid, object_name, virtual_path, 0, true);
 
                     println("Created virtual directory \"" + virtual_path + "\" \"" + object_name + "\"",
                             custom_utils::COLOR::GREEN);
@@ -709,12 +708,7 @@ namespace ftps_session
                         object_name = custom_utils::splitString(argument, '/').back();
                     }
 
-                    std::string v_obj_id = m_virtual_fs.remove_virtual_object(m_userid, object_name, virtual_path);
-                    if (v_obj_id != "")
-                    {
-                        fs_handler::remove_file("data/" + v_obj_id);
-                    }
-
+                    m_virtual_fs.remove_virtual_object(m_userid, object_name, virtual_path);
                     control_send("250 Deleted.");
 
                     control_receive();
@@ -754,6 +748,7 @@ namespace ftps_session
 
                     std::string parent_directory_name = custom_utils::splitString(parent_directory, '/').back();
 
+                    // if not root directory and parent directory not found
                     if (parent_directory != "/" &&
                         m_virtual_fs.get_object(m_userid, parent_directory_name, parent_of_parent_directory).size() ==
                             0)
@@ -1108,13 +1103,6 @@ namespace ftps_session
         }
 
         std::string send_file_id = v_obj[0];
-
-        if (!fs_handler::file_exists("data/" + send_file_id))
-        {
-            println("File not found in OS -> \"./data/" + send_file_id + "\"", custom_utils::COLOR::RED);
-            data_close();
-            return;
-        }
 
         m_send_file_stream = std::make_unique<std::ifstream>("data/" + send_file_id, std::ios::binary);
         if (!m_send_file_stream->is_open())

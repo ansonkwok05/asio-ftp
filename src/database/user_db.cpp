@@ -19,19 +19,35 @@ namespace user_db
         check_table_exists();
     }
 
-    std::vector<std::string> user::get_id_by_name(std::string name)
+    std::string user::get_id_by_name(std::string name)
     {
-        return db.run_param_query("SELECT user_id FROM users WHERE name = ?", {name});
+        std::vector<std::string> result_vector = db.run_param_query("SELECT user_id FROM users WHERE name = ?", {name});
+
+        if (result_vector.size() == 0)
+        {
+            // username not found
+            return "";
+        }
+
+        return result_vector[0];
     }
 
-    std::vector<std::string> user::get_name_by_id(std::string id)
+    bool user::check_password(std::string id, std::string password)
     {
-        return db.run_param_query("SELECT name FROM users WHERE user_id = ?", {id});
-    }
+        std::vector<std::string> result_vector =
+            db.run_param_query("SELECT password FROM users WHERE user_id = ?", {id});
 
-    std::vector<std::string> user::get_password_by_id(std::string id)
-    {
-        return db.run_param_query("SELECT password FROM users WHERE user_id = ?", {id});
+        if (result_vector.size() == 0)
+        {
+            return false;
+        }
+
+        if (result_vector[0] != password)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     void user::create_user(std::string name, std::string password)

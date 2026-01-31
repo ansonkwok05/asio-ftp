@@ -34,6 +34,8 @@ namespace sftp_session
 
     void session::start()
     {
+        goto temp_skip_key;
+
         // prepare ecdsa-sha2-nistp256 privatekey and publickey;
         {
             std::ifstream private_pem("./ssh_keys/ecdsa_p256_private.pem");
@@ -61,9 +63,8 @@ namespace sftp_session
                 println(std::to_string(rc));
                 println(std::to_string(pkey_size));
 
-                // todo
+                // todo:
                 // stuck trying to extract ec point from ecdsa public key
-                return;
 
                 // unsigned char buf[100];
 
@@ -102,8 +103,10 @@ namespace sftp_session
                 // }
             }
 
-            // todo parse pem -> ignore header/footer, decode the base64 payload
+            // todo: parse pem -> ignore header/footer, decode the base64 payload
         }
+
+    temp_skip_key:
 
         m_stopwatch.start();
         timer = std::make_unique<boost::asio::steady_timer>(m_socket.get_executor(),
@@ -144,6 +147,8 @@ namespace sftp_session
                                          self->close_connection();
                                          return;
                                      }
+
+                                     self->println("SSH server protocol sent to client");
                                  });
 
         // receive client protocol version
@@ -422,6 +427,8 @@ namespace sftp_session
                                         self->close_connection();
                                         return;
                                     }
+
+                                    self->println("Server key exchange init sent to client");
                                 });
         }
 
@@ -841,36 +848,90 @@ namespace sftp_session
                         }
 
                         {
-                            const int nid = NID_X9_62_prime256v1;
-                            EC_GROUP *group = EC_GROUP_new_by_curve_name(nid);
-                            EC_POINT *point = EC_POINT_new(group);
+                            EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+                            EC_POINT *client_point = EC_POINT_new(group);
 
-                            if (!EC_POINT_oct2point(group, point, keeip.Q_C.data(), keeip.Q_C.size(), nullptr))
+                            if (!EC_POINT_oct2point(group, client_point, keeip.Q_C.data(), keeip.Q_C.size(), nullptr))
                             {
                                 self->println("Unable to parse client ec to point", custom_utils::COLOR::RED);
-                                EC_POINT_free(point);
+                                EC_POINT_free(client_point);
                                 EC_GROUP_free(group);
                                 self->close_connection();
                                 return;
                             }
 
-                            if (!EC_POINT_is_on_curve(group, point, nullptr))
+                            if (!EC_POINT_is_on_curve(group, client_point, nullptr))
                             {
                                 self->println("Client ec point is not on curve", custom_utils::COLOR::RED);
-                                EC_POINT_free(point);
+                                EC_POINT_free(client_point);
                                 EC_GROUP_free(group);
                                 self->close_connection();
                                 return;
                             }
 
-                            // todo store client public key
+                            // std::string temp;
+                            // for (auto c : K)
+                            // {
+                            //     temp += std::to_string(c) + " ";
+                            // }
+                            // self->println(temp);
 
-                            EC_POINT_free(point);
+                            // EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(own_key, NULL);
+
+                            {
+                                // /* 1. Create an EVP_PKEY_CTX for ECDH */
+                                // EVP_PKEY_CTX *ctx = EVP_PKEY_CTX_new(own_key, NULL);
+                                // if (!ctx)
+                                // { /* handle error */
+                                // }
+
+                                // /* 2. Initialise the context – key agreement operation */
+                                // if (EVP_PKEY_derive_init(ctx) <= 0)
+                                // { /* error */
+                                // }
+
+                                // /* 3. Set the peer public key in the context
+                                //  *    (we need to convert EC_POINT → EVP_PKEY first)
+                                //  */
+                                // EC_KEY *peer_key = EC_KEY_new();
+                                // EC_KEY_set_group(peer_key, group);
+                                // EC_KEY_set_public_key(peer_key, client_point);
+
+                                // EVP_PKEY *peer_pkey = EVP_PKEY_new();
+                                // EVP_PKEY_assign_EC_KEY(peer_pkey, peer_key); /* ownership transferred */
+
+                                // /* 4. Tell the context about the peer key */
+                                // if (EVP_PKEY_derive_set_peer(ctx, peer_pkey) <= 0)
+                                // { /* error */
+                                // }
+
+                                // /* 5. Determine buffer length for shared secret */
+                                // size_t secret_len = 0;
+                                // if (EVP_PKEY_derive(ctx, NULL, &secret_len) <= 0)
+                                // { /* error */
+                                // }
+
+                                // unsigned char *secret = OPENSSL_malloc(secret_len);
+                                // if (!secret)
+                                // { /* error */
+                                // }
+
+                                // /* 6. Derive the shared secret */
+                                // if (EVP_PKEY_derive(ctx, secret, &secret_len) <= 0)
+                                // { /* error */
+                                // }
+
+                                /* ---------- use `secret` of length `secret_len` here ---------- */
+                            }
+
+                            // todo: shared secret
+
+                            EC_POINT_free(client_point);
                             EC_GROUP_free(group);
 
                             // EC_POINT_
 
-                            // todo
+                            // todo:
                             // handle client Q_C
 
                             // send SSH_MSG_KEX_ECDH_REPLY back

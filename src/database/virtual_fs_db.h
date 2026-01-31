@@ -23,7 +23,7 @@ namespace virtual_fs_db
                                           long long object_size, bool is_directory);
         std::string update_virtual_object(std::string user_id, std::string object_name, std::string object_path,
                                           long long object_size);
-        std::string remove_virtual_object(std::string user_id, std::string object_name, std::string object_path);
+        bool remove_virtual_object(std::string user_id, std::string object_name, std::string object_path);
 
     private:
         sqlite_wrapper::SQLiteDb db;
@@ -33,5 +33,7 @@ namespace virtual_fs_db
         void create_virtual_objects_table();
 
         void check_virtual_objects_table_structure();
+
+        std::string return_parent_directory(std::string directory);
     };
 } // namespace virtual_fs_db
