@@ -26,7 +26,9 @@ namespace ftps_server
 
         println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
 
-        // multithreading is unstable, might lead to address boundary error and race conditions
+        // todo: multithreading is unstable, might lead to address boundary error and race conditions
+        // also random segfaults
+
         // std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
         // std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
         // std::thread io_ctx_thread3([&] { m_io_ctx.run(); });

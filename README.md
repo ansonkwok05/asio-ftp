@@ -1,38 +1,30 @@
-# C++ File Server
-A lightweight cross-platform file server written in C++.
+# asio-ftp
+A small FTP file server written with Boost.Asio
 
-## Current features
-Feature | Description
-------- | -----------
-FTPS server | Explicit and implicit encryption mode. Support file upload and download. (Only working with FileZilla)
+## Description
+- Explicit or implicit encryption through the same port.
+- File download/upload using FileZilla.
 
 ## To be implemented / bug fixes:
-* SFTP server
-* FTPS public ip mode (currently only works in LAN)
-* FTPS mobile download and upload has corrupted files (incorrect size, data)
+* Dont know how to deal with public ips (only works in LAN now)
+* Some clients has corrupted files from downloads and uploads (incorrect file size, corrupted data)
+* Multithreading has random segfaults
 
-## Requirements
+## How to compile
+This project can be compiled using CMake.
+
+### Requirements
 * CMake version 3.10 or higher
 * gcc
 * g++
 * SQLite3
 * Boost.Asio
 * OpenSSL
-* TLS keys (dh.pem, cert.pem, key.pem)
+* TLS certificate (dh.pem, cert.pem, key.pem)
 
-## How to compile
-This project can be compiled using CMake, allowing cross-platform compilation across Windows, macOS and Linux.
-
-### Windows
-Can be built using Visual Studio, or use CMake to generate your own build files.
-
-### Linux
 ```
 mkdir build
 cd ./build
 cmake ..
 make
 ```
-
-### macOS
-Not tested, but should work by using CMake to build.
