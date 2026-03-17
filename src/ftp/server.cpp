@@ -45,10 +45,6 @@ namespace ftp
             println("FTP server listening on port -> " + std::to_string(cfg.port), custom_utils::COLOR::GREEN);
         }
 
-        // todo: multithreading is unstable, might lead to address boundary error and race conditions
-        // maybe random segfaults
-        // do more tests
-
         if (cfg.multi_threading)
         {
             int total_thread_count = std::thread::hardware_concurrency();

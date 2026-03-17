@@ -3,7 +3,6 @@
 #include "../custom_utils.h"
 
 #include <boost/asio.hpp>
-#include <boost/system/detail/error_code.hpp>
 
 #include <string>
 #include <fstream>
@@ -75,7 +74,7 @@ namespace ftps
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
                 if (ec)
                 {
-                    if (ec == boost::asio::error::eof)
+                    if (ec == boost::asio::error::eof || ec == boost::asio::ssl::error::stream_truncated)
                     {
                         // client disconnected
 
@@ -215,24 +214,25 @@ namespace ftps
 
     void secure_session::start()
     {
-        boost::system::error_code ec =
-            m_control_socket.handshake(boost::asio::ssl::stream_base::handshake_type::server, ec);
-        if (ec)
-        {
-            println("handshake error", custom_utils::COLOR::RED);
-            return;
-        }
+        m_control_socket.async_handshake(boost::asio::ssl::stream_base::handshake_type::server,
+                                         [self = shared_from_this()](boost::system::error_code ec) {
+                                             if (ec)
+                                             {
+                                                 self->println("handshake error", custom_utils::COLOR::RED);
+                                                 return;
+                                             }
 
-        if (m_is_implicit)
-        {
-            // clients in implicit mode haven't seen the welcome message yet
-            control_send(FTP_WELCOMEMESSAGE);
-        }
+                                             if (self->m_is_implicit)
+                                             {
+                                                 // clients in implicit mode haven't seen the welcome message yet
+                                                 self->control_send(FTP_WELCOMEMESSAGE);
+                                             }
 
-        m_connection_stage = CONNECTION_STAGE::UNAUTHENTICATED;
+                                             self->m_connection_stage = CONNECTION_STAGE::UNAUTHENTICATED;
 
-        // clients in explicit mode should send login details immediately
-        control_receive();
+                                             // clients in explicit mode should send login details immediately
+                                             self->control_receive();
+                                         });
     }
 
     void secure_session::control_send(std::string message)
@@ -256,7 +256,7 @@ namespace ftps
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
                 if (ec)
                 {
-                    if (ec == boost::asio::error::eof)
+                    if (ec == boost::asio::error::eof || ec == boost::asio::ssl::error::stream_truncated)
                     {
                         // client disconnected
                         self->control_close();
@@ -722,8 +722,6 @@ namespace ftps
                 }
                 else
                 {
-                    // type 2, 3
-
                     if (argument[0] != '/')
                     {
                         // type 2
@@ -958,37 +956,39 @@ namespace ftps
                 self->m_data_socket =
                     boost::asio::ssl::stream<boost::asio::ip::tcp::socket>(std::move(socket), self->m_ssl_context);
 
-                boost::system::error_code handshake_ec =
-                    self->m_data_socket.handshake(boost::asio::ssl::stream_base::handshake_type::server, handshake_ec);
-                if (ec)
-                {
-                    self->println("handshake error", custom_utils::COLOR::RED);
-                    return;
-                }
-                self->println("Data socket accepted and handshaked", custom_utils::COLOR::GREEN);
+                self->m_data_socket.async_handshake(
+                    boost::asio::ssl::stream_base::handshake_type::server, [self](boost::system::error_code ec) {
+                        if (ec)
+                        {
+                            self->println("handshake error", custom_utils::COLOR::RED);
+                            return;
+                        }
 
-                // check if list directory
-                if (self->m_pending_directory_list != "")
-                {
-                    self->data_directory_listing();
-                    return;
-                }
+                        self->println("Data socket accepted and handshaked", custom_utils::COLOR::GREEN);
 
-                // check if receive file
-                if (self->m_pending_write_file != "")
-                {
-                    self->data_receive_file();
-                    return;
-                }
+                        // check if need to list directory
+                        if (self->m_pending_directory_list != "")
+                        {
+                            self->data_directory_listing();
+                            return;
+                        }
 
-                // check if send file
-                if (self->m_sendable_file_id != "")
-                {
-                    self->data_send_file();
-                    return;
-                }
+                        // check if need to receive file
+                        if (self->m_pending_write_file != "")
+                        {
+                            self->data_receive_file();
+                            return;
+                        }
 
-                self->println("Data socket nothing done, possible late commands", custom_utils::COLOR::CYAN);
+                        // check if need to send file
+                        if (self->m_sendable_file_id != "")
+                        {
+                            self->data_send_file();
+                            return;
+                        }
+
+                        self->println("Data socket nothing done, possible late commands", custom_utils::COLOR::CYAN);
+                    });
             });
     }
 
