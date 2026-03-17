@@ -1,46 +1,76 @@
+#include "server.h"
+#include "../config/parser.h"
 #include "../custom_utils.h"
-#include "ftps_server.h"
 #include "../database/fs_handler.h"
-#include "ftp_session.h"
+#include "session.h"
+#include "secure_session.h"
 
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
 #include <boost/beast.hpp>
 
-#include <memory>
 #include <string>
 #include <stdexcept>
 
-namespace ftps_server
+namespace ftp
 {
     using custom_utils::println;
 
-    server::server()
-        : m_acceptor(m_io_ctx, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), PORT)), m_socket(m_io_ctx)
+    server::server(config::parsed_config cfg)
+        : m_ssl_context(boost::asio::ssl::context::tlsv13_server),
+          m_acceptor(m_io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), cfg.port)),
+          m_socket(m_io_context)
     {
         // get_public_ip();
 
-        check_tls_keys();
+        if (cfg.secure)
+        {
+            check_tls_keys();
 
-        start_accepting();
+            m_ssl_context.set_options(boost::asio::ssl::context::default_workarounds |
+                                      boost::asio::ssl::context::no_sslv2 | boost::asio::ssl::context::no_tlsv1 |
+                                      boost::asio::ssl::context::no_tlsv1_1 | boost::asio::ssl::context::single_dh_use);
+            m_ssl_context.use_certificate_chain_file("tls/cert.pem");
+            m_ssl_context.use_private_key_file("tls/key.pem", boost::asio::ssl::context::pem);
+            m_ssl_context.use_tmp_dh_file("tls/dh.pem");
 
-        println("FTPS server listening on port -> " + std::to_string(PORT), custom_utils::COLOR::GREEN);
+            start_accepting_secure();
+
+            println("FTPS server listening on port -> " + std::to_string(cfg.port), custom_utils::COLOR::GREEN);
+        }
+        else
+        {
+            start_accepting_insecure();
+
+            println("FTP server listening on port -> " + std::to_string(cfg.port), custom_utils::COLOR::GREEN);
+        }
 
         // todo: multithreading is unstable, might lead to address boundary error and race conditions
-        // also random segfaults
+        // maybe random segfaults
+        // do more tests
 
-        // std::thread io_ctx_thread1([&] { m_io_ctx.run(); });
-        // std::thread io_ctx_thread2([&] { m_io_ctx.run(); });
-        // std::thread io_ctx_thread3([&] { m_io_ctx.run(); });
-        // std::thread io_ctx_thread4([&] { m_io_ctx.run(); });
-        // std::thread io_ctx_thread5([&] { m_io_ctx.run(); });
+        if (cfg.multi_threading)
+        {
+            int total_thread_count = std::thread::hardware_concurrency();
+            println("Using " + std::to_string(total_thread_count) + " threads", custom_utils::COLOR::GREEN);
 
-        m_io_ctx.run();
-        // io_ctx_thread1.join();
-        // io_ctx_thread2.join();
-        // io_ctx_thread3.join();
-        // io_ctx_thread4.join();
-        // io_ctx_thread5.join();
+            // use total - 1 threads as worker threads, the main thread runs also
+            std::vector<std::thread> worker_threads;
+            for (int i = 0; i < total_thread_count - 1; i++)
+            {
+                worker_threads.emplace_back(std::thread([&] { m_io_context.run(); }));
+            }
+
+            m_io_context.run();
+            for (auto &t : worker_threads)
+            {
+                t.join();
+            }
+        }
+        else
+        {
+            m_io_context.run();
+        }
     }
 
     void server::check_tls_keys()
@@ -114,7 +144,7 @@ namespace ftps_server
         //     throw boost::beast::system_error{ec};
     }
 
-    void server::start_accepting()
+    void server::start_accepting_insecure()
     {
         m_acceptor.async_accept(m_socket, [this](boost::system::error_code ec) {
             if (ec)
@@ -123,10 +153,25 @@ namespace ftps_server
                 return;
             }
 
-            std::make_shared<ftp_session::session>(std::move(m_socket))->start();
+            std::make_shared<ftp::session>(std::move(m_socket))->start();
 
-            this->start_accepting();
+            this->start_accepting_insecure();
         });
     }
 
-} // namespace ftps_server
+    void server::start_accepting_secure()
+    {
+        m_acceptor.async_accept(m_socket, [this](boost::system::error_code ec) {
+            if (ec)
+            {
+                println("Failed to accept connection -> " + ec.message(), custom_utils::COLOR::RED);
+                return;
+            }
+
+            std::make_shared<ftps::adaptive_session>(std::move(m_socket), m_ssl_context)->start();
+
+            this->start_accepting_secure();
+        });
+    }
+
+} // namespace ftp
