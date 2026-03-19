@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.30)
 
 project(asio-ftp)
 
@@ -17,11 +17,6 @@ if (SQLite3_FOUND)
     target_link_libraries(asio-ftp sqlite3)
 else()
     message(FATAL_ERROR "SQLite3 not found. Please install it using a package manager")
-endif()
-
-# get rid of warning
-if(POLICY CMP0167)
-  cmake_policy(SET CMP0167 NEW)
 endif()
 
 # Boost library (need Boost.Asio and Boost.JSON)
@@ -45,6 +40,3 @@ if (OpenSSL_FOUND)
 else()
     message(FATAL_ERROR "OpenSSL not found. Please install it using a package manager")
 endif()
-
-# Set sqlite3 to threadsafe
-target_compile_options(asio-ftp PRIVATE "-DTHREADSAFE=1")
