@@ -4,8 +4,11 @@
 #include "../database/user_db.h"
 #include "../database/virtual_fs_db.h"
 
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl/context.hpp>
+#include <boost/asio/steady_timer.hpp>
+#include <boost/asio/ssl/stream.hpp>
+#include <boost/asio/streambuf.hpp>
 
 #include <queue>
 #include <string>

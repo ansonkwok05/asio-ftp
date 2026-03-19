@@ -2,7 +2,17 @@
 #include "secure_session.h"
 #include "../custom_utils.h"
 
-#include <boost/asio.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl/context.hpp>
+#include <boost/system/detail/error_code.hpp>
+#include <boost/asio/write.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/asio/error.hpp>
+#include <boost/asio/ssl/error.hpp>
+#include <boost/asio/socket_base.hpp>
+#include <boost/asio/ssl/stream_base.hpp>
+#include <boost/asio/ssl/stream.hpp>
+#include <boost/asio/read.hpp>
 
 #include <string>
 #include <fstream>

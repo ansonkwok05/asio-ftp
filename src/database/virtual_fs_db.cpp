@@ -1,7 +1,6 @@
 #include "virtual_fs_db.h"
 #include "sqlite_wrapper.h"
 #include "fs_handler.h"
-
 #include "../custom_utils.h"
 
 #include <stdexcept>
