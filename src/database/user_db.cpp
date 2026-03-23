@@ -31,6 +31,11 @@ namespace user_db
         return result_vector[0];
     }
 
+    std::vector<std::string> user::get_username_list()
+    {
+        return db.run_query("SELECT name, password FROM users");
+    }
+
     bool user::check_password(std::string id, std::string password)
     {
         std::vector<std::string> result_vector =

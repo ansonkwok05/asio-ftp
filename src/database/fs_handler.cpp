@@ -31,6 +31,19 @@ namespace fs_handler
         return true;
     }
 
+    bool rename_file(std::string path_to_file, std::string new_path_to_file)
+    {
+        try
+        {
+            std::filesystem::rename(path_to_file, new_path_to_file);
+            return true;
+        }
+        catch (const std::filesystem::filesystem_error &err)
+        {
+            return false;
+        }
+    }
+
     bool remove_file(std::string path_to_file)
     {
         try

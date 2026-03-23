@@ -1,10 +1,8 @@
 #pragma once
 
+#include <boost/json.hpp>
+#include <map>
 #include <unordered_map>
-
-#include <boost/json/kind.hpp>
-#include <boost/json/array.hpp>
-#include <boost/json/object.hpp>
 
 namespace config
 {
@@ -41,7 +39,7 @@ namespace config
         bool secure = false;
         bool multi_threading = false;
         int port = 6921;
-        std::unordered_map<std::string, std::string> users;
+        std::map<std::string, std::string> users;
     };
 
     parsed_config make_default_json();

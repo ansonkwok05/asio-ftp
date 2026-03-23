@@ -2,10 +2,10 @@
 #include "fs_handler.h"
 #include "../custom_utils.h"
 
+#include <sqlite3.h>
+
 #include <stdexcept>
 #include <string>
-
-#include <sqlite3.h>
 
 namespace sqlite_wrapper
 {

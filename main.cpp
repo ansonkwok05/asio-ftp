@@ -1,103 +1,114 @@
 #include "src/custom_utils.h"
 #include "src/config/parser.h"
+#include "src/database/fs_handler.h"
 #include "src/database/sqlite_wrapper.h"
 #include "src/database/user_db.h"
 #include "src/database/virtual_fs_db.h"
 #include "src/ftp/server.h"
 
+#include <boost/json/stream_parser.hpp>
 #include <string>
+#include <map>
 
 using custom_utils::println;
 
 config::parsed_config init_config()
 {
-    custom_utils::stopwatch performanceWatcher;
-    performanceWatcher.start();
-
     config::parsed_config cfg = config::read_json_config();
     if (cfg.users.empty())
     {
-        println("No users configured", custom_utils::COLOR::YELLOW);
+        println("No user configured", custom_utils::COLOR::YELLOW);
     }
-
-    println("Config loaded in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
-            custom_utils::COLOR::GREEN);
 
     return cfg;
 }
 
-void init_sql_db()
+void init_sql_db(bool show_logs = true)
 {
-    custom_utils::stopwatch performanceWatcher;
-    performanceWatcher.start();
+    if (show_logs)
+        sqlite_wrapper::SQLiteDb(sqlite_wrapper::ENABLE_LOGGING).init_db();
+    else
+        sqlite_wrapper::SQLiteDb().init_db();
+}
 
-    println("Initializing SQLite database", custom_utils::COLOR::GREEN);
+bool any_users_changed(std::map<std::string, std::string> db_users, std::map<std::string, std::string> config_users)
+{
+    // using std::map so data is ordered
+    for (const auto &[db_user_name, db_user_password] : db_users)
+    {
+        // find if any side has missing users
+        if (config_users.find(db_user_name) == config_users.end())
+        {
+            return true;
+        }
 
-    sqlite_wrapper::SQLiteDb *database = new sqlite_wrapper::SQLiteDb(sqlite_wrapper::ENABLE_LOGGING);
-    database->init_db();
-    delete database;
-    database = nullptr;
+        // check if any password changed
+        if (config_users[db_user_name] != db_user_password)
+        {
+            return true;
+        }
+    }
 
-    println("SQLite database initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
-            custom_utils::COLOR::GREEN);
+    return false;
 }
 
 void init_user_table(config::parsed_config cfg)
 {
-    custom_utils::stopwatch performanceWatcher;
-    performanceWatcher.start();
-
-    println("Initializing user database", custom_utils::COLOR::GREEN);
-
-    user_db::user *user = new user_db::user();
-    user->initialize();
-
-    for (const auto &[name, password] : cfg.users)
+    std::map<std::string, std::string> db_users;
     {
-        if (user->get_id_by_name(name).size() == 0)
-        {
-            // todo: if any new users detected,
-            // clear old user table before using new users
+        user_db::user user = user_db::user();
+        user.initialize();
 
-            println("Attemping to create user \"" + name + "\"", custom_utils::COLOR::YELLOW);
-            user->create_user(name, password);
-            println("Created user \"" + name + "\"", custom_utils::COLOR::GREEN);
+        std::vector<std::string> temp_userlist = user.get_username_list();
+        int i = 0;
+        while (i < temp_userlist.size())
+        {
+            db_users[temp_userlist[i]] = temp_userlist[i + 1];
+            i += 2;
         }
     }
 
-    delete user;
-    user = nullptr;
+    if (any_users_changed(db_users, cfg.users))
+    {
+        // new users config detected
+        println("Users config changed. Backing up storage.db and creating a new one", custom_utils::COLOR::YELLOW);
+        fs_handler::rename_file("data/storage.db", "data/backup_storage.db");
 
-    println("User database initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
-            custom_utils::COLOR::GREEN);
-}
+        // create a new storage.db
+        init_sql_db(false);
+    }
 
-void init_fs_table()
-{
-    custom_utils::stopwatch performanceWatcher;
-    performanceWatcher.start();
-
-    println("Initializing virtual fs database", custom_utils::COLOR::GREEN);
-
-    virtual_fs_db::virtual_fs *virtual_fs = new virtual_fs_db::virtual_fs();
-    virtual_fs->initialize();
-    delete virtual_fs;
-    virtual_fs = nullptr;
-
-    println("Virtual fs database initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) +
-                "ms",
-            custom_utils::COLOR::GREEN);
+    user_db::user user = user_db::user();
+    user.initialize();
+    for (const auto &[name, password] : cfg.users)
+    {
+        user.create_user(name, password);
+        println("Created user \"" + name + "\"", custom_utils::COLOR::GREEN);
+    }
 }
 
 int main()
 {
-    config::parsed_config cfg = init_config();
-
     std::srand(std::time(NULL));
 
+    custom_utils::stopwatch performanceWatcher;
+    performanceWatcher.start();
+
+    config::parsed_config cfg = init_config();
+    println("Config loaded in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
+            custom_utils::COLOR::GREEN);
+
     init_sql_db();
+    println("SQLite database initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
+            custom_utils::COLOR::GREEN);
+
     init_user_table(cfg);
-    init_fs_table();
+    println("User table initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
+            custom_utils::COLOR::GREEN);
+
+    virtual_fs_db::virtual_fs().initialize();
+    println("Virtual_fs table initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
+            custom_utils::COLOR::GREEN);
 
     // start ftp server
     ftp::server ftp_server = ftp::server(cfg);
