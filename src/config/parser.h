@@ -4,6 +4,10 @@
 #include <map>
 #include <unordered_map>
 
+#include <boost/json/kind.hpp>
+#include <boost/json/array.hpp>
+#include <boost/json/object.hpp>
+
 namespace config
 {
     // data type lookup table for each user

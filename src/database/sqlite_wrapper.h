@@ -1,11 +1,11 @@
 #pragma once
 
-#include <sqlite3.h>
-
 #include "../custom_utils.h"
 
 #include <string>
 #include <vector>
+
+#include <sqlite3.h>
 
 namespace sqlite_wrapper
 {

@@ -4,11 +4,11 @@
 #include "../database/user_db.h"
 #include "../database/virtual_fs_db.h"
 
-#include <boost/asio.hpp>
-
 #include <queue>
 #include <string>
 #include <fstream>
+
+#include <boost/asio.hpp>
 
 namespace ftp
 {
