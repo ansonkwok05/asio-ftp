@@ -36,10 +36,10 @@ namespace ftp
         static constexpr size_t MESSAGE_BUFFER_SIZE = 512;
 
         // buffer size in Bytes for receiving files
-        static constexpr size_t RECEIVE_BUFFER_SIZE = 1024;
+        static constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 512;
 
         // buffer size in Bytes for sending files
-        static constexpr size_t SEND_BUFFER_SIZE = 1024;
+        static constexpr size_t SEND_BUFFER_SIZE = 1024 * 512;
 
         // list of commands supported
         static constexpr std::array<std::string_view, 17> FTP_COMMANDS = {

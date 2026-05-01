@@ -22,10 +22,10 @@ namespace ftps
     constexpr size_t MESSAGE_BUFFER_SIZE = 512;
 
     // buffer size in Bytes for receiving files
-    constexpr size_t RECEIVE_BUFFER_SIZE = 1024;
+    constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 512;
 
     // buffer size in Bytes for sending files
-    constexpr size_t SEND_BUFFER_SIZE = 1024;
+    constexpr size_t SEND_BUFFER_SIZE = 1024 * 512;
 
     class adaptive_session : public std::enable_shared_from_this<adaptive_session>
     {

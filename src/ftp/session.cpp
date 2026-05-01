@@ -1,6 +1,7 @@
 #include "../custom_utils.h"
 #include "session.h"
 
+#include <boost/system/system_error.hpp>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -11,8 +12,9 @@
 namespace ftp
 {
     session::session(boost::asio::ip::tcp::socket socket)
-        : m_control_socket(std::move(socket)), m_buffer(MESSAGE_BUFFER_SIZE),
-          m_data_socket_acceptor(m_control_socket.get_executor()), m_data_socket(m_control_socket.get_executor())
+        : m_control_socket(std::move(socket)), m_data_socket_acceptor(m_control_socket.get_executor()),
+          m_data_socket(m_control_socket.get_executor()), m_buffer(MESSAGE_BUFFER_SIZE),
+          m_receive_buffer(RECEIVE_BUFFER_SIZE)
     {
         m_session_id = custom_utils::generate_uuid_string(8);
 
