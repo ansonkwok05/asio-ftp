@@ -1016,6 +1016,12 @@ namespace ftp
         // close data channel
         println("Operation finished, closing data socket", custom_utils::COLOR::GREEN);
 
+        if (!m_data_socket.is_open())
+        {
+            println("Unable to close data socket. It is not open?", custom_utils::COLOR::YELLOW);
+            return;
+        }
+
         boost::system::error_code ec = m_data_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
