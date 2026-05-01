@@ -1253,6 +1253,14 @@ namespace ftps
         }
 
         boost::system::error_code ec = m_data_socket.shutdown(ec);
+        if (ec)
+        {
+            println("Error during data socket ssl shutdown, possible client sudden disconnect",
+                    custom_utils::COLOR::RED);
+            m_data_socket.next_layer().close();
+            return;
+        }
+
         ec = m_data_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
