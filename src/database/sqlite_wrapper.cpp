@@ -58,7 +58,8 @@ namespace sqlite_wrapper
             println("Error code -> " + std::to_string(rc), custom_utils::COLOR::RED);
             println("Error msg -> " + std::string(errMsg), custom_utils::COLOR::RED);
 
-            throw std::runtime_error(errMsg);
+            sqlite3_free(errMsg);
+            throw std::runtime_error("sqlite3_exec failed");
         }
 
         return context.argv;
@@ -74,7 +75,7 @@ namespace sqlite_wrapper
             println("Query: " + sql_query, custom_utils::COLOR::RED);
             println("Error code -> " + std::to_string(rc), custom_utils::COLOR::RED);
 
-            throw std::runtime_error("Failed to call run_param_query");
+            throw std::runtime_error("run_param_query failed");
         }
 
         for (int i = 0; i < params.size(); i++)
@@ -87,7 +88,7 @@ namespace sqlite_wrapper
                 println("Param index: " + std::to_string(i), custom_utils::COLOR::RED);
                 println("Error code -> " + std::to_string(rc), custom_utils::COLOR::RED);
 
-                throw std::runtime_error("Failed to bind param");
+                throw std::runtime_error("sqlite3_bind_text failed");
             }
         }
 
@@ -177,7 +178,9 @@ namespace sqlite_wrapper
         if (rc != SQLITE_OK)
         {
             println("Failed to set optimizations", custom_utils::COLOR::RED);
-            throw std::runtime_error(errMsg);
+
+            sqlite3_free(errMsg);
+            throw std::runtime_error("sqlite3_exec failed");
         }
 
         println("Database optimizations set", custom_utils::COLOR::GREEN);
