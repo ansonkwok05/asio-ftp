@@ -872,6 +872,7 @@ namespace ftps
                 // handle multiple types of arguments
                 // type 1 "one"         // object name only
                 // type 2 "/test/one"   // absolute path
+                // type 3 "test/one"    // relative path
 
                 std::string file_path;
                 std::string file_name;
@@ -881,11 +882,22 @@ namespace ftps
                     file_path = m_working_directory;
                     file_name = argument;
                 }
-                else
+                else if (custom_utils::strStartsWith(argument, "/"))
                 {
                     // type 2
                     file_path = return_parent_directory(argument);
                     file_name = custom_utils::splitString(argument, '/').back();
+                }
+                else
+                {
+                    // type 3
+
+                    std::vector<std::string> split_path = custom_utils::splitString(argument, '/');
+
+                    file_name = split_path.back();
+
+                    split_path.pop_back();
+                    file_path = m_working_directory + custom_utils::vectorStrJoin(split_path, "/");
                 }
 
                 std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, file_name, file_path);
