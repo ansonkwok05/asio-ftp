@@ -1024,6 +1024,9 @@ namespace ftp
             return;
         }
 
+        // cancel all async operations
+        m_data_socket.cancel();
+
         boost::system::error_code ec = m_data_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {

@@ -1252,21 +1252,27 @@ namespace ftps
             return;
         }
 
-        boost::system::error_code ec = m_data_socket.shutdown(ec);
-        if (ec)
-        {
-            println("Error during data socket ssl shutdown, possible client sudden disconnect",
-                    custom_utils::COLOR::RED);
-            m_data_socket.next_layer().close();
-            return;
-        }
+        // cancel all async operations
+        m_data_socket.next_layer().cancel();
 
-        ec = m_data_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-        if (ec)
-        {
-            println("Error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
-        }
-        m_data_socket.next_layer().close();
+        m_data_socket.async_shutdown([&](const boost::system::error_code &ec) {
+            if (ec)
+            {
+                println("Error during data socket ssl shutdown, possible client sudden disconnect",
+                        custom_utils::COLOR::RED);
+                m_data_socket.next_layer().close();
+                return;
+            }
+
+            boost::system::error_code temp_ec =
+                m_data_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, temp_ec);
+            if (temp_ec)
+            {
+                println("Error during data socket shutdown, possible client sudden disconnect",
+                        custom_utils::COLOR::RED);
+            }
+            m_data_socket.next_layer().close();
+        });
     }
 
     std::string secure_session::parse_metadata_time(std::string time_str)
