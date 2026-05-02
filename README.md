@@ -1,9 +1,9 @@
 # asio-ftp
-FTP file server written with Boost.Asio
+FTP file server written in C++
 
 ## Features
 - Support file download/upload using FileZilla
-- Non-blocking and multi-threaded I/O handling
+- Non-blocking I/O handling
 - Optional explicit and implicit encryption
 
 ## To be implemented / issues:
