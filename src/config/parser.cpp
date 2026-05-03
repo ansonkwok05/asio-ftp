@@ -74,7 +74,6 @@ namespace config
         parsed_config parsed_config;
 
         parsed_config.secure = DEFAULT_CONFIG.find("secure")->value().as_bool();
-        parsed_config.multi_threading = DEFAULT_CONFIG.find("multi_threading")->value().as_bool();
         parsed_config.port = DEFAULT_CONFIG.find("port")->value().as_int64();
 
         for (auto i = DEFAULT_USERS.begin(); i < DEFAULT_USERS.end(); i++)
@@ -209,11 +208,6 @@ namespace config
                     break;
                 }
 
-                if (i->key() == "multi_threading")
-                {
-                    parsed_config.multi_threading = i->value().as_bool();
-                    break;
-                }
                 break;
             }
             case boost::json::kind::int64:

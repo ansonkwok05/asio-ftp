@@ -45,28 +45,7 @@ namespace ftp
             println("FTP server listening on port -> " + std::to_string(cfg.port), custom_utils::COLOR::GREEN);
         }
 
-        if (cfg.multi_threading)
-        {
-            int total_thread_count = std::thread::hardware_concurrency();
-            println("Using " + std::to_string(total_thread_count) + " threads", custom_utils::COLOR::GREEN);
-
-            // use total - 1 threads as worker threads, the main thread runs also
-            std::vector<std::thread> worker_threads;
-            for (int i = 0; i < total_thread_count - 1; i++)
-            {
-                worker_threads.emplace_back(std::thread([&] { m_io_context.run(); }));
-            }
-
-            m_io_context.run();
-            for (auto &t : worker_threads)
-            {
-                t.join();
-            }
-        }
-        else
-        {
-            m_io_context.run();
-        }
+        m_io_context.run();
     }
 
     void server::check_tls_keys()

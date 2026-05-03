@@ -9,7 +9,6 @@ FTP file server written in C++
 ## To be implemented / issues:
 * handle public ip
 * Some FTP clients has corrupted files from downloads and uploads (incorrect file size, corrupted data)
-* multi-threading is very unstable
 
 ## Requirements
 * CMake version >= 3.30
