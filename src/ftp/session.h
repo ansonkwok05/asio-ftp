@@ -10,6 +10,8 @@
 
 #include <boost/asio.hpp>
 
+#include "constants.h"
+
 namespace ftp
 {
     class session : public std::enable_shared_from_this<session>
@@ -21,80 +23,8 @@ namespace ftp
         void start();
 
     private:
-        enum class CONNECTION_STAGE
-        {
-            UNAUTHENTICATED,
-            LOGGED_IN
-        };
-
-        // server welcome message
-        static constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome. This connection is not secured";
-
-        static constexpr int DATA_CHANNEL_BEGIN_PORT = 7000;
-
-        // buffer size in Bytes for receiving ftp messages
-        static constexpr size_t MESSAGE_BUFFER_SIZE = 512;
-
-        // buffer size in Bytes for receiving files
-        static constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 512;
-
-        // buffer size in Bytes for sending files
-        static constexpr size_t SEND_BUFFER_SIZE = 1024 * 512;
-
-        // list of commands supported
-        static constexpr std::array<std::string_view, 17> FTP_COMMANDS = {
-            // Authentication username
-            "USER",
-
-            // Authentication password
-            "PASS",
-
-            // Return system type
-            "SYST",
-
-            // Disconnect.
-            "QUIT",
-
-            // Print working directory. Returns the current directory of the host.
-            "PWD",
-
-            // Sets the transfer mode (ASCII/Binary).
-            "TYPE",
-
-            // Enter passive mode.
-            "PASV",
-
-            // Returns information of a file or directory if specified, else information of the current working
-            // directory is returned.
-            "LIST",
-
-            // Get the feature list implemented by the server.
-            "FEAT",
-
-            // Change to Parent Directory.
-            "CDUP",
-
-            // Change working directory.
-            "CWD",
-
-            // Make directory.
-            "MKD",
-
-            // Remove a directory.
-            "RMD",
-
-            // Delete file.
-            "DELE",
-
-            // Accept the data and to store the data as a file at the server site
-            "STOR",
-
-            // Retrieve a copy of the file
-            "RETR",
-
-            // Return the size of a file.
-            "SIZE",
-        };
+        // server welcome message for non-secure session
+        static constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome. This connection is not secure";
 
         // session identifier, for logging purposes
         std::string m_session_id;

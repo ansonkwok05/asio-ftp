@@ -311,6 +311,34 @@ namespace ftp
                 return;
             }
 
+            if (command == "PBSZ")
+            {
+                control_send("200 OK.");
+                control_receive();
+                return;
+            }
+
+            if (command == "PROT")
+            {
+                control_send("200 OK.");
+                control_receive();
+                return;
+            }
+
+            if (command == "OPTS")
+            {
+                if (argument == "UTF8 ON")
+                {
+                    control_send("200 Enabled UTF-8 encoding.");
+                    control_receive();
+                    return;
+                }
+
+                println("Unknown OPTS argument -> \"" + argument + "\"", custom_utils::COLOR::YELLOW);
+                control_receive();
+                return;
+            }
+
             if (command == "CDUP")
             {
                 m_working_directory = return_parent_directory(m_working_directory);
