@@ -117,7 +117,7 @@ namespace ftps
             });
     }
 
-    void adaptive_session::handle_FTP_command(std::string command, std::string argument)
+    void adaptive_session::handle_FTP_command(const std::string &command, const std::string &argument)
     {
         if (command != "AUTH")
         {
@@ -150,12 +150,12 @@ namespace ftps
         m_control_socket.close();
     }
 
-    void adaptive_session::println(std::string message)
+    void adaptive_session::println(const std::string &message)
     {
         custom_utils::println("[FTP ] [" + m_session_id + "] " + message);
     }
 
-    void adaptive_session::println(std::string message, custom_utils::COLOR color)
+    void adaptive_session::println(const std::string &message, custom_utils::COLOR color)
     {
         custom_utils::println("[FTP ] [" + m_session_id + "] " + message, color);
     }
@@ -275,7 +275,7 @@ namespace ftps
             });
     }
 
-    void secure_session::handle_FTP_command(std::string &command, std::string &argument)
+    void secure_session::handle_FTP_command(const std::string &command, const std::string &argument)
     {
         // check if command is supported
         if (std::find(FTP_COMMANDS.begin(), FTP_COMMANDS.end(), command) == FTP_COMMANDS.end())
@@ -974,7 +974,7 @@ namespace ftps
             });
     }
 
-    void secure_session::data_send(std::string message)
+    void secure_session::data_send(const std::string &message)
     {
         boost::asio::async_write(m_data_socket, boost::asio::buffer(message),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
@@ -1189,12 +1189,12 @@ namespace ftps
         });
     }
 
-    void secure_session::println(std::string message)
+    void secure_session::println(const std::string &message)
     {
         custom_utils::println("[FTPS] [" + m_session_id + "] " + message);
     }
 
-    void secure_session::println(std::string message, custom_utils::COLOR color)
+    void secure_session::println(const std::string &message, custom_utils::COLOR color)
     {
         custom_utils::println("[FTPS] [" + m_session_id + "] " + message, color);
     }

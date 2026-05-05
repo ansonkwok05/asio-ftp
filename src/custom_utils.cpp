@@ -17,7 +17,7 @@ namespace custom_utils
         std::mutex print_mutex;
     } // namespace
 
-    void print(std::string message)
+    void print(const std::string &message)
     {
         print_mutex.lock();
 
@@ -26,7 +26,7 @@ namespace custom_utils
         print_mutex.unlock();
     }
 
-    void print(std::string message, COLOR color)
+    void print(const std::string &message, COLOR color)
     {
         print_mutex.lock();
 
@@ -42,12 +42,12 @@ namespace custom_utils
         print("[" + getTimeString() + "] \n");
     }
 
-    void println(std::string message)
+    void println(const std::string &message)
     {
         print("[" + getTimeString() + "] " + message + "\n");
     }
 
-    void println(std::string message, COLOR color)
+    void println(const std::string &message, COLOR color)
     {
         print("[" + getTimeString() + "] " + message + "\n", color);
     }
@@ -107,7 +107,7 @@ namespace custom_utils
         return splittedStr;
     }
 
-    std::string vectorStrJoin(std::vector<std::string> inputVector, std::string seperator)
+    std::string vectorStrJoin(const std::vector<std::string> &inputVector, const std::string &seperator)
     {
         std::string output;
 
@@ -120,7 +120,7 @@ namespace custom_utils
         return output;
     }
 
-    std::string strToUpper(const std::string input)
+    std::string strToUpper(const std::string &input)
     {
         std::string output = "";
 
@@ -142,7 +142,7 @@ namespace custom_utils
         return output;
     }
 
-    bool strStartsWith(const std::string input, std::string prefix)
+    bool strStartsWith(const std::string &input, const std::string &prefix)
     {
         if (input.size() < prefix.size())
         {
@@ -162,7 +162,7 @@ namespace custom_utils
         return true;
     }
 
-    std::string replaceString(const std::string &original, std::string search, std::string replacement)
+    std::string replaceString(const std::string &original, const std::string &search, const std::string &replacement)
     {
         std::string output = "";
 

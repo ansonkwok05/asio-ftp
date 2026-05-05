@@ -109,7 +109,7 @@ namespace ftp
             });
     }
 
-    void session::handle_FTP_command(std::string &command, std::string &argument)
+    void session::handle_FTP_command(const std::string &command, const std::string &argument)
     {
         // check if command is supported
         if (std::find(FTP_COMMANDS.begin(), FTP_COMMANDS.end(), command) == FTP_COMMANDS.end())
@@ -798,7 +798,7 @@ namespace ftp
             });
     }
 
-    void session::data_send(std::string message)
+    void session::data_send(const std::string &message)
     {
         boost::asio::async_write(m_data_socket, boost::asio::buffer(message),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
@@ -1001,12 +1001,12 @@ namespace ftp
         m_data_socket.close();
     }
 
-    void session::println(std::string message)
+    void session::println(const std::string &message)
     {
         custom_utils::println("[FTP] [" + m_session_id + "] " + message);
     }
 
-    void session::println(std::string message, custom_utils::COLOR color)
+    void session::println(const std::string &message, custom_utils::COLOR color)
     {
         custom_utils::println("[FTP] [" + m_session_id + "] " + message, color);
     }

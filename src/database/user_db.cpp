@@ -18,7 +18,7 @@ namespace user_db
         check_table_exists();
     }
 
-    std::string user::get_id_by_name(std::string name)
+    std::string user::get_id_by_name(const std::string &name)
     {
         std::vector<std::string> result_vector = db.run_param_query("SELECT user_id FROM users WHERE name = ?", {name});
 
@@ -36,7 +36,7 @@ namespace user_db
         return db.run_query("SELECT name, password FROM users");
     }
 
-    bool user::check_password(std::string id, std::string password)
+    bool user::check_password(const std::string &id, const std::string &password)
     {
         std::vector<std::string> result_vector =
             db.run_param_query("SELECT password FROM users WHERE user_id = ?", {id});
@@ -54,7 +54,7 @@ namespace user_db
         return true;
     }
 
-    void user::create_user(std::string name, std::string password)
+    void user::create_user(const std::string &name, const std::string &password)
     {
         db.run_param_query("INSERT INTO users (user_id, name, password) VALUES (?, ?, ?)",
                            {custom_utils::generate_uuid_string(64), name, password});

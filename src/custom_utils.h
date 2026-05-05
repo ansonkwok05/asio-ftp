@@ -30,14 +30,14 @@ namespace custom_utils
      * print message to console
      * @param message string to print to console
      */
-    void print(std::string message);
+    void print(const std::string &message);
 
     /**
      * print message to console with color
      * @param message string to print to console
      * @param color enum representing the color
      */
-    void print(std::string message, COLOR color);
+    void print(const std::string &message, COLOR color);
 
     /**
      * print empty line to console
@@ -48,14 +48,14 @@ namespace custom_utils
      * print message to console with line break
      * @param message string to print to console
      */
-    void println(std::string message);
+    void println(const std::string &message);
 
     /**
      * print message to console with line break and color
      * @param message string to print to console
      * @param color enum representing the color
      */
-    void println(std::string message, COLOR color);
+    void println(const std::string &message, COLOR color);
 
     /**
      * set the color of cout by using ANSI color code
@@ -68,12 +68,12 @@ namespace custom_utils
     std::string getTimeString();
 
     std::vector<std::string> splitString(const std::string &inputString, char delimiter);
-    std::string vectorStrJoin(std::vector<std::string> inputVector, std::string seperator);
+    std::string vectorStrJoin(const std::vector<std::string> &inputVector, const std::string &seperator);
 
-    std::string strToUpper(const std::string input);
-    bool strStartsWith(const std::string input, std::string prefix);
+    std::string strToUpper(const std::string &input);
+    bool strStartsWith(const std::string &input, const std::string &prefix);
 
-    std::string replaceString(const std::string &original, std::string search, std::string replacement);
+    std::string replaceString(const std::string &original, const std::string &search, const std::string &replacement);
     std::string generate_uuid_string(size_t length);
 
     class stopwatch

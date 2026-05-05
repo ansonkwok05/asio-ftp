@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-std::pair<std::string, std::string> parse_buffer(std::vector<uint8_t> buffer, size_t bytes_received)
+std::pair<std::string, std::string> parse_buffer(const std::vector<uint8_t> &buffer, size_t bytes_received)
 {
     std::string parsed_string;
 
@@ -29,7 +29,7 @@ std::pair<std::string, std::string> parse_buffer(std::vector<uint8_t> buffer, si
     return {FTP_command, FTP_argument};
 }
 
-std::string return_parent_directory(std::string directory)
+std::string return_parent_directory(const std::string &directory)
 {
     // return root when already at root directory
     if (directory == "/")
@@ -60,7 +60,7 @@ std::string return_parent_directory(std::string directory)
 
 namespace
 {
-    std::string parse_metadata_time(std::string time_str)
+    std::string parse_metadata_time(const std::string &time_str)
     {
         // format: 2025-08-28 05:12:43 -> Aug 28 05:12
 
@@ -154,8 +154,8 @@ namespace
     }
 } // namespace
 
-std::string create_directory_list(std::vector<std::string> virtual_object_list, std::string target_directory,
-                                  std::string owner, bool include_special_entries)
+std::string create_directory_list(const std::vector<std::string> &virtual_object_list,
+                                  const std::string &target_directory, std::string owner, bool include_special_entries)
 {
     std::string directory_list = "";
 

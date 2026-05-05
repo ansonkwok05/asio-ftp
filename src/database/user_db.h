@@ -16,11 +16,11 @@ namespace user_db
 
         void initialize();
 
-        std::string get_id_by_name(std::string name);
+        std::string get_id_by_name(const std::string &name);
         std::vector<std::string> get_username_list();
 
-        bool check_password(std::string id, std::string password);
-        void create_user(std::string name, std::string password);
+        bool check_password(const std::string &id, const std::string &password);
+        void create_user(const std::string &name, const std::string &password);
 
     private:
         sqlite_wrapper::SQLiteDb db;

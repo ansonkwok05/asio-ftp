@@ -2,6 +2,7 @@
 #include "sqlite_wrapper.h"
 #include "fs_handler.h"
 #include "../custom_utils.h"
+#include "../ftp/helpers.h"
 
 #include <stdexcept>
 #include <vector>
@@ -19,8 +20,8 @@ namespace virtual_fs_db
         check_table_exists();
     }
 
-    std::vector<std::string> virtual_fs::get_object(std::string user_id, std::string object_name,
-                                                    std::string object_path)
+    std::vector<std::string> virtual_fs::get_object(const std::string &user_id, const std::string &object_name,
+                                                    const std::string &object_path)
     {
         return db.run_param_query(
             "SELECT object_id, name, path, size, modified_time, is_directory FROM virtual_objects WHERE "
@@ -28,15 +29,16 @@ namespace virtual_fs_db
             {user_id, object_name, object_path});
     }
 
-    std::vector<std::string> virtual_fs::get_object_list(std::string user_id)
+    std::vector<std::string> virtual_fs::get_object_list(const std::string &user_id)
     {
         return db.run_param_query(
             "SELECT object_id, name, path, size, modified_time, is_directory FROM virtual_objects WHERE user_id = ?",
             {user_id});
     }
 
-    std::string virtual_fs::create_virtual_object(std::string user_id, std::string object_name, std::string object_path,
-                                                  long long object_size, bool is_directory)
+    std::string virtual_fs::create_virtual_object(const std::string &user_id, const std::string &object_name,
+                                                  const std::string &object_path, long long object_size,
+                                                  bool is_directory)
     {
         // check if object path exists, when object path is not root directory
         if (object_path != "/")
@@ -76,8 +78,8 @@ namespace virtual_fs_db
         return object_id;
     }
 
-    std::string virtual_fs::update_virtual_object(std::string user_id, std::string object_name, std::string object_path,
-                                                  long long object_size)
+    std::string virtual_fs::update_virtual_object(const std::string &user_id, const std::string &object_name,
+                                                  const std::string &object_path, long long object_size)
     {
         std::vector<std::string> v_obj = get_object(user_id, object_name, object_path);
 
@@ -94,7 +96,8 @@ namespace virtual_fs_db
         return object_id;
     }
 
-    bool virtual_fs::remove_virtual_object(std::string user_id, std::string object_name, std::string object_path)
+    bool virtual_fs::remove_virtual_object(const std::string &user_id, const std::string &object_name,
+                                           const std::string &object_path)
     {
         std::vector<std::string> v_obj = get_object(user_id, object_name, object_path);
 
@@ -189,35 +192,6 @@ namespace virtual_fs_db
         }
 
         custom_utils::println("Verified \"virtual_objects\" table structure", custom_utils::COLOR::GREEN);
-    }
-
-    std::string virtual_fs::return_parent_directory(std::string directory)
-    {
-        // return root when already at root directory
-        if (directory == "/")
-            return "/";
-
-        std::vector<std::string> split_directory = custom_utils::splitString(directory, '/');
-
-        // input only have one child
-        // such as "/test" or "/one"
-        if (split_directory.size() <= 2)
-        {
-            return "/";
-        }
-
-        // combine split string except last, adding '/' in between
-        std::string parent = "";
-        for (int i = 0; i < split_directory.size() - 1; i++)
-        {
-            // ignore empty strings, they were "/" before splitting
-            if (split_directory.at(i) == "")
-                continue;
-
-            parent += "/" + split_directory.at(i);
-        }
-
-        return parent;
     }
 
 } // namespace virtual_fs_db

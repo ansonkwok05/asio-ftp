@@ -56,7 +56,7 @@ namespace sqlite_wrapper
          * @param sql_query sql query string
          * @return result as vector of string
          */
-        std::vector<std::string> run_query(std::string sql_query);
+        std::vector<std::string> run_query(const std::string &sql_query);
 
         /**
          * Runs a parameterized sql query
@@ -65,7 +65,7 @@ namespace sqlite_wrapper
          * @param params parameters
          * @return result as vector of string
          */
-        std::vector<std::string> run_param_query(std::string sql_query, std::vector<std::string> params);
+        std::vector<std::string> run_param_query(const std::string &sql_query, const std::vector<std::string> &params);
 
     private:
         bool allowLogging = false;
@@ -77,8 +77,8 @@ namespace sqlite_wrapper
         void check_db_file_exists();
         void set_optimizations();
 
-        void println(std::string message);
-        void println(std::string message, custom_utils::COLOR color);
+        void println(const std::string &message);
+        void println(const std::string &message, custom_utils::COLOR color);
 
         /**
          * A callback that copys return value into a SQLite_Context

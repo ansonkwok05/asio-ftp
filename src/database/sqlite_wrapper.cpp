@@ -45,7 +45,7 @@ namespace sqlite_wrapper
         set_optimizations();
     }
 
-    std::vector<std::string> SQLiteDb::run_query(std::string sql_query)
+    std::vector<std::string> SQLiteDb::run_query(const std::string &sql_query)
     {
         SQLite_Context context;
         char *errMsg;
@@ -65,7 +65,8 @@ namespace sqlite_wrapper
         return context.argv;
     }
 
-    std::vector<std::string> SQLiteDb::run_param_query(std::string sql_query, std::vector<std::string> params)
+    std::vector<std::string> SQLiteDb::run_param_query(const std::string &sql_query,
+                                                       const std::vector<std::string> &params)
     {
         sqlite3_stmt *stmt;
         int rc = sqlite3_prepare_v2(db, sql_query.c_str(), sql_query.length(), &stmt, nullptr);
@@ -186,14 +187,14 @@ namespace sqlite_wrapper
         println("Database optimizations set", custom_utils::COLOR::GREEN);
     }
 
-    void SQLiteDb::println(std::string message)
+    void SQLiteDb::println(const std::string &message)
     {
         if (!allowLogging)
             return;
         custom_utils::println(message);
     }
 
-    void SQLiteDb::println(std::string message, custom_utils::COLOR color)
+    void SQLiteDb::println(const std::string &message, custom_utils::COLOR color)
     {
         if (!allowLogging)
             return;

@@ -17,13 +17,15 @@ namespace virtual_fs_db
 
         void initialize();
 
-        std::vector<std::string> get_object(std::string user_id, std::string object_name, std::string object_path);
-        std::vector<std::string> get_object_list(std::string user_id);
-        std::string create_virtual_object(std::string user_id, std::string object_name, std::string object_path,
-                                          long long object_size, bool is_directory);
-        std::string update_virtual_object(std::string user_id, std::string object_name, std::string object_path,
-                                          long long object_size);
-        bool remove_virtual_object(std::string user_id, std::string object_name, std::string object_path);
+        std::vector<std::string> get_object(const std::string &user_id, const std::string &object_name,
+                                            const std::string &object_path);
+        std::vector<std::string> get_object_list(const std::string &user_id);
+        std::string create_virtual_object(const std::string &user_id, const std::string &object_name,
+                                          const std::string &object_path, long long object_size, bool is_directory);
+        std::string update_virtual_object(const std::string &user_id, const std::string &object_name,
+                                          const std::string &object_path, long long object_size);
+        bool remove_virtual_object(const std::string &user_id, const std::string &object_name,
+                                   const std::string &object_path);
 
     private:
         sqlite_wrapper::SQLiteDb db;
@@ -33,7 +35,5 @@ namespace virtual_fs_db
         void create_virtual_objects_table();
 
         void check_virtual_objects_table_structure();
-
-        std::string return_parent_directory(std::string directory);
     };
 } // namespace virtual_fs_db

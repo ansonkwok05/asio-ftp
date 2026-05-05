@@ -51,14 +51,14 @@ namespace ftps
         void control_send(std::string message);
         void control_receive();
         void handle_received_string();
-        void handle_FTP_command(std::string command, std::string argument);
+        void handle_FTP_command(const std::string &command, const std::string &argument);
 
         void control_close();
 
         void start_ftps_session(bool is_implicit);
 
-        void println(std::string message);
-        void println(std::string message, custom_utils::COLOR color);
+        void println(const std::string &message);
+        void println(const std::string &message, custom_utils::COLOR color);
     };
 
     class secure_session : public std::enable_shared_from_this<secure_session>
@@ -90,7 +90,7 @@ namespace ftps
 
         void control_receive();
         void handle_received_string();
-        void handle_FTP_command(std::string &command, std::string &argument);
+        void handle_FTP_command(const std::string &command, const std::string &argument);
 
         void control_close();
 
@@ -110,7 +110,7 @@ namespace ftps
 
         void data_acceptor_start_accept();
 
-        void data_send(std::string message);
+        void data_send(const std::string &message);
 
         void data_directory_listing();
 
@@ -131,7 +131,7 @@ namespace ftps
 
         void data_close();
 
-        void println(std::string message);
-        void println(std::string message, custom_utils::COLOR color);
+        void println(const std::string &message);
+        void println(const std::string &message, custom_utils::COLOR color);
     };
 } // namespace ftps

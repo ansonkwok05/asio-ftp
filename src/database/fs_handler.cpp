@@ -4,17 +4,17 @@
 
 namespace fs_handler
 {
-    bool directory_exists(std::string path_to_directory)
+    bool directory_exists(const std::string &path_to_directory)
     {
         return std::filesystem::is_directory(path_to_directory);
     }
 
-    bool file_exists(std::string file_name)
+    bool file_exists(const std::string &file_name)
     {
         return std::filesystem::exists(file_name);
     }
 
-    bool create_directory(std::string path_to_directory)
+    bool create_directory(const std::string &path_to_directory)
     {
         try
         {
@@ -31,7 +31,7 @@ namespace fs_handler
         return true;
     }
 
-    bool rename_file(std::string path_to_file, std::string new_path_to_file)
+    bool rename_file(const std::string &path_to_file, const std::string &new_path_to_file)
     {
         try
         {
@@ -44,7 +44,7 @@ namespace fs_handler
         }
     }
 
-    bool remove_file(std::string path_to_file)
+    bool remove_file(const std::string &path_to_file)
     {
         try
         {
