@@ -1,19 +1,18 @@
 #pragma once
 
+#include "constants.h"
+
 #include "../custom_utils.h"
 #include "../database/user_db.h"
 #include "../database/virtual_fs_db.h"
+
+#include <string>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/streambuf.hpp>
-
-#include <queue>
-#include <string>
-
-#include "constants.h"
 
 namespace ftps
 {
@@ -48,7 +47,6 @@ namespace ftps
         void wait_for_implicit();
 
         std::vector<uint8_t> m_buffer;
-        std::string m_received_string;
 
         void control_send(std::string message);
         void control_receive();
@@ -112,9 +110,7 @@ namespace ftps
 
         void data_acceptor_start_accept();
 
-        std::queue<std::string> m_data_send_queue;
         void data_send(std::string message);
-        void data_async_write();
 
         void data_directory_listing();
 
@@ -134,9 +130,6 @@ namespace ftps
         void data_async_send();
 
         void data_close();
-
-        std::string parse_metadata_time(std::string time_str);
-        std::string return_parent_directory(std::string directory);
 
         void println(std::string message);
         void println(std::string message, custom_utils::COLOR color);

@@ -1,16 +1,15 @@
 #pragma once
 
+#include "constants.h"
+
 #include "../custom_utils.h"
 #include "../database/user_db.h"
 #include "../database/virtual_fs_db.h"
 
-#include <queue>
 #include <string>
 #include <fstream>
 
 #include <boost/asio.hpp>
-
-#include "constants.h"
 
 namespace ftp
 {
@@ -35,7 +34,6 @@ namespace ftp
         boost::asio::ip::tcp::socket m_data_socket;
 
         std::vector<uint8_t> m_buffer;
-        std::string m_received_string;
 
         CONNECTION_STAGE m_connection_stage;
 
@@ -63,9 +61,7 @@ namespace ftp
 
         void data_acceptor_start_accept();
 
-        std::queue<std::string> m_data_send_queue;
         void data_send(std::string message);
-        void data_async_write();
 
         void data_directory_listing();
 
@@ -85,9 +81,6 @@ namespace ftp
         void data_async_send();
 
         void data_close();
-
-        std::string parse_metadata_time(std::string time_str);
-        std::string return_parent_directory(std::string directory);
 
         void println(std::string message);
         void println(std::string message, custom_utils::COLOR color);

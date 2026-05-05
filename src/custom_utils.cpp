@@ -8,19 +8,20 @@
 
 namespace custom_utils
 {
-    time_t t = time(NULL);
-    struct tm *time_struct = localtime(&t);
-    int offset_hour = time_struct->tm_gmtoff / 3600;
+    namespace
+    {
+        time_t t = time(NULL);
+        struct tm *time_struct = localtime(&t);
+        int offset_hour = time_struct->tm_gmtoff / 3600;
 
-    using std::cout;
-
-    std::mutex print_mutex;
+        std::mutex print_mutex;
+    } // namespace
 
     void print(std::string message)
     {
         print_mutex.lock();
 
-        cout << message;
+        std::cout << message;
 
         print_mutex.unlock();
     }
@@ -30,7 +31,7 @@ namespace custom_utils
         print_mutex.lock();
 
         setPrintColor(color);
-        cout << message;
+        std::cout << message;
         resetPrintColor();
 
         print_mutex.unlock();
@@ -53,12 +54,12 @@ namespace custom_utils
 
     void setPrintColor(COLOR color)
     {
-        cout << "\033[" << static_cast<int>(color) << "m";
+        std::cout << "\033[" << static_cast<int>(color) << "m";
     }
 
     void resetPrintColor()
     {
-        cout << "\033[0m";
+        std::cout << "\033[0m";
     }
 
     std::string getTimeString()

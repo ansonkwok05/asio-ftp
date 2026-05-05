@@ -1,6 +1,10 @@
-
 #include "secure_session.h"
+
+#include "helpers.h"
 #include "../custom_utils.h"
+
+#include <string>
+#include <fstream>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
@@ -13,9 +17,6 @@
 #include <boost/asio/ssl/stream_base.hpp>
 #include <boost/asio/ssl/stream.hpp>
 #include <boost/asio/read.hpp>
-
-#include <string>
-#include <fstream>
 
 namespace ftps
 {
@@ -108,35 +109,12 @@ namespace ftps
                     return;
                 }
 
-                self->m_received_string = "";
+                auto [FTP_command, FTP_argument] = parse_buffer(self->m_buffer, bytes_received);
 
-                // remove unwanted data
-                for (size_t i = 0; i < bytes_received - 2; i++)
-                {
-                    self->m_received_string += self->m_buffer.at(i);
-                }
+                self->println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
 
-                self->handle_received_string();
+                self->handle_FTP_command(FTP_command, FTP_argument);
             });
-    }
-
-    void adaptive_session::handle_received_string()
-    {
-        std::vector<std::string> split_received_string = custom_utils::splitString(m_received_string, ' ');
-
-        std::string FTP_command = split_received_string[0];
-        std::string FTP_argument = "";
-
-        if (split_received_string.size() > 1)
-        {
-            // received message has argument(s)
-            FTP_argument = custom_utils::vectorStrJoin(
-                std::vector<std::string>(split_received_string.begin() + 1, split_received_string.end()), " ");
-        }
-
-        println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
-
-        handle_FTP_command(FTP_command, FTP_argument);
     }
 
     void adaptive_session::handle_FTP_command(std::string command, std::string argument)
@@ -289,41 +267,12 @@ namespace ftps
                     return;
                 }
 
-                self->m_received_string = "";
+                auto [FTP_command, FTP_argument] = parse_buffer(self->m_buffer, bytes_received);
 
-                // remove unwanted data
-                for (size_t i = 0; i < bytes_received - 2; i++)
-                {
-                    self->m_received_string += self->m_buffer.at(i);
-                }
+                self->println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
 
-                self->handle_received_string();
+                self->handle_FTP_command(FTP_command, FTP_argument);
             });
-    }
-
-    void secure_session::handle_received_string()
-    {
-        std::vector<std::string> split_received_string = custom_utils::splitString(m_received_string, ' ');
-
-        std::string FTP_command = split_received_string[0];
-        std::string FTP_argument = "";
-
-        // convert commands to uppercase
-        for (auto &c : FTP_command)
-        {
-            c = toupper(c);
-        }
-
-        if (split_received_string.size() > 1)
-        {
-            // received message has argument(s)
-            FTP_argument = custom_utils::vectorStrJoin(
-                std::vector<std::string>(split_received_string.begin() + 1, split_received_string.end()), " ");
-        }
-
-        println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
-
-        handle_FTP_command(FTP_command, FTP_argument);
     }
 
     void secure_session::handle_FTP_command(std::string &command, std::string &argument)
@@ -1027,23 +976,7 @@ namespace ftps
 
     void secure_session::data_send(std::string message)
     {
-        message += "\r\n";
-
-        m_data_send_queue.push(message);
-    }
-
-    void secure_session::data_async_write()
-    {
-        if (m_data_send_queue.size() == 0)
-        {
-            // inform client through control channel that data channel finished
-            m_pending_directory_list = "";
-            control_send("226 Transferred.");
-            data_close();
-            return;
-        }
-
-        boost::asio::async_write(m_data_socket, boost::asio::buffer(m_data_send_queue.front()),
+        boost::asio::async_write(m_data_socket, boost::asio::buffer(message),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
                                      if (ec)
                                      {
@@ -1052,8 +985,10 @@ namespace ftps
                                          return;
                                      }
 
-                                     self->m_data_send_queue.pop();
-                                     self->data_async_write();
+                                     // inform client through control channel that data channel finished
+                                     self->m_pending_directory_list = "";
+                                     self->control_send("226 Transferred.");
+                                     self->data_close();
                                  });
     }
 
@@ -1061,55 +996,11 @@ namespace ftps
     {
         std::vector<std::string> v_object_list = m_virtual_fs.get_object_list(m_userid);
 
-        // also send "." and ".." entries
-        if (m_pending_directory_list_all)
-        {
-            m_pending_directory_list_all = false;
-            data_send("drwxrwxrwx 1 home home 0 Jan 1 00:00 .");
-            data_send("drwxrwxrwx 1 home home 0 Jan 1 00:00 ..");
-        }
+        // send directory list over data channel
+        data_send(
+            create_directory_list(v_object_list, m_pending_directory_list, m_username, m_pending_directory_list_all));
 
-        size_t i = 2;
-        while (i < v_object_list.size())
-        {
-            if (v_object_list[i] != m_pending_directory_list)
-            {
-                i += 6;
-                continue;
-            }
-
-            std::string listing_format = "";
-
-            // is file
-            if (v_object_list[i + 3] == "0")
-            {
-                listing_format += "-rwxrwxrwx 1 ";
-            }
-            else if (v_object_list[i + 3] == "1")
-            {
-                // is directory
-                listing_format += "drwxrwxrwx 1 ";
-            }
-
-            // file owner
-            listing_format += m_username + " " + m_username + " ";
-
-            // file_size
-            listing_format += v_object_list[i + 1] + " ";
-
-            // modified_time
-            listing_format += parse_metadata_time(v_object_list[i + 2]) + " ";
-
-            // file_name
-            listing_format += v_object_list[i - 1];
-
-            data_send(listing_format);
-
-            i += 6;
-        }
-
-        // start sending directory list
-        data_async_write();
+        m_pending_directory_list_all = false;
     }
 
     void secure_session::data_receive_file()
@@ -1296,128 +1187,6 @@ namespace ftps
             }
             m_data_socket.next_layer().close();
         });
-    }
-
-    std::string secure_session::parse_metadata_time(std::string time_str)
-    {
-        // format: 2025-08-28 05:12:43 -> Aug 28 05:12
-
-        std::string parsedStr = "";
-
-        switch (time_str.at(5))
-        {
-        // < 10
-        case '0': {
-            switch (time_str.at(6))
-            {
-            // 01
-            case '1': {
-                parsedStr += "Jan ";
-                break;
-            }
-            // 02
-            case '2': {
-                parsedStr += "Feb ";
-                break;
-            }
-            // 03
-            case '3': {
-                parsedStr += "Mar ";
-                break;
-            }
-            // 04
-            case '4': {
-                parsedStr += "Apr ";
-                break;
-            }
-            // 05
-            case '5': {
-                parsedStr += "May ";
-                break;
-            }
-            // 06
-            case '6': {
-                parsedStr += "Jun ";
-                break;
-            }
-            // 07
-            case '7': {
-                parsedStr += "July ";
-                break;
-            }
-            // 08
-            case '8': {
-                parsedStr += "Aug ";
-                break;
-            }
-            // 09
-            case '9': {
-                parsedStr += "Sep ";
-                break;
-            }
-            }
-            break;
-        }
-        // >= 10
-        case '1': {
-            switch (time_str.at(6))
-            {
-            // 10
-            case '0': {
-                parsedStr += "Oct ";
-                break;
-            }
-            // 11
-            case '1': {
-                parsedStr += "Nov ";
-                break;
-            }
-            // 12
-            case '2': {
-                parsedStr += "Dec ";
-                break;
-            }
-            }
-            break;
-        }
-        }
-
-        // add day
-        parsedStr += time_str.substr(8, 2) + " ";
-
-        // add hour:minute
-        parsedStr += time_str.substr(11, 5);
-
-        return parsedStr;
-    }
-
-    std::string secure_session::return_parent_directory(std::string directory)
-    {
-        // return root when already at root directory
-        if (directory == "/")
-            return "/";
-
-        std::vector<std::string> split_directory = custom_utils::splitString(directory, '/');
-
-        // input only have one child
-        // such as "/test" or "/one"
-        if (split_directory.size() <= 2)
-        {
-            return "/";
-        }
-
-        // combine split string except last, adding '/' in between
-        std::string parent = "";
-        for (int i = 0; i < split_directory.size() - 1; i++)
-        {
-            // ignore empty strings, they were "/" before splitting
-            if (split_directory.at(i) == "")
-                continue;
-
-            parent += "/" + split_directory.at(i);
-        }
-
-        return parent;
     }
 
     void secure_session::println(std::string message)
