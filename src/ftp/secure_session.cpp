@@ -811,13 +811,24 @@ namespace ftps
                 }
 
                 // set to path
-                if (m_working_directory == "/")
+                // handle different argument type
+                // type 1: filename
+                // type 2: /filename
+
+                if (argument[0] != '/')
                 {
-                    m_pending_write_file = m_working_directory + argument;
+                    if (m_working_directory == "/")
+                    {
+                        m_pending_write_file = m_working_directory + argument;
+                    }
+                    else
+                    {
+                        m_pending_write_file = m_working_directory + "/" + argument;
+                    }
                 }
                 else
                 {
-                    m_pending_write_file = m_working_directory + "/" + argument;
+                    m_pending_write_file = argument;
                 }
 
                 // don't allow uploads to a directory that doesn't exists
