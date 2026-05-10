@@ -2,7 +2,7 @@
 #include "../config/parser.h"
 #include "../custom_utils.h"
 #include "../database/fs_handler.h"
-#include "session.h"
+#include "insecure_session.h"
 #include "secure_session.h"
 
 #include <boost/asio.hpp>

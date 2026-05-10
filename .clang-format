@@ -20,5 +20,7 @@ BraceWrapping:
   SplitEmptyFunction: true
   SplitEmptyRecord: true
   SplitEmptyNamespace: true
+BreakTemplateDeclarations: Yes
 NamespaceIndentation: All
-SortIncludes: Never
+SortIncludes:
+  Enabled: false
