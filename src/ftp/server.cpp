@@ -143,7 +143,7 @@ namespace ftp
                 return;
             }
 
-            std::make_shared<ftps::adaptive_session>(std::move(m_socket), m_ssl_context)->start();
+            std::make_shared<ftps::secure_session>(std::move(m_socket), m_ssl_context)->start();
 
             this->start_accepting_secure();
         });

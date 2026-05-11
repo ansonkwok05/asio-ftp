@@ -17,14 +17,12 @@ namespace ftps
     // server welcome message for secure only session
     static constexpr char FTP_WELCOMEMESSAGE[] = "220 Welcome. Encryption required.";
 
-    // temporal session to handle explicit/implicit switching
-    class adaptive_session : public std::enable_shared_from_this<adaptive_session>
+    class secure_session : public base_session, public std::enable_shared_from_this<secure_session>
     {
     public:
-        adaptive_session(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context &ssl_context);
-        ~adaptive_session();
+        secure_session(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context &ssl_context);
 
-        void start();
+        void start() override;
 
     private:
         // interval time to check for client responses
@@ -33,43 +31,26 @@ namespace ftps
         // time to wait for an implicit connection (tls handshake)
         static constexpr int IMPLICIT_TIMEOUT_MS = 500;
 
+        // timer for waiting imlicit connection
         custom_utils::stopwatch m_stopwatch;
         boost::asio::steady_timer m_timer;
 
-        // session identifier, for logging purposes
-        std::string m_session_id;
-
-        boost::asio::ssl::context &m_ssl_context;
-        boost::asio::ip::tcp::socket m_control_socket;
+        // temporal socket to handle explicit/implicit switching
+        boost::asio::ip::tcp::socket m_probe_socket;
 
         void wait_for_implicit();
 
-        std::vector<uint8_t> m_buffer;
+        void probe_send(std::string message);
+        void probe_receive();
 
-        void control_send(std::string message);
-        void control_receive();
-        void handle_received_string();
-        void handle_FTP_command(const std::string &command, const std::string &argument);
+        void handle_auth(const std::string &command, const std::string &argument);
 
-        void control_close();
+        void probe_close();
 
-        void start_ftps_session(bool is_implicit);
-
-        void println(const std::string &message);
-        void println(const std::string &message, custom_utils::COLOR color);
-    };
-
-    class secure_session : public base_session, public std::enable_shared_from_this<secure_session>
-    {
-    public:
-        secure_session(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context &ssl_context, bool is_implicit);
-
-        void start() override;
-
-    private:
-        bool m_is_implicit;
+        void start_secure(bool is_implicit);
 
         boost::asio::ssl::context &m_ssl_context;
+
         boost::asio::ssl::stream<boost::asio::ip::tcp::socket> m_control_socket;
 
         boost::asio::ssl::stream<boost::asio::ip::tcp::socket> m_data_socket;

@@ -21,43 +21,40 @@
 
 namespace ftps
 {
-    adaptive_session::adaptive_session(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context &ssl_context)
-        : m_ssl_context(ssl_context), m_control_socket(std::move(socket)), m_buffer(MESSAGE_BUFFER_SIZE),
-          m_timer(socket.get_executor(), std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS))
+    secure_session::secure_session(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context &ssl_context)
+        : base_session(socket.get_executor()),
+          m_timer(socket.get_executor(), std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS)),
+          m_probe_socket(std::move(socket)), m_ssl_context(ssl_context),
+          m_control_socket(socket.get_executor(), m_ssl_context), m_data_socket(socket.get_executor(), m_ssl_context)
     {
-        m_session_id = custom_utils::generate_uuid_string(8);
+        m_session_type = "FTP ";
 
-        println("session created for " + m_control_socket.remote_endpoint().address().to_string() + ":" +
-                    std::to_string(m_control_socket.remote_endpoint().port()),
+        println("session created for " + m_probe_socket.lowest_layer().remote_endpoint().address().to_string() + ":" +
+                    std::to_string(m_probe_socket.lowest_layer().remote_endpoint().port()),
                 custom_utils::COLOR::BRIGHTBLACK);
     }
 
-    adaptive_session::~adaptive_session()
-    {
-        println("session destroyed", custom_utils::COLOR::BRIGHTBLACK);
-    }
-
-    void adaptive_session::start()
+    void secure_session::start()
     {
         m_stopwatch.start();
         wait_for_implicit();
     }
 
-    void adaptive_session::wait_for_implicit()
+    void secure_session::wait_for_implicit()
     {
         if (m_stopwatch.lapMs() > IMPLICIT_TIMEOUT_MS)
         {
             // timeout, enter explicit mode
-            control_send(FTP_WELCOMEMESSAGE);
-            control_receive();
+            probe_send(FTP_WELCOMEMESSAGE);
+            probe_receive();
             return;
         }
 
         // wait for implicit ClientHello
-        if (m_control_socket.available() > 100)
+        if (m_probe_socket.available() > 100)
         {
             // enter implicit mode
-            start_ftps_session(true);
+            start_secure(true);
             return;
         }
 
@@ -65,10 +62,10 @@ namespace ftps
         m_timer.async_wait([self = shared_from_this()](boost::system::error_code ec) { self->wait_for_implicit(); });
     }
 
-    void adaptive_session::control_send(std::string message)
+    void secure_session::probe_send(std::string message)
     {
         message += "\r\n";
-        boost::asio::async_write(m_control_socket, boost::asio::buffer(message),
+        boost::asio::async_write(m_probe_socket, boost::asio::buffer(message),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
                                      if (ec)
                                      {
@@ -79,9 +76,9 @@ namespace ftps
                                  });
     }
 
-    void adaptive_session::control_receive()
+    void secure_session::probe_receive()
     {
-        m_control_socket.async_read_some(
+        m_probe_socket.async_read_some(
             boost::asio::buffer(m_buffer, MESSAGE_BUFFER_SIZE),
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
                 if (ec)
@@ -90,7 +87,7 @@ namespace ftps
                     {
                         // client disconnected
 
-                        self->control_close();
+                        self->probe_close();
                         return;
                     }
                     self->println("Unknown read_some error -> " + ec.message(), custom_utils::COLOR::YELLOW);
@@ -114,16 +111,17 @@ namespace ftps
 
                 self->println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
 
-                self->handle_FTP_command(FTP_command, FTP_argument);
+                self->handle_auth(FTP_command, FTP_argument);
             });
     }
 
-    void adaptive_session::handle_FTP_command(const std::string &command, const std::string &argument)
+    void secure_session::handle_auth(const std::string &command, const std::string &argument)
     {
         if (command != "AUTH")
         {
             // client not starting a secure connection
-            control_send("503 Not AUTH.");
+            probe_send("503 Not AUTH.");
+            probe_receive();
             return;
         }
 
@@ -131,61 +129,36 @@ namespace ftps
         if (argument != "TLS" && argument != "SSL")
         {
             // unrecognized security extensions
-            control_send("502 Not supported.");
+            probe_send("502 Not supported.");
+            probe_receive();
             return;
         }
 
-        control_send("234 Proceed.");
-        start_ftps_session(false);
+        probe_send("234 Proceed.");
+        start_secure(false);
     }
 
-    void adaptive_session::start_ftps_session(bool is_implicit)
+    void secure_session::probe_close()
     {
-        std::make_shared<ftps::secure_session>(std::move(m_control_socket), m_ssl_context, is_implicit)->start();
+        boost::system::error_code ec = m_probe_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
+        m_probe_socket.close();
     }
 
-    void adaptive_session::control_close()
-    {
-        boost::system::error_code ec = m_control_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
-        m_control_socket.close();
-    }
-
-    void adaptive_session::println(const std::string &message)
-    {
-        custom_utils::println("[FTP ] [" + m_session_id + "] " + message);
-    }
-
-    void adaptive_session::println(const std::string &message, custom_utils::COLOR color)
-    {
-        custom_utils::println("[FTP ] [" + m_session_id + "] " + message, color);
-    }
-
-    secure_session::secure_session(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context &ssl_context,
-                                   bool is_implicit)
-        : base_session(socket.get_executor()), m_ssl_context(ssl_context),
-          m_control_socket(std::move(socket), m_ssl_context), m_data_socket(socket.get_executor(), m_ssl_context)
+    void secure_session::start_secure(bool is_implicit)
     {
         m_session_type = "FTPS";
 
-        // will send welcome message if implicit mode
-        m_is_implicit = is_implicit;
-
-        println("session created for " + m_control_socket.lowest_layer().remote_endpoint().address().to_string() + ":" +
-                    std::to_string(m_control_socket.lowest_layer().remote_endpoint().port()),
-                custom_utils::COLOR::BRIGHTBLACK);
-    }
-
-    void secure_session::start()
-    {
+        m_control_socket =
+            boost::asio::ssl::stream<boost::asio::ip::tcp::socket>(std::move(m_probe_socket), m_ssl_context);
         m_control_socket.async_handshake(boost::asio::ssl::stream_base::handshake_type::server,
-                                         [self = shared_from_this()](boost::system::error_code ec) {
+                                         [self = shared_from_this(), is_implicit](boost::system::error_code ec) {
                                              if (ec)
                                              {
                                                  self->println("handshake error", custom_utils::COLOR::RED);
                                                  return;
                                              }
 
-                                             if (self->m_is_implicit)
+                                             if (is_implicit)
                                              {
                                                  // clients in implicit mode haven't seen the welcome message yet
                                                  self->control_send(FTP_WELCOMEMESSAGE);
