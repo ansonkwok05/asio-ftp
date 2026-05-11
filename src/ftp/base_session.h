@@ -35,7 +35,8 @@ protected:
     void handle_control_send_callback(boost::system::error_code ec, size_t bytes_written);
 
     virtual void control_receive() = 0;
-    void handle_control_receive_callback(boost::system::error_code ec, size_t bytes_received);
+    std::pair<std::string, std::string> handle_control_receive_callback(boost::system::error_code ec,
+                                                                        size_t bytes_received);
 
     void handle_command(const std::string &command, const std::string &argument);
     virtual void run_PASV() = 0;
@@ -85,4 +86,16 @@ protected:
 
     void println(const std::string &message);
     void println(const std::string &message, custom_utils::COLOR color);
+
+private:
+    std::pair<std::string, std::string> parse_buffer(const std::vector<uint8_t> &buffer, size_t bytes_received);
+
+    std::string create_directory_list(const std::vector<std::string> &virtual_object_list,
+                                      const std::string &target_directory, std::string owner,
+                                      bool include_special_entries);
 };
+
+namespace
+{
+    std::string parse_metadata_time(const std::string &time_str);
+} // namespace

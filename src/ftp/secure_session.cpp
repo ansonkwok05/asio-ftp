@@ -81,33 +81,7 @@ namespace ftps
         m_probe_socket.async_read_some(
             boost::asio::buffer(m_buffer, MESSAGE_BUFFER_SIZE),
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
-                if (ec)
-                {
-                    if (ec == boost::asio::error::eof || ec == boost::asio::ssl::error::stream_truncated)
-                    {
-                        // client disconnected
-
-                        self->probe_close();
-                        return;
-                    }
-                    self->println("Unknown read_some error -> " + ec.message(), custom_utils::COLOR::YELLOW);
-                    return;
-                }
-
-                if (bytes_received == 1 || bytes_received == 2)
-                {
-                    self->println("received incomplete message (length " + std::to_string(bytes_received) +
-                                  "), disconnecting");
-                    return;
-                }
-
-                if (bytes_received == 0)
-                {
-                    self->println("received nothing, disconnecting");
-                    return;
-                }
-
-                auto [FTP_command, FTP_argument] = parse_buffer(self->m_buffer, bytes_received);
+                auto [FTP_command, FTP_argument] = self->handle_control_receive_callback(ec, bytes_received);
 
                 self->println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
 
@@ -185,7 +159,11 @@ namespace ftps
         m_control_socket.async_read_some(
             boost::asio::buffer(m_buffer, MESSAGE_BUFFER_SIZE),
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
-                self->handle_control_receive_callback(ec, bytes_received);
+                auto [FTP_command, FTP_argument] = self->handle_control_receive_callback(ec, bytes_received);
+
+                self->println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
+
+                self->handle_command(FTP_command, FTP_argument);
             });
     }
 

@@ -48,37 +48,27 @@ void base_session::handle_control_send_callback(boost::system::error_code ec, si
     }
 }
 
-void base_session::handle_control_receive_callback(boost::system::error_code ec, size_t bytes_received)
+std::pair<std::string, std::string> base_session::handle_control_receive_callback(boost::system::error_code ec,
+                                                                                  size_t bytes_received)
 {
     if (ec)
     {
-        if (ec == boost::asio::error::eof || ec == boost::asio::ssl::error::stream_truncated)
+        if (ec != boost::asio::error::eof && ec != boost::asio::ssl::error::stream_truncated)
         {
-            // client disconnected
-            control_close();
-            return;
+            println("Unknown async_read_some error -> " + ec.message(), custom_utils::COLOR::YELLOW);
         }
-        println("Unknown read_some error -> " + ec.message(), custom_utils::COLOR::YELLOW);
-        return;
+
+        // disconnected
+        return {"", ""};
     }
 
-    if (bytes_received == 1 || bytes_received == 2)
+    // received incomplete message (message must contain at least "\r\n")
+    if (bytes_received <= 2)
     {
-        println("received incomplete message (length " + std::to_string(bytes_received) + "), disconnecting");
-        return;
+        return {"", ""};
     }
 
-    if (bytes_received == 0)
-    {
-        println("received nothing, disconnecting");
-        return;
-    }
-
-    auto [FTP_command, FTP_argument] = parse_buffer(m_buffer, bytes_received);
-
-    println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
-
-    handle_command(FTP_command, FTP_argument);
+    return parse_buffer(m_buffer, bytes_received);
 }
 
 void base_session::handle_command(const std::string &command, const std::string &argument)
@@ -626,4 +616,180 @@ void base_session::println(const std::string &message)
 void base_session::println(const std::string &message, custom_utils::COLOR color)
 {
     custom_utils::println("[" + m_session_type + "] [" + m_session_id + "] " + message, color);
+}
+
+std::pair<std::string, std::string> base_session::parse_buffer(const std::vector<uint8_t> &buffer,
+                                                               size_t bytes_received)
+{
+    std::string parsed_string;
+
+    for (size_t i = 0; i < bytes_received - 2; i++)
+    {
+        parsed_string += buffer.at(i);
+    }
+
+    std::vector<std::string> split_string = custom_utils::splitString(parsed_string, ' ');
+
+    std::string FTP_command = split_string[0];
+    std::string FTP_argument = "";
+
+    if (split_string.size() > 1)
+    {
+        // received message has argument(s)
+        FTP_argument =
+            custom_utils::vectorStrJoin(std::vector<std::string>(split_string.begin() + 1, split_string.end()), " ");
+    }
+
+    return {FTP_command, FTP_argument};
+}
+
+namespace
+{
+    std::string parse_metadata_time(const std::string &time_str)
+    {
+        // format: 2025-08-28 05:12:43 -> Aug 28 05:12
+
+        std::string parsedStr = "";
+
+        switch (time_str.at(5))
+        {
+        // < 10
+        case '0': {
+            switch (time_str.at(6))
+            {
+            // 01
+            case '1': {
+                parsedStr += "Jan ";
+                break;
+            }
+            // 02
+            case '2': {
+                parsedStr += "Feb ";
+                break;
+            }
+            // 03
+            case '3': {
+                parsedStr += "Mar ";
+                break;
+            }
+            // 04
+            case '4': {
+                parsedStr += "Apr ";
+                break;
+            }
+            // 05
+            case '5': {
+                parsedStr += "May ";
+                break;
+            }
+            // 06
+            case '6': {
+                parsedStr += "Jun ";
+                break;
+            }
+            // 07
+            case '7': {
+                parsedStr += "July ";
+                break;
+            }
+            // 08
+            case '8': {
+                parsedStr += "Aug ";
+                break;
+            }
+            // 09
+            case '9': {
+                parsedStr += "Sep ";
+                break;
+            }
+            }
+            break;
+        }
+        // >= 10
+        case '1': {
+            switch (time_str.at(6))
+            {
+            // 10
+            case '0': {
+                parsedStr += "Oct ";
+                break;
+            }
+            // 11
+            case '1': {
+                parsedStr += "Nov ";
+                break;
+            }
+            // 12
+            case '2': {
+                parsedStr += "Dec ";
+                break;
+            }
+            }
+            break;
+        }
+        }
+
+        // add day
+        parsedStr += time_str.substr(8, 2) + " ";
+
+        // add hour:minute
+        parsedStr += time_str.substr(11, 5);
+
+        return parsedStr;
+    }
+} // namespace
+
+std::string base_session::create_directory_list(const std::vector<std::string> &virtual_object_list,
+                                                const std::string &target_directory, std::string owner,
+                                                bool include_special_entries)
+{
+    std::string directory_list = "";
+
+    // also send "." and ".." entries
+    if (include_special_entries)
+    {
+        directory_list += "drwxrwxrwx 1 " + owner + " " + owner + " 0 Jan 1 00:00 .\r\n";
+        directory_list += "drwxrwxrwx 1 " + owner + " " + owner + " 0 Jan 1 00:00 ..\r\n";
+    }
+
+    size_t i = 2;
+    while (i < virtual_object_list.size())
+    {
+        if (virtual_object_list[i] != target_directory)
+        {
+            i += 6;
+            continue;
+        }
+
+        std::string listing_format = "";
+
+        // is file
+        if (virtual_object_list[i + 3] == "0")
+        {
+            listing_format += "-rwxrwxrwx 1 ";
+        }
+        else if (virtual_object_list[i + 3] == "1")
+        {
+            // is directory
+            listing_format += "drwxrwxrwx 1 ";
+        }
+
+        // file owner
+        listing_format += owner + " " + owner + " ";
+
+        // file_size
+        listing_format += virtual_object_list[i + 1] + " ";
+
+        // modified_time
+        listing_format += parse_metadata_time(virtual_object_list[i + 2]) + " ";
+
+        // file_name
+        listing_format += virtual_object_list[i - 1];
+
+        directory_list += listing_format + "\r\n";
+
+        i += 6;
+    }
+
+    return directory_list;
 }
