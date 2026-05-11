@@ -1,5 +1,6 @@
 #include "user_db.h"
 #include "sqlite_wrapper.h"
+#include "../helpers.h"
 #include "../custom_utils.h"
 
 #include <stdexcept>
@@ -57,7 +58,7 @@ namespace user_db
     void user::create_user(const std::string &name, const std::string &password)
     {
         db.run_param_query("INSERT INTO users (user_id, name, password) VALUES (?, ?, ?)",
-                           {custom_utils::generate_uuid_string(64), name, password});
+                           {generate_uuid_string(64), name, password});
     }
 
     void user::check_table_exists()

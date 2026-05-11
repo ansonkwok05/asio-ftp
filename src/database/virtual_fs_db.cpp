@@ -2,7 +2,7 @@
 #include "sqlite_wrapper.h"
 #include "fs_handler.h"
 #include "../custom_utils.h"
-#include "../ftp/helpers.h"
+#include "../helpers.h"
 
 #include <stdexcept>
 #include <vector>
@@ -43,8 +43,8 @@ namespace virtual_fs_db
         // check if object path exists, when object path is not root directory
         if (object_path != "/")
         {
-            std::vector<std::string> v_object = get_object(user_id, custom_utils::splitString(object_path, '/').back(),
-                                                           return_parent_directory(object_path));
+            std::vector<std::string> v_object =
+                get_object(user_id, get_basename(object_path), get_parent_path(object_path));
 
             if (v_object.size() == 0)
             {
@@ -65,7 +65,7 @@ namespace virtual_fs_db
             return "";
         }
 
-        std::string object_id = custom_utils::generate_uuid_string(64);
+        std::string object_id = generate_uuid_string(64);
 
         // todo: use fs_handler to create file
         // manage it all here, move code from ftps_session

@@ -1,7 +1,7 @@
 #include "secure_session.h"
 
 #include "base_session.h"
-#include "helpers.h"
+#include "../helpers.h"
 #include "../custom_utils.h"
 
 #include <string>
@@ -161,8 +161,6 @@ namespace ftps
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
                 auto [FTP_command, FTP_argument] = self->handle_control_receive_callback(ec, bytes_received);
 
-                self->println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
-
                 self->handle_command(FTP_command, FTP_argument);
             });
     }
@@ -174,8 +172,8 @@ namespace ftps
         // forming response
         std::string response_format = "227 Entering Passive Mode (";
 
-        response_format += custom_utils::replaceString(
-            m_control_socket.lowest_layer().local_endpoint().address().to_string(), ".", ",");
+        response_format +=
+            string_replace(m_control_socket.lowest_layer().local_endpoint().address().to_string(), ".", ",");
 
         response_format += "," + std::to_string(port / 256) + "," + std::to_string(port % 256) + ")";
 
@@ -256,10 +254,10 @@ namespace ftps
         }
 
         // don't allow uploads to a directory that doesn't exists
-        std::string parent_directory = return_parent_directory(m_pending_write_file);
-        std::string parent_of_parent_directory = return_parent_directory(parent_directory);
+        std::string parent_directory = get_parent_path(m_pending_write_file);
+        std::string parent_of_parent_directory = get_parent_path(parent_directory);
 
-        std::string parent_directory_name = custom_utils::splitString(parent_directory, '/').back();
+        std::string parent_directory_name = get_basename(parent_directory);
 
         // if not root directory and parent directory not found
         if (parent_directory != "/" &&
@@ -307,33 +305,33 @@ namespace ftps
         // type 2 "/test/one"   // absolute path
         // type 3 "test/one"    // relative path
 
-        std::string file_path;
-        std::string file_name;
-        if (custom_utils::splitString(argument, '/').size() == 1)
+        std::string object_path;
+        std::string object_name;
+        if (string_split(argument, "/").size() == 1)
         {
             // type 1
-            file_path = m_working_directory;
-            file_name = argument;
+            object_path = m_working_directory;
+            object_name = argument;
         }
-        else if (custom_utils::strStartsWith(argument, "/"))
+        else if (string_starts_with(argument, "/"))
         {
             // type 2
-            file_path = return_parent_directory(argument);
-            file_name = custom_utils::splitString(argument, '/').back();
+            object_path = get_parent_path(argument);
+            object_name = get_basename(argument);
         }
         else
         {
             // type 3
 
-            std::vector<std::string> split_path = custom_utils::splitString(argument, '/');
+            std::vector<std::string> split_path = string_split(argument, "/");
 
-            file_name = split_path.back();
+            object_name = split_path.back();
 
             split_path.pop_back();
-            file_path = m_working_directory + custom_utils::vectorStrJoin(split_path, "/");
+            object_path = m_working_directory + string_join(split_path, "/");
         }
 
-        std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, file_name, file_path);
+        std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, object_name, object_path);
         if (v_obj.size() == 0)
         {
             // file does not exists

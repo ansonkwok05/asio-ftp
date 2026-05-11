@@ -1,18 +1,19 @@
 #include "base_session.h"
 #include "constants.h"
-#include "helpers.h"
-
+#include "../helpers.h"
 #include "../custom_utils.h"
 
 #include <fstream>
 
+#include <boost/asio/error.hpp>
+#include <boost/system/detail/error_code.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/error.hpp>
 
 base_session::base_session(boost::asio::any_io_executor executor)
     : m_data_socket_acceptor(executor), m_buffer(MESSAGE_BUFFER_SIZE), m_receive_buffer(RECEIVE_BUFFER_SIZE)
 {
-    m_session_id = custom_utils::generate_uuid_string(8);
+    m_session_id = generate_uuid_string(8);
 
     // prepare acceptor for data_socket connection acception
     {
@@ -43,7 +44,12 @@ void base_session::handle_control_send_callback(boost::system::error_code ec, si
 {
     if (ec)
     {
-        println("Unknown async_write error -> " + ec.message(), custom_utils::COLOR::YELLOW);
+        if (ec != boost::asio::error::broken_pipe)
+        {
+            println("Unknown async_write error -> " + ec.message(), custom_utils::COLOR::YELLOW);
+        }
+
+        // disconnect
         return;
     }
 }
@@ -73,6 +79,9 @@ std::pair<std::string, std::string> base_session::handle_control_receive_callbac
 
 void base_session::handle_command(const std::string &command, const std::string &argument)
 {
+    if (command == "")
+        return;
+
     // check if command is supported
     if (std::find(FTP_COMMANDS.begin(), FTP_COMMANDS.end(), command) == FTP_COMMANDS.end())
     {
@@ -81,6 +90,8 @@ void base_session::handle_command(const std::string &command, const std::string 
         control_receive();
         return;
     }
+
+    println(command + " -> \"" + argument + "\"", custom_utils::COLOR::BLUE);
 
     // UNAUTHENTICATED
     {
@@ -235,7 +246,7 @@ void base_session::handle_command(const std::string &command, const std::string 
 
         if (command == "CDUP")
         {
-            m_working_directory = return_parent_directory(m_working_directory);
+            m_working_directory = get_parent_path(m_working_directory);
 
             control_send("250 Okay.");
             control_receive();
@@ -255,7 +266,7 @@ void base_session::handle_command(const std::string &command, const std::string 
             // return to last slash
             if (argument == "..")
             {
-                m_working_directory = return_parent_directory(m_working_directory);
+                m_working_directory = get_parent_path(m_working_directory);
                 control_send("250 Changed working directory.");
                 control_receive();
                 return;
@@ -274,26 +285,26 @@ void base_session::handle_command(const std::string &command, const std::string 
             // type 1 "/test/one"   // absolute path
             // type 2 "test/one"    // absolute path using current working directory as parent
 
-            std::string virtual_path = "";
+            std::string object_path = "";
             std::vector<std::string> children;
 
             if (argument[0] == '/')
             {
                 // type 1
                 // use root as first path
-                virtual_path = "/";
+                object_path = "/";
 
                 // use argument without first char as children
-                children = custom_utils::splitString(argument.substr(1, argument.size() - 1), '/');
+                children = string_split(argument.substr(1, argument.size() - 1), "/");
             }
             else
             {
                 // type 2
                 // use working_directory as first path
-                virtual_path = m_working_directory;
+                object_path = m_working_directory;
 
                 // argument as children
-                children = custom_utils::splitString(argument, '/');
+                children = string_split(argument, "/");
             }
 
             // validate if each subdirectory exists
@@ -301,9 +312,9 @@ void base_session::handle_command(const std::string &command, const std::string 
                 size_t i = 0; // path iterator
 
                 // check if first subdirectory exists
-                if (m_virtual_fs.get_object(m_userid, children[0], virtual_path).size() == 0)
+                if (m_virtual_fs.get_object(m_userid, children[0], object_path).size() == 0)
                 {
-                    println("Cannot change working directory: " + virtual_path + " -> " + children[0] + ", not found",
+                    println("Cannot change working directory: " + object_path + " -> " + children[0] + ", not found",
                             custom_utils::COLOR::YELLOW);
                     control_send("550 No such file or directory.");
                     control_receive();
@@ -312,19 +323,19 @@ void base_session::handle_command(const std::string &command, const std::string 
 
                 // prepare cumulative_path before processing
                 // '/' will be added in loop
-                if (virtual_path == "/")
+                if (object_path == "/")
                 {
-                    virtual_path.pop_back();
+                    object_path.pop_back();
                 }
 
                 // check each subdirectory in order
                 while (i < children.size() - 1)
                 {
-                    virtual_path += "/" + children[i];
+                    object_path += "/" + children[i];
 
-                    if (m_virtual_fs.get_object(m_userid, children[i + 1], virtual_path).size() == 0)
+                    if (m_virtual_fs.get_object(m_userid, children[i + 1], object_path).size() == 0)
                     {
-                        println("Cannot change working directory: " + virtual_path + " -> " + children[i + 1] +
+                        println("Cannot change working directory: " + object_path + " -> " + children[i + 1] +
                                     ", not found",
                                 custom_utils::COLOR::YELLOW);
                         control_send("550 No such file or directory.");
@@ -337,13 +348,13 @@ void base_session::handle_command(const std::string &command, const std::string 
             }
 
             // set new working directory
-            if (virtual_path == "/")
+            if (object_path == "/")
             {
-                m_working_directory = virtual_path + children.back();
+                m_working_directory = object_path + children.back();
             }
             else
             {
-                m_working_directory = virtual_path + "/" + children.back();
+                m_working_directory = object_path + "/" + children.back();
             }
 
             control_send("250 Changed working directory.");
@@ -373,24 +384,24 @@ void base_session::handle_command(const std::string &command, const std::string 
             // handle multiple types of arguments
             // type 1 "one"         // object name only
             // type 2 "test/one"    // absolute path but missing "/" at front
-            std::string virtual_path;
+            std::string object_path;
             std::string object_name;
-            if (custom_utils::splitString(argument, '/').size() == 1)
+            if (string_split(argument, "/").size() == 1)
             {
                 // type 1
 
-                virtual_path = m_working_directory;
+                object_path = m_working_directory;
                 object_name = argument;
             }
             else
             {
                 // type 2
 
-                virtual_path = return_parent_directory("/" + argument);
-                object_name = custom_utils::splitString(argument, '/').back();
+                object_path = get_parent_path("/" + argument);
+                object_name = get_basename(argument);
             }
 
-            std::string vobj_id = m_virtual_fs.create_virtual_object(m_userid, object_name, virtual_path, 0, true);
+            std::string vobj_id = m_virtual_fs.create_virtual_object(m_userid, object_name, object_path, 0, true);
 
             // check if created successfully
             if (vobj_id == "")
@@ -401,7 +412,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 return;
             }
 
-            println("Created virtual directory \"" + virtual_path + "\" \"" + object_name + "\"",
+            println("Created virtual directory \"" + object_path + "\" \"" + object_name + "\"",
                     custom_utils::COLOR::GREEN);
 
             control_send("250 Directory created.");
@@ -423,14 +434,14 @@ void base_session::handle_command(const std::string &command, const std::string 
             // type 1 "one"         // object name only
             // type 2 "test/one"    // absolute path but missing "/" at front
             // type 3 "/test"       // absolute path
-            std::string virtual_path;
+            std::string object_path;
             std::string object_name;
 
-            if (custom_utils::splitString(argument, '/').size() == 1)
+            if (string_split(argument, "/").size() == 1)
             {
                 // type 1
 
-                virtual_path = m_working_directory;
+                object_path = m_working_directory;
                 object_name = argument;
             }
             else
@@ -441,19 +452,19 @@ void base_session::handle_command(const std::string &command, const std::string 
                 {
                     // type 2
 
-                    virtual_path = return_parent_directory("/" + argument);
-                    object_name = custom_utils::splitString(argument, '/').back();
+                    object_path = get_parent_path("/" + argument);
+                    object_name = get_basename(argument);
                 }
                 else
                 {
                     // type 3
 
-                    virtual_path = virtual_path = return_parent_directory(argument);
-                    object_name = custom_utils::splitString(argument, '/').back();
+                    object_path = object_path = get_parent_path(argument);
+                    object_name = get_basename(argument);
                 }
             }
 
-            m_virtual_fs.remove_virtual_object(m_userid, object_name, virtual_path);
+            m_virtual_fs.remove_virtual_object(m_userid, object_name, object_path);
             control_send("250 Deleted.");
 
             control_receive();
@@ -473,25 +484,25 @@ void base_session::handle_command(const std::string &command, const std::string 
             // type 1 "one"         // object name only
             // type 2 "test/one"    // absolute path but missing "/" at front
 
-            std::string virtual_path;
+            std::string object_path;
             std::string object_name;
 
-            if (custom_utils::splitString(argument, '/').size() == 1)
+            if (string_split(argument, "/").size() == 1)
             {
                 // type 1
 
-                virtual_path = m_working_directory;
+                object_path = m_working_directory;
                 object_name = argument;
             }
             else
             {
                 // type 2
 
-                virtual_path = return_parent_directory("/" + argument);
-                object_name = custom_utils::splitString(argument, '/').back();
+                object_path = get_parent_path("/" + argument);
+                object_name = get_basename(argument);
             }
 
-            m_virtual_fs.remove_virtual_object(m_userid, object_name, virtual_path);
+            m_virtual_fs.remove_virtual_object(m_userid, object_name, object_path);
             control_send("250 Deleted.");
 
             control_receive();
@@ -512,10 +523,10 @@ void base_session::handle_command(const std::string &command, const std::string 
 
         if (command == "SIZE")
         {
-            std::string file_path = return_parent_directory(argument);
-            std::string file_name = custom_utils::splitString(argument, '/').back();
+            std::string object_path = get_parent_path(argument);
+            std::string object_name = get_basename(argument);
 
-            std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, file_name, file_path);
+            std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, object_name, object_path);
             if (v_obj.size() == 0)
             {
                 // file does not exists
@@ -558,9 +569,9 @@ void base_session::data_directory_listing()
 
 void base_session::data_receive_file()
 {
-    m_receive_file_path = return_parent_directory(m_pending_write_file);
+    m_receive_file_path = get_parent_path(m_pending_write_file);
     m_received_file_size = 0;
-    m_receive_file_name = custom_utils::splitString(m_pending_write_file, '/').back();
+    m_receive_file_name = get_basename(m_pending_write_file);
 
     // check if virtual object exists already
     std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, m_receive_file_name, m_receive_file_path);
@@ -628,7 +639,7 @@ std::pair<std::string, std::string> base_session::parse_buffer(const std::vector
         parsed_string += buffer.at(i);
     }
 
-    std::vector<std::string> split_string = custom_utils::splitString(parsed_string, ' ');
+    std::vector<std::string> split_string = string_split(parsed_string, " ");
 
     std::string FTP_command = split_string[0];
     std::string FTP_argument = "";
@@ -636,11 +647,10 @@ std::pair<std::string, std::string> base_session::parse_buffer(const std::vector
     if (split_string.size() > 1)
     {
         // received message has argument(s)
-        FTP_argument =
-            custom_utils::vectorStrJoin(std::vector<std::string>(split_string.begin() + 1, split_string.end()), " ");
+        FTP_argument = string_join(std::vector<std::string>(split_string.begin() + 1, split_string.end()), " ");
     }
 
-    return {FTP_command, FTP_argument};
+    return {string_to_uppercase(FTP_command), FTP_argument};
 }
 
 namespace

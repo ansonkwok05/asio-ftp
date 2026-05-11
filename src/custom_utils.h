@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <string>
-#include <vector>
 
 namespace custom_utils
 {
@@ -66,15 +65,6 @@ namespace custom_utils
     void resetPrintColor();
 
     std::string getTimeString();
-
-    std::vector<std::string> splitString(const std::string &inputString, char delimiter);
-    std::string vectorStrJoin(const std::vector<std::string> &inputVector, const std::string &seperator);
-
-    std::string strToUpper(const std::string &input);
-    bool strStartsWith(const std::string &input, const std::string &prefix);
-
-    std::string replaceString(const std::string &original, const std::string &search, const std::string &replacement);
-    std::string generate_uuid_string(size_t length);
 
     class stopwatch
     {
