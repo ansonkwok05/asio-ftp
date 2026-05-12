@@ -2,23 +2,20 @@
 
 #include <string>
 #include <vector>
+#include <string_view>
+#include <cstddef>
 
 std::string get_basename(const std::string &path)
 {
-    if (path.length() == 0)
-    {
-        return "";
-    }
+    if (path.empty())
+        return std::string();
 
-    // not absolute path
     if (path.find('/') == std::string::npos)
-    {
-        return "";
-    }
+        return path;
 
     // scan backwards for the last '/'
     size_t i = path.length() - 1;
-    while (i >= 0)
+    while (true)
     {
         if (path[i] == '/')
         {
@@ -36,15 +33,11 @@ std::string get_parent_path(const std::string &path)
 {
     // already at root directory
     if (path.length() <= 1)
-    {
-        return "/";
-    }
+        return std::string("/");
 
     // not absolute path
     if (path[0] != '/')
-    {
-        return "/";
-    }
+        return std::string("/");
 
     // scan backwards for the last '/'
     size_t i = path.length() - 1;
@@ -61,15 +54,14 @@ std::string get_parent_path(const std::string &path)
 
 std::vector<std::string> string_split(const std::string &input_string, const std::string &delimiter)
 {
-    if (input_string.size() == 0)
-    {
-        return {};
-    }
+    if (input_string.empty())
+        return std::vector<std::string>{};
 
-    if (delimiter.size() == 0 || input_string.length() < delimiter.length())
-        return {input_string};
+    if (delimiter.empty() || input_string.length() < delimiter.length())
+        return std::vector<std::string>{input_string};
 
     std::vector<std::string> splitted;
+    splitted.reserve(std::min<size_t>(input_string.length() / delimiter.length(), 64));
 
     size_t find_start = 0;
     while (true)
@@ -77,12 +69,14 @@ std::vector<std::string> string_split(const std::string &input_string, const std
         size_t index = input_string.find(delimiter, find_start);
 
         if (index == std::string::npos)
+        {
+            splitted.emplace_back(input_string.substr(find_start, input_string.length() - find_start));
             break;
+        }
 
         splitted.emplace_back(input_string.substr(find_start, index - find_start));
         find_start = index + delimiter.length();
     }
-    splitted.emplace_back(input_string.substr(find_start, input_string.length() - find_start));
 
     return splitted;
 }
@@ -90,36 +84,38 @@ std::vector<std::string> string_split(const std::string &input_string, const std
 std::string string_join(const std::vector<std::string> &input_vector, const std::string &separator)
 {
     if (input_vector.size() == 0)
-        return "";
+        return std::string();
+
+    size_t total_length = 0;
+
+    for (const std::string &substring : input_vector)
+    {
+        total_length += substring.length();
+    }
+    total_length += separator.length() * (input_vector.size() - 1);
 
     std::string joined;
+    joined.reserve(total_length);
 
     for (size_t i = 0; i < input_vector.size() - 1; i++)
     {
-        joined += input_vector[i] + separator;
+        joined += input_vector[i];
+        joined += separator;
     }
-    joined += input_vector[input_vector.size() - 1];
+    joined += input_vector.back();
 
     return joined;
 }
 
 std::string string_to_uppercase(const std::string &input_string)
 {
-    std::string upper = "";
+    std::string upper(input_string);
 
-    size_t i = 0;
-    while (i < input_string.size())
+    for (char &c : upper)
     {
-        if (input_string[i] >= 'a' && input_string[i] <= 'z')
-        {
-            upper += input_string[i] - 32;
-        }
-        else
-        {
-            upper += input_string[i];
-        }
-
-        i++;
+        if (c < 'a' || c > 'z')
+            continue;
+        c = c - 32;
     }
 
     return upper;
@@ -133,12 +129,13 @@ bool string_starts_with(const std::string &input_string, const std::string &pref
     return input_string.substr(0, prefix.length()) == prefix;
 }
 
-std::string string_replace(const std::string &input_string, const std::string &search, const std::string &replace)
+std::string string_replace(std::string_view input_string, std::string_view search, std::string_view replace)
 {
-    if (input_string.length() == 0 || search.length() == 0)
-        return "";
+    if (input_string.empty() || search.empty() || input_string.length() < search.length() || search == replace)
+        return std::string(input_string);
 
     std::string replaced;
+    replaced.reserve(input_string.length());
 
     size_t find_start = 0;
     while (true)
@@ -146,12 +143,16 @@ std::string string_replace(const std::string &input_string, const std::string &s
         size_t found = input_string.find(search, find_start);
 
         if (found == std::string::npos)
+        {
+            replaced += input_string.substr(find_start, input_string.length() - find_start);
             break;
+        }
 
-        replaced += input_string.substr(find_start, found - find_start) + replace;
+        replaced.append(input_string.begin() + find_start, found - find_start);
+        replaced.append(replace);
+
         find_start = found + search.length();
     }
-    replaced += input_string.substr(find_start, input_string.length() - find_start);
 
     return replaced;
 }

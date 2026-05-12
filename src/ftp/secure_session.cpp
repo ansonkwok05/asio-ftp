@@ -59,7 +59,9 @@ namespace ftps
         }
 
         m_timer.expires_at(m_timer.expiry() + std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS));
-        m_timer.async_wait([self = shared_from_this()](boost::system::error_code ec) { self->wait_for_implicit(); });
+        m_timer.async_wait([self = shared_from_this()](boost::system::error_code ec) {
+            self->wait_for_implicit();
+        });
     }
 
     void secure_session::probe_send(std::string message)
@@ -83,14 +85,14 @@ namespace ftps
             [self = shared_from_this()](boost::system::error_code ec, size_t bytes_received) {
                 auto [FTP_command, FTP_argument] = self->handle_control_receive_callback(ec, bytes_received);
 
-                self->println(FTP_command + " -> \"" + FTP_argument + "\"", custom_utils::COLOR::BLUE);
-
                 self->handle_auth(FTP_command, FTP_argument);
             });
     }
 
     void secure_session::handle_auth(const std::string &command, const std::string &argument)
     {
+        println(command + " -> \"" + argument + "\"", custom_utils::COLOR::BLUE);
+
         if (command != "AUTH")
         {
             // client not starting a secure connection
@@ -255,13 +257,11 @@ namespace ftps
 
         // don't allow uploads to a directory that doesn't exists
         std::string parent_directory = get_parent_path(m_pending_write_file);
-        std::string parent_of_parent_directory = get_parent_path(parent_directory);
-
-        std::string parent_directory_name = get_basename(parent_directory);
 
         // if not root directory and parent directory not found
         if (parent_directory != "/" &&
-            m_virtual_fs.get_object(m_userid, parent_directory_name, parent_of_parent_directory).size() == 0)
+            m_virtual_fs.get_object(m_userid, get_basename(parent_directory), get_parent_path(parent_directory))
+                    .size() == 0)
         {
             println("Parent directory doesn't exists -> " + m_pending_write_file, custom_utils::COLOR::RED);
             return;
@@ -284,63 +284,8 @@ namespace ftps
         data_acceptor_start_accept();
     }
 
-    void secure_session::run_RETR(const std::string &argument)
+    void secure_session::run_RETR()
     {
-        // no argument
-        if (argument == "")
-        {
-            control_send("501 No arguments presented.");
-            control_receive();
-            return;
-        }
-
-        if (m_sendable_file_id != "")
-        {
-            println("Previous send file operation not finished -> " + m_sendable_file_id, custom_utils::COLOR::RED);
-            return;
-        }
-
-        // handle multiple types of arguments
-        // type 1 "one"         // object name only
-        // type 2 "/test/one"   // absolute path
-        // type 3 "test/one"    // relative path
-
-        std::string object_path;
-        std::string object_name;
-        if (string_split(argument, "/").size() == 1)
-        {
-            // type 1
-            object_path = m_working_directory;
-            object_name = argument;
-        }
-        else if (string_starts_with(argument, "/"))
-        {
-            // type 2
-            object_path = get_parent_path(argument);
-            object_name = get_basename(argument);
-        }
-        else
-        {
-            // type 3
-
-            std::vector<std::string> split_path = string_split(argument, "/");
-
-            object_name = split_path.back();
-
-            split_path.pop_back();
-            object_path = m_working_directory + string_join(split_path, "/");
-        }
-
-        std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, object_name, object_path);
-        if (v_obj.size() == 0)
-        {
-            // file does not exists
-            println("Client requested -> " + argument + " which does not exists", custom_utils::COLOR::RED);
-            control_send("550 File unavailable.");
-            return;
-        }
-        m_sendable_file_id = v_obj[0];
-
         // if data socket is already accepted, that means RETR command is received late
         if (m_data_socket.lowest_layer().is_open())
         {

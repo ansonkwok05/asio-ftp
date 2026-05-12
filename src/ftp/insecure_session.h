@@ -30,7 +30,7 @@ namespace ftp
         void run_PASV() override;
         void run_LIST(const std::string &argument) override;
         void run_STOR(const std::string &argument) override;
-        void run_RETR(const std::string &argument) override;
+        void run_RETR() override;
 
         void control_close() override;
 

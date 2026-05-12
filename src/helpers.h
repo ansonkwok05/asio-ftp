@@ -2,6 +2,8 @@
 
 #include <string>
 #include <vector>
+#include <string_view>
+#include <cstddef>
 
 std::string get_basename(const std::string &path);
 
@@ -15,6 +17,6 @@ std::string string_to_uppercase(const std::string &input_string);
 
 bool string_starts_with(const std::string &input_string, const std::string &prefix);
 
-std::string string_replace(const std::string &input_string, const std::string &search, const std::string &replace);
+std::string string_replace(std::string_view input_string, std::string_view search, std::string_view replace);
 
 std::string generate_uuid_string(size_t length);

@@ -19,10 +19,10 @@ constexpr size_t RECEIVE_BUFFER_SIZE = 1024 * 512;
 // buffer size in Bytes for sending files
 constexpr size_t SEND_BUFFER_SIZE = 1024 * 512;
 
-static constexpr int DATA_CHANNEL_BEGIN_PORT = 7000;
+constexpr int DATA_CHANNEL_BEGIN_PORT = 7000;
 
 // list of commands supported
-static constexpr std::array<std::string_view, 20> FTP_COMMANDS = {
+constexpr std::array<std::string_view, 20> FTP_COMMANDS = {
     // Authentication username
     "USER",
 

@@ -1,6 +1,7 @@
 ---
 BasedOnStyle: Microsoft
 AccessModifierOffset: -4
+AllowShortLambdasOnASingleLine: None
 BraceWrapping:
   AfterCaseLabel: false
   AfterClass: true

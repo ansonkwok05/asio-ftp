@@ -3,6 +3,7 @@
 #include "../helpers.h"
 #include "../custom_utils.h"
 
+#include <string>
 #include <fstream>
 
 #include <boost/asio/error.hpp>
@@ -65,16 +66,16 @@ std::pair<std::string, std::string> base_session::handle_control_receive_callbac
         }
 
         // disconnected
-        return {"", ""};
+        return std::pair<std::string, std::string>();
     }
 
     // received incomplete message (message must contain at least "\r\n")
     if (bytes_received <= 2)
     {
-        return {"", ""};
+        return std::pair<std::string, std::string>();
     }
 
-    return parse_buffer(m_buffer, bytes_received);
+    return parse_buffer(bytes_received);
 }
 
 void base_session::handle_command(const std::string &command, const std::string &argument)
@@ -286,7 +287,7 @@ void base_session::handle_command(const std::string &command, const std::string 
             // type 2 "test/one"    // absolute path using current working directory as parent
 
             std::string object_path = "";
-            std::vector<std::string> children;
+            std::vector<std::string> path_segments = string_split(argument, "/");
 
             if (argument[0] == '/')
             {
@@ -294,17 +295,14 @@ void base_session::handle_command(const std::string &command, const std::string 
                 // use root as first path
                 object_path = "/";
 
-                // use argument without first char as children
-                children = string_split(argument.substr(1, argument.size() - 1), "/");
+                // remove first element because of "/"
+                path_segments.erase(path_segments.begin());
             }
             else
             {
                 // type 2
                 // use working_directory as first path
                 object_path = m_working_directory;
-
-                // argument as children
-                children = string_split(argument, "/");
             }
 
             // validate if each subdirectory exists
@@ -312,9 +310,10 @@ void base_session::handle_command(const std::string &command, const std::string 
                 size_t i = 0; // path iterator
 
                 // check if first subdirectory exists
-                if (m_virtual_fs.get_object(m_userid, children[0], object_path).size() == 0)
+                if (m_virtual_fs.get_object(m_userid, path_segments[0], object_path).size() == 0)
                 {
-                    println("Cannot change working directory: " + object_path + " -> " + children[0] + ", not found",
+                    println("Cannot change working directory: " + object_path + " -> " + path_segments[0] +
+                                ", not found",
                             custom_utils::COLOR::YELLOW);
                     control_send("550 No such file or directory.");
                     control_receive();
@@ -329,13 +328,14 @@ void base_session::handle_command(const std::string &command, const std::string 
                 }
 
                 // check each subdirectory in order
-                while (i < children.size() - 1)
+                while (i < path_segments.size() - 1)
                 {
-                    object_path += "/" + children[i];
+                    object_path += "/";
+                    object_path += path_segments[i];
 
-                    if (m_virtual_fs.get_object(m_userid, children[i + 1], object_path).size() == 0)
+                    if (m_virtual_fs.get_object(m_userid, path_segments[i + 1], object_path).size() == 0)
                     {
-                        println("Cannot change working directory: " + object_path + " -> " + children[i + 1] +
+                        println("Cannot change working directory: " + object_path + " -> " + path_segments[i + 1] +
                                     ", not found",
                                 custom_utils::COLOR::YELLOW);
                         control_send("550 No such file or directory.");
@@ -348,14 +348,12 @@ void base_session::handle_command(const std::string &command, const std::string 
             }
 
             // set new working directory
-            if (object_path == "/")
+            m_working_directory = object_path;
+            if (object_path != "/")
             {
-                m_working_directory = object_path + children.back();
+                m_working_directory += "/";
             }
-            else
-            {
-                m_working_directory = object_path + "/" + children.back();
-            }
+            m_working_directory += path_segments.back();
 
             control_send("250 Changed working directory.");
             control_receive();
@@ -444,24 +442,19 @@ void base_session::handle_command(const std::string &command, const std::string 
                 object_path = m_working_directory;
                 object_name = argument;
             }
+            else if (argument[0] != '/')
+            {
+                // type 2
+
+                object_path = get_parent_path("/" + argument);
+                object_name = get_basename(argument);
+            }
             else
             {
-                // type 2, 3
+                // type 3
 
-                if (argument[0] != '/')
-                {
-                    // type 2
-
-                    object_path = get_parent_path("/" + argument);
-                    object_name = get_basename(argument);
-                }
-                else
-                {
-                    // type 3
-
-                    object_path = object_path = get_parent_path(argument);
-                    object_name = get_basename(argument);
-                }
+                object_path = get_parent_path(argument);
+                object_name = get_basename(argument);
             }
 
             m_virtual_fs.remove_virtual_object(m_userid, object_name, object_path);
@@ -517,7 +510,8 @@ void base_session::handle_command(const std::string &command, const std::string 
 
         if (command == "RETR")
         {
-            run_RETR(argument);
+            parse_RETR_argument(argument);
+            run_RETR();
             return;
         }
 
@@ -541,6 +535,61 @@ void base_session::handle_command(const std::string &command, const std::string 
     }
 
     println("Known but unprocessed command -> \"" + command + "\"", custom_utils::COLOR::RED);
+}
+
+void base_session::parse_RETR_argument(const std::string &argument)
+{
+    // no argument
+    if (argument == "")
+    {
+        control_send("501 No arguments presented.");
+        control_receive();
+        return;
+    }
+
+    if (m_sendable_file_id != "")
+    {
+        println("Previous send file operation not finished -> " + m_sendable_file_id, custom_utils::COLOR::RED);
+        return;
+    }
+
+    // handle multiple types of arguments
+    // type 1 "one"         // object name only
+    // type 2 "/test/one"   // absolute path
+    // type 3 "test/one"    // relative path
+
+    std::string object_path;
+    std::string object_name;
+
+    if (string_split(argument, "/").size() == 1)
+    {
+        // type 1
+        object_path = m_working_directory;
+        object_name = argument;
+    }
+    else if (string_starts_with(argument, "/"))
+    {
+        // type 2
+        object_path = get_parent_path(argument);
+        object_name = get_basename(argument);
+    }
+    else
+    {
+        // type 3
+        object_path = get_parent_path(m_working_directory + argument);
+        object_name = get_basename(argument);
+    }
+
+    std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, object_name, object_path);
+    if (v_obj.size() == 0)
+    {
+        // file does not exists
+        println("Client requested -> " + argument + " which does not exists", custom_utils::COLOR::RED);
+        control_send("550 File unavailable.");
+        return;
+    }
+
+    m_sendable_file_id = v_obj[0];
 }
 
 void base_session::handle_data_send_callback(boost::system::error_code ec, size_t bytes_written)
@@ -629,28 +678,21 @@ void base_session::println(const std::string &message, custom_utils::COLOR color
     custom_utils::println("[" + m_session_type + "] [" + m_session_id + "] " + message, color);
 }
 
-std::pair<std::string, std::string> base_session::parse_buffer(const std::vector<uint8_t> &buffer,
-                                                               size_t bytes_received)
+std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_received)
 {
-    std::string parsed_string;
+    std::vector<std::string> splitted =
+        string_split(std::string(m_buffer.begin(), m_buffer.begin() + bytes_received - 2), " ");
 
-    for (size_t i = 0; i < bytes_received - 2; i++)
-    {
-        parsed_string += buffer.at(i);
-    }
-
-    std::vector<std::string> split_string = string_split(parsed_string, " ");
-
-    std::string FTP_command = split_string[0];
+    std::string FTP_command = splitted[0];
     std::string FTP_argument = "";
 
-    if (split_string.size() > 1)
-    {
-        // received message has argument(s)
-        FTP_argument = string_join(std::vector<std::string>(split_string.begin() + 1, split_string.end()), " ");
-    }
+    splitted.erase(splitted.begin());
 
-    return {string_to_uppercase(FTP_command), FTP_argument};
+    // received message has an argument
+    if (splitted.size() > 0)
+        FTP_argument = string_join(splitted, " ");
+
+    return std::pair<std::string, std::string>(string_to_uppercase(FTP_command), FTP_argument);
 }
 
 namespace

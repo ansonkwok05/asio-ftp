@@ -42,7 +42,9 @@ protected:
     virtual void run_PASV() = 0;
     virtual void run_LIST(const std::string &argument) = 0;
     virtual void run_STOR(const std::string &argument) = 0;
-    virtual void run_RETR(const std::string &argument) = 0;
+
+    void parse_RETR_argument(const std::string &argument);
+    virtual void run_RETR() = 0;
 
     virtual void control_close() = 0;
 
@@ -88,7 +90,7 @@ protected:
     void println(const std::string &message, custom_utils::COLOR color);
 
 private:
-    std::pair<std::string, std::string> parse_buffer(const std::vector<uint8_t> &buffer, size_t bytes_received);
+    std::pair<std::string, std::string> parse_buffer(size_t bytes_received);
 
     std::string create_directory_list(const std::vector<std::string> &virtual_object_list,
                                       const std::string &target_directory, std::string owner,
