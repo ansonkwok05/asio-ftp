@@ -24,8 +24,10 @@ namespace ftps
     secure_session::secure_session(boost::asio::ip::tcp::socket socket, boost::asio::ssl::context &ssl_context)
         : base_session(socket.get_executor()),
           m_timer(socket.get_executor(), std::chrono::milliseconds(IMPLICIT_CHECK_INTERVAL_MS)),
-          m_probe_socket(std::move(socket)), m_ssl_context(ssl_context),
-          m_control_socket(socket.get_executor(), m_ssl_context), m_data_socket(socket.get_executor(), m_ssl_context)
+          m_probe_socket(std::move(socket)),
+          m_ssl_context(ssl_context),
+          m_control_socket(socket.get_executor(), m_ssl_context),
+          m_data_socket(socket.get_executor(), m_ssl_context)
     {
         m_session_type = "FTP ";
 

@@ -23,6 +23,8 @@ namespace ftp
     {
         // get_public_ip();
 
+        std::string server_type;
+
         if (cfg.secure)
         {
             check_tls_keys();
@@ -36,14 +38,16 @@ namespace ftp
 
             start_accepting_secure();
 
-            println("FTPS server listening on port -> " + std::to_string(cfg.port), custom_utils::COLOR::GREEN);
+            server_type = "FTPS";
         }
         else
         {
             start_accepting_insecure();
 
-            println("FTP server listening on port -> " + std::to_string(cfg.port), custom_utils::COLOR::GREEN);
+            server_type = "FTP";
         }
+
+        println(server_type + " server listening on port -> " + std::to_string(cfg.port), custom_utils::COLOR::GREEN);
 
         m_io_context.run();
     }

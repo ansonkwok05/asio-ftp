@@ -12,28 +12,27 @@
 #include <boost/asio/ssl/error.hpp>
 
 base_session::base_session(boost::asio::any_io_executor executor)
-    : m_data_socket_acceptor(executor), m_buffer(MESSAGE_BUFFER_SIZE), m_receive_buffer(RECEIVE_BUFFER_SIZE)
+    : m_session_id(generate_uuid_string(8)),
+      m_data_socket_acceptor(executor),
+      m_buffer(MESSAGE_BUFFER_SIZE),
+      m_receive_buffer(RECEIVE_BUFFER_SIZE)
 {
-    m_session_id = generate_uuid_string(8);
-
     // prepare acceptor for data_socket connection acception
+    boost::system::error_code ec = m_data_socket_acceptor.open(boost::asio::ip::tcp::v4(), ec);
+
+    // choosing a port starting from this
+    int port = DATA_CHANNEL_BEGIN_PORT;
+    while (true)
     {
-        boost::system::error_code ec = m_data_socket_acceptor.open(boost::asio::ip::tcp::v4(), ec);
+        ec = m_data_socket_acceptor.bind(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port), ec);
 
-        // choosing a port starting from this
-        int port = DATA_CHANNEL_BEGIN_PORT;
-        while (true)
-        {
-            ec = m_data_socket_acceptor.bind(boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port), ec);
+        // break when successfully bind to a usable port
+        if (ec.message() == "Success")
+            break;
 
-            // break when successfully bind to a usable port
-            if (ec.message() == "Success")
-                break;
-
-            port++;
-        }
-        m_data_socket_acceptor.listen();
+        port++;
     }
+    m_data_socket_acceptor.listen();
 }
 
 base_session::~base_session()

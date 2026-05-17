@@ -9,7 +9,8 @@
 namespace ftp
 {
     session::session(boost::asio::ip::tcp::socket socket)
-        : base_session(socket.get_executor()), m_control_socket(std::move(socket)),
+        : base_session(socket.get_executor()),
+          m_control_socket(std::move(socket)),
           m_data_socket(m_control_socket.get_executor())
     {
         m_session_type = "FTP";

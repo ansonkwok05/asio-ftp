@@ -23,5 +23,6 @@ BraceWrapping:
   SplitEmptyNamespace: true
 BreakTemplateDeclarations: Yes
 NamespaceIndentation: All
+PackConstructorInitializers: CurrentLine
 SortIncludes:
   Enabled: false
