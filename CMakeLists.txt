@@ -26,7 +26,7 @@ endif()
 # Boost library (need Boost.Asio and Boost.JSON)
 set(Boost_USE_STATIC_LIBS ON)
 find_package(
-    Boost 1.75.0 REQUIRED
+    Boost 1.78.0 REQUIRED
     COMPONENTS json
 )
 if (Boost_FOUND)

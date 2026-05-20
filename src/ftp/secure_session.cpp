@@ -371,108 +371,26 @@ namespace ftps
     void secure_session::data_send(const std::string &message)
     {
         boost::asio::async_write(m_data_socket, boost::asio::buffer(message),
-                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
-                                     self->handle_data_send_callback(ec, bytes_written);
+                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_sent) {
+                                     self->handle_data_send_callback(ec, bytes_sent);
                                  });
     }
 
     void secure_session::data_async_receive()
     {
-        if (m_receive_end)
-        {
-            m_receive_end = false;
-
-            m_receive_file_stream->close();
-            m_receive_file_stream.reset();
-
-            println("updating object metadata in db", custom_utils::COLOR::CYAN);
-            m_virtual_fs.update_virtual_object(m_userid, m_receive_file_name, m_receive_file_path,
-                                               m_received_file_size);
-
-            // allow another file to be received
-            m_pending_write_file = "";
-
-            // notify client
-            control_send("226 Received.");
-
-            // close data channel
-            data_close();
-            return;
-        }
-
         boost::asio::async_read(m_data_socket, m_receive_buffer,
                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_read) {
-                                    self->m_received_file_size += bytes_read;
-
-                                    if (bytes_read > 0)
-                                    {
-                                        *self->m_receive_file_stream << &self->m_receive_buffer;
-                                    }
-
-                                    if (self->m_receive_file_stream->fail())
-                                    {
-                                        self->println("Error writing output file stream", custom_utils::COLOR::RED);
-                                        self->m_receive_end = true;
-                                    }
-
-                                    // no more file data to receive
-                                    if (ec == boost::asio::error::eof)
-                                    {
-                                        self->m_receive_end = true;
-                                    }
-                                    else if (ec.message() != "Success")
-                                    {
-                                        self->println("Unexpected error while receiving file data -> " + ec.message(),
-                                                      custom_utils::COLOR::YELLOW);
-                                        self->m_receive_end = true;
-                                    }
-
-                                    self->data_async_receive();
+                                    self->handle_data_async_receive_callback(ec, bytes_read);
                                 });
     }
 
     void secure_session::data_async_send()
     {
-        if (m_send_end)
-        {
-            m_send_end = false;
-
-            m_send_file_stream->close();
-            m_send_file_stream.reset();
-
-            // allow another file to be sent
-            m_sendable_file_id = "";
-
-            // notify client
-            control_send("226 Sent.");
-
-            // close data channel
-            data_close();
-            return;
-        }
-
         m_send_file_stream->read(m_send_buffer, SEND_BUFFER_SIZE);
 
         boost::asio::async_write(m_data_socket, boost::asio::buffer(m_send_buffer, m_send_file_stream->gcount()),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_sent) {
-                                     if (self->m_send_file_stream->eof())
-                                     {
-                                         self->m_send_end = true;
-                                     }
-                                     else if (ec == boost::asio::error::broken_pipe)
-                                     {
-                                         self->println("Data channel disconnected mid file send",
-                                                       custom_utils::COLOR::YELLOW);
-                                         self->m_send_end = true;
-                                     }
-                                     else if (ec.message() != "Success")
-                                     {
-                                         self->println("Unexpected error while sending file data -> " + ec.message(),
-                                                       custom_utils::COLOR::YELLOW);
-                                         self->m_send_end = true;
-                                     }
-
-                                     self->data_async_send();
+                                     self->handle_data_async_send_callback(ec, bytes_sent);
                                  });
     }
 

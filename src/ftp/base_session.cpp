@@ -591,7 +591,7 @@ void base_session::parse_RETR_argument(const std::string &argument)
     m_sendable_file_id = v_obj[0];
 }
 
-void base_session::handle_data_send_callback(boost::system::error_code ec, size_t bytes_written)
+void base_session::handle_data_send_callback(boost::system::error_code ec, size_t bytes_sent)
 {
     if (ec)
     {
@@ -652,6 +652,60 @@ void base_session::data_receive_file()
     data_async_receive();
 }
 
+void base_session::handle_data_async_receive_callback(boost::system::error_code ec, size_t bytes_read)
+{
+    m_received_file_size += bytes_read;
+
+    // write to file if received any file data
+    if (bytes_read > 0)
+    {
+        *m_receive_file_stream << &m_receive_buffer;
+    }
+
+    // error writing file
+    if (m_receive_file_stream->fail())
+    {
+        println("Error writing output file stream", custom_utils::COLOR::RED);
+        data_async_receive_end();
+        return;
+    }
+
+    // entire file is received
+    if (ec == boost::asio::error::eof)
+    {
+        data_async_receive_end();
+        return;
+    }
+
+    // maybe client disconnect or something
+    if (ec.message() != "Success")
+    {
+        println("Unexpected error while receiving file data -> " + ec.message(), custom_utils::COLOR::YELLOW);
+        data_async_receive_end();
+        return;
+    }
+
+    data_async_receive();
+}
+
+void base_session::data_async_receive_end()
+{
+    m_receive_file_stream->close();
+    m_receive_file_stream.reset();
+
+    println("updating object metadata in db", custom_utils::COLOR::CYAN);
+    m_virtual_fs.update_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, m_received_file_size);
+
+    // allow another file to be received
+    m_pending_write_file = "";
+
+    // notify client
+    control_send("226 Received.");
+
+    // close data channel
+    data_close();
+}
+
 void base_session::data_send_file()
 {
     m_send_file_stream = std::make_unique<std::ifstream>("data/" + m_sendable_file_id, std::ios::binary);
@@ -665,6 +719,47 @@ void base_session::data_send_file()
 
     // start sending file
     data_async_send();
+}
+
+void base_session::handle_data_async_send_callback(boost::system::error_code ec, size_t bytes_sent)
+{
+    // entire file is read
+    if (m_send_file_stream->eof())
+    {
+        data_async_send_end();
+        return;
+    }
+
+    if (ec == boost::asio::error::broken_pipe)
+    {
+        println("Data channel disconnected mid file send", custom_utils::COLOR::YELLOW);
+        data_async_send_end();
+        return;
+    }
+
+    if (ec.message() != "Success")
+    {
+        println("Unexpected error while sending file data -> " + ec.message(), custom_utils::COLOR::YELLOW);
+        data_async_send_end();
+        return;
+    }
+
+    data_async_send();
+}
+
+void base_session::data_async_send_end()
+{
+    m_send_file_stream->close();
+    m_send_file_stream.reset();
+
+    // allow another file to be sent
+    m_sendable_file_id = "";
+
+    // notify client
+    control_send("226 Sent.");
+
+    // close data channel
+    data_close();
 }
 
 void base_session::println(const std::string &message)
@@ -693,102 +788,6 @@ std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_rece
 
     return std::pair<std::string, std::string>(string_to_uppercase(FTP_command), FTP_argument);
 }
-
-namespace
-{
-    std::string parse_metadata_time(const std::string &time_str)
-    {
-        // format: 2025-08-28 05:12:43 -> Aug 28 05:12
-
-        std::string parsedStr = "";
-
-        switch (time_str.at(5))
-        {
-        // < 10
-        case '0': {
-            switch (time_str.at(6))
-            {
-            // 01
-            case '1': {
-                parsedStr += "Jan ";
-                break;
-            }
-            // 02
-            case '2': {
-                parsedStr += "Feb ";
-                break;
-            }
-            // 03
-            case '3': {
-                parsedStr += "Mar ";
-                break;
-            }
-            // 04
-            case '4': {
-                parsedStr += "Apr ";
-                break;
-            }
-            // 05
-            case '5': {
-                parsedStr += "May ";
-                break;
-            }
-            // 06
-            case '6': {
-                parsedStr += "Jun ";
-                break;
-            }
-            // 07
-            case '7': {
-                parsedStr += "July ";
-                break;
-            }
-            // 08
-            case '8': {
-                parsedStr += "Aug ";
-                break;
-            }
-            // 09
-            case '9': {
-                parsedStr += "Sep ";
-                break;
-            }
-            }
-            break;
-        }
-        // >= 10
-        case '1': {
-            switch (time_str.at(6))
-            {
-            // 10
-            case '0': {
-                parsedStr += "Oct ";
-                break;
-            }
-            // 11
-            case '1': {
-                parsedStr += "Nov ";
-                break;
-            }
-            // 12
-            case '2': {
-                parsedStr += "Dec ";
-                break;
-            }
-            }
-            break;
-        }
-        }
-
-        // add day
-        parsedStr += time_str.substr(8, 2) + " ";
-
-        // add hour:minute
-        parsedStr += time_str.substr(11, 5);
-
-        return parsedStr;
-    }
-} // namespace
 
 std::string base_session::create_directory_list(const std::vector<std::string> &virtual_object_list,
                                                 const std::string &target_directory, std::string owner,
@@ -844,3 +843,104 @@ std::string base_session::create_directory_list(const std::vector<std::string> &
 
     return directory_list;
 }
+
+namespace
+{
+    std::string parse_metadata_time(const std::string &time_str)
+    {
+        // format: 2025-08-28 05:12:43 -> Aug 28 05:12
+
+        std::string parsedStr = "";
+
+        if (time_str.length() < 19)
+        {
+            return parsedStr;
+        }
+
+        switch (time_str[5])
+        {
+        // < 10
+        case '0': {
+            switch (time_str[6])
+            {
+            // 01
+            case '1': {
+                parsedStr += "Jan ";
+                break;
+            }
+            // 02
+            case '2': {
+                parsedStr += "Feb ";
+                break;
+            }
+            // 03
+            case '3': {
+                parsedStr += "Mar ";
+                break;
+            }
+            // 04
+            case '4': {
+                parsedStr += "Apr ";
+                break;
+            }
+            // 05
+            case '5': {
+                parsedStr += "May ";
+                break;
+            }
+            // 06
+            case '6': {
+                parsedStr += "Jun ";
+                break;
+            }
+            // 07
+            case '7': {
+                parsedStr += "July ";
+                break;
+            }
+            // 08
+            case '8': {
+                parsedStr += "Aug ";
+                break;
+            }
+            // 09
+            case '9': {
+                parsedStr += "Sep ";
+                break;
+            }
+            }
+            break;
+        }
+        // >= 10
+        case '1': {
+            switch (time_str[6])
+            {
+            // 10
+            case '0': {
+                parsedStr += "Oct ";
+                break;
+            }
+            // 11
+            case '1': {
+                parsedStr += "Nov ";
+                break;
+            }
+            // 12
+            case '2': {
+                parsedStr += "Dec ";
+                break;
+            }
+            }
+            break;
+        }
+        }
+
+        // add day
+        parsedStr += time_str.substr(8, 2) + " ";
+
+        // add hour:minute
+        parsedStr += time_str.substr(11, 5);
+
+        return parsedStr;
+    }
+} // namespace

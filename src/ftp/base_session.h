@@ -65,7 +65,7 @@ protected:
     virtual void data_acceptor_start_accept() = 0; // todo extract data socket handling if logics
 
     virtual void data_send(const std::string &message) = 0;
-    void handle_data_send_callback(boost::system::error_code ec, size_t bytes_written);
+    void handle_data_send_callback(boost::system::error_code ec, size_t bytes_sent);
 
     void data_directory_listing();
 
@@ -73,16 +73,18 @@ protected:
     std::string m_receive_file_name;
     std::string m_receive_file_path;
     long long m_received_file_size;
-    bool m_receive_end = false;
     std::unique_ptr<std::ofstream> m_receive_file_stream;
     void data_receive_file();
-    virtual void data_async_receive() = 0; // todo: maybe the m_receive_end can be checked inside the callback
+    virtual void data_async_receive() = 0;
+    void handle_data_async_receive_callback(boost::system::error_code ec, size_t bytes_read);
+    void data_async_receive_end();
 
     char m_send_buffer[SEND_BUFFER_SIZE];
-    bool m_send_end = false;
     std::unique_ptr<std::ifstream> m_send_file_stream;
     void data_send_file();
-    virtual void data_async_send() = 0; // todo: maybe the m_send_end can be checked inside the callback
+    virtual void data_async_send() = 0;
+    void handle_data_async_send_callback(boost::system::error_code ec, size_t bytes_sent);
+    void data_async_send_end();
 
     virtual void data_close() = 0;
 
