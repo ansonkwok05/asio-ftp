@@ -32,7 +32,7 @@ protected:
     CONNECTION_STAGE m_connection_stage;
 
     virtual void control_send(std::string message) = 0;
-    void handle_control_send_callback(boost::system::error_code ec, size_t bytes_written);
+    void handle_control_send_callback(boost::system::error_code ec, size_t bytes_sent);
 
     virtual void control_receive() = 0;
     std::pair<std::string, std::string> handle_control_receive_callback(boost::system::error_code ec,

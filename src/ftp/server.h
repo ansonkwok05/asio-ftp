@@ -33,6 +33,8 @@ namespace ftp
 
         void start_accepting_insecure();
         void start_accepting_secure();
+
+        void configure_socket();
     };
 
 } // namespace ftp

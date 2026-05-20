@@ -32,8 +32,8 @@ namespace ftp
     {
         message += "\r\n";
         boost::asio::async_write(m_control_socket, boost::asio::buffer(message),
-                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
-                                     self->handle_control_send_callback(ec, bytes_written);
+                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_sent) {
+                                     self->handle_control_send_callback(ec, bytes_sent);
                                  });
     }
 
@@ -254,7 +254,7 @@ namespace ftp
     {
         m_send_file_stream->read(m_send_buffer, SEND_BUFFER_SIZE);
 
-        boost::asio::async_write(m_data_socket, boost::asio::buffer(m_send_buffer, m_send_file_stream->gcount()),
+        boost::asio::async_write(m_data_socket, boost::asio::const_buffer(m_send_buffer, m_send_file_stream->gcount()),
                                  [self = shared_from_this()](boost::system::error_code ec, size_t bytes_sent) {
                                      self->handle_data_async_send_callback(ec, bytes_sent);
                                  });

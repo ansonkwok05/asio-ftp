@@ -132,6 +132,8 @@ namespace ftp
                 return;
             }
 
+            this->configure_socket();
+
             std::make_shared<ftp::session>(std::move(m_socket))->start();
 
             this->start_accepting_insecure();
@@ -147,10 +149,19 @@ namespace ftp
                 return;
             }
 
+            this->configure_socket();
+
             std::make_shared<ftps::secure_session>(std::move(m_socket), m_ssl_context)->start();
 
             this->start_accepting_secure();
         });
+    }
+
+    void server::configure_socket()
+    {
+        // disables nagle's algorithm which reduces small packet latency
+        // this improves the speed of FTP protocol very much
+        m_socket.set_option(boost::asio::ip::tcp::no_delay(true));
     }
 
 } // namespace ftp

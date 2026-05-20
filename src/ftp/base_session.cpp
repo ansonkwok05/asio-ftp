@@ -40,7 +40,7 @@ base_session::~base_session()
     println("session destroyed", custom_utils::COLOR::BRIGHTBLACK);
 }
 
-void base_session::handle_control_send_callback(boost::system::error_code ec, size_t bytes_written)
+void base_session::handle_control_send_callback(boost::system::error_code ec, size_t bytes_sent)
 {
     if (ec)
     {
