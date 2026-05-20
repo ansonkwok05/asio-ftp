@@ -329,6 +329,9 @@ namespace ftps
                 return;
             }
 
+            // disables nagle's algorithm to reduce small packet latency
+            socket.set_option(boost::asio::ip::tcp::no_delay(true));
+
             self->m_data_socket =
                 boost::asio::ssl::stream<boost::asio::ip::tcp::socket>(std::move(socket), self->m_ssl_context);
 

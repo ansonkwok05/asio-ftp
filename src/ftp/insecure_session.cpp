@@ -200,14 +200,16 @@ namespace ftp
     {
         m_data_socket_acceptor.async_accept(
             [self = shared_from_this()](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
-                // create socket
-                self->m_data_socket = std::move(socket);
-
                 if (ec)
                 {
                     self->println("data socket acceptor error -> " + ec.message(), custom_utils::COLOR::RED);
                     return;
                 }
+
+                // disables nagle's algorithm to reduce small packet latency
+                socket.set_option(boost::asio::ip::tcp::no_delay(true));
+
+                self->m_data_socket = std::move(socket);
 
                 // check if need to list directory
                 if (self->m_pending_directory_list != "")

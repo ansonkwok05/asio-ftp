@@ -159,7 +159,7 @@ namespace ftp
 
     void server::configure_socket()
     {
-        // disables nagle's algorithm which reduces small packet latency
+        // disables nagle's algorithm to reduce small packet latency
         // this improves the speed of FTP protocol very much
         m_socket.set_option(boost::asio::ip::tcp::no_delay(true));
     }
