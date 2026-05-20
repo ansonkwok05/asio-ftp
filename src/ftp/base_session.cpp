@@ -764,12 +764,14 @@ void base_session::data_async_send_end()
 
 void base_session::println(const std::string &message)
 {
-    custom_utils::println("[" + m_session_type + "] [" + m_session_id + "] " + message);
+    println(message, custom_utils::COLOR::WHITE);
 }
 
 void base_session::println(const std::string &message, custom_utils::COLOR color)
 {
+#ifndef NDEBUG
     custom_utils::println("[" + m_session_type + "] [" + m_session_id + "] " + message, color);
+#endif
 }
 
 std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_received)
