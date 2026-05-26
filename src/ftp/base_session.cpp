@@ -79,8 +79,10 @@ std::pair<std::string, std::string> base_session::handle_control_receive_callbac
 
 void base_session::handle_command(const std::string &command, const std::string &argument)
 {
-    if (command == "")
+    if (command.empty())
+    {
         return;
+    }
 
     // check if command is supported
     if (std::find(FTP_COMMANDS.begin(), FTP_COMMANDS.end(), command) == FTP_COMMANDS.end())
@@ -97,9 +99,8 @@ void base_session::handle_command(const std::string &command, const std::string 
     {
         if (command == "USER")
         {
-            if (argument == "")
+            if (argument.empty())
             {
-                // argument is empty
                 println("Unknown username -> \"" + argument + "\"", custom_utils::COLOR::YELLOW);
                 control_send("530 Invalid username.");
                 control_receive();
@@ -109,7 +110,7 @@ void base_session::handle_command(const std::string &command, const std::string 
             // get user_id by name from database users table
             std::string uid = m_users_table.get_id_by_name(argument);
 
-            if (uid == "")
+            if (uid.empty())
             {
                 // username does not exist in database
                 println("Unknown username -> \"" + argument + "\"", custom_utils::COLOR::YELLOW);
@@ -129,7 +130,7 @@ void base_session::handle_command(const std::string &command, const std::string 
 
         if (command == "PASS")
         {
-            if (m_userid == "")
+            if (m_userid.empty())
             {
                 control_send("530 User not found.");
                 control_receive();
@@ -256,7 +257,7 @@ void base_session::handle_command(const std::string &command, const std::string 
         if (command == "CWD")
         {
             // check empty argument
-            if (argument == "")
+            if (argument.empty())
             {
                 control_send("501 No arguments presented.");
                 control_receive();
@@ -309,7 +310,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 size_t i = 0; // path iterator
 
                 // check if first subdirectory exists
-                if (m_fs_objects_table.get_object(m_userid, path_segments[0], object_path).size() == 0)
+                if (m_fs_objects_table.get_object(m_userid, path_segments[0], object_path).id.empty())
                 {
                     println("Cannot change working directory: " + object_path + " -> " + path_segments[0] +
                                 ", not found",
@@ -332,7 +333,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                     object_path += "/";
                     object_path += path_segments[i];
 
-                    if (m_fs_objects_table.get_object(m_userid, path_segments[i + 1], object_path).size() == 0)
+                    if (m_fs_objects_table.get_object(m_userid, path_segments[i + 1], object_path).id.empty())
                     {
                         println("Cannot change working directory: " + object_path + " -> " + path_segments[i + 1] +
                                     ", not found",
@@ -361,7 +362,7 @@ void base_session::handle_command(const std::string &command, const std::string 
 
         if (command == "MKD")
         {
-            if (argument == "")
+            if (argument.empty())
             {
                 println("Cannot make directory, no arguments", custom_utils::COLOR::YELLOW);
                 control_send("501 No arguments presented.");
@@ -401,7 +402,7 @@ void base_session::handle_command(const std::string &command, const std::string 
             std::string object_id = m_fs_objects_table.create_object(m_userid, object_name, object_path, 0, true);
 
             // check if created successfully
-            if (object_id == "")
+            if (object_id.empty())
             {
                 println("Unable to create fs object", custom_utils::COLOR::YELLOW);
                 control_send("250 Failed.");
@@ -418,8 +419,7 @@ void base_session::handle_command(const std::string &command, const std::string 
 
         if (command == "RMD")
         {
-            // no argument
-            if (argument == "")
+            if (argument.empty())
             {
                 control_send("501 No arguments presented.");
                 control_receive();
@@ -464,7 +464,7 @@ void base_session::handle_command(const std::string &command, const std::string 
 
         if (command == "DELE")
         {
-            if (argument == "")
+            if (argument.empty())
             {
                 control_send("501 No arguments presented.");
                 control_receive();
@@ -518,8 +518,8 @@ void base_session::handle_command(const std::string &command, const std::string 
             std::string object_path = get_parent_path(argument);
             std::string object_name = get_basename(argument);
 
-            std::vector<std::string> object = m_fs_objects_table.get_object(m_userid, object_name, object_path);
-            if (object.size() == 0)
+            fs_objects::fs_object object = m_fs_objects_table.get_object(m_userid, object_name, object_path);
+            if (object.id.empty())
             {
                 // file does not exists
                 println("Client requested -> " + argument + " which does not exists", custom_utils::COLOR::RED);
@@ -527,7 +527,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 return;
             }
 
-            control_send("213 " + object[3]);
+            control_send("213 " + object.size);
             return;
         }
     }
@@ -537,8 +537,7 @@ void base_session::handle_command(const std::string &command, const std::string 
 
 void base_session::parse_RETR_argument(const std::string &argument)
 {
-    // no argument
-    if (argument == "")
+    if (argument.empty())
     {
         control_send("501 No arguments presented.");
         control_receive();
@@ -578,8 +577,8 @@ void base_session::parse_RETR_argument(const std::string &argument)
         object_name = get_basename(argument);
     }
 
-    std::vector<std::string> object = m_fs_objects_table.get_object(m_userid, object_name, object_path);
-    if (object.size() == 0)
+    fs_objects::fs_object object = m_fs_objects_table.get_object(m_userid, object_name, object_path);
+    if (object.id.empty())
     {
         // file does not exists
         println("Client requested -> " + argument + " which does not exists", custom_utils::COLOR::RED);
@@ -587,7 +586,7 @@ void base_session::parse_RETR_argument(const std::string &argument)
         return;
     }
 
-    m_sendable_file_id = object[0];
+    m_sendable_file_id = object.id;
 }
 
 void base_session::handle_data_send_callback(boost::system::error_code ec, size_t bytes_sent)
@@ -606,7 +605,7 @@ void base_session::handle_data_send_callback(boost::system::error_code ec, size_
 
 void base_session::data_directory_listing()
 {
-    std::vector<std::string> objects = m_fs_objects_table.get_all_objects(m_userid);
+    std::vector<fs_objects::fs_object> objects = m_fs_objects_table.get_all_objects(m_userid);
 
     // send directory list over data channel
     data_send(create_directory_list(objects, m_pending_directory_list, m_username, m_pending_directory_list_all));
@@ -621,8 +620,8 @@ void base_session::data_receive_file()
     m_receive_file_name = get_basename(m_pending_write_file);
 
     // check if object exists already
-    std::vector<std::string> object = m_fs_objects_table.get_object(m_userid, m_receive_file_name, m_receive_file_path);
-    if (object.size() == 0)
+    fs_objects::fs_object object = m_fs_objects_table.get_object(m_userid, m_receive_file_name, m_receive_file_path);
+    if (object.id.empty())
     {
         // object not found, create one
         std::string created_file_id =
@@ -634,10 +633,9 @@ void base_session::data_receive_file()
     else
     {
         // object found in db
-        std::string existing_file_id = object[0];
-        m_received_file_size = std::stoll(object[3]);
+        m_received_file_size = std::stoll(object.size);
         println("appending existing file", custom_utils::COLOR::CYAN);
-        m_receive_file_stream = std::make_unique<std::ofstream>("data/" + existing_file_id, std::ios::binary);
+        m_receive_file_stream = std::make_unique<std::ofstream>("data/" + object.id, std::ios::binary);
     }
 
     if (!m_receive_file_stream->is_open())
@@ -791,7 +789,7 @@ std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_rece
     return std::pair<std::string, std::string>(string_to_uppercase(FTP_command), FTP_argument);
 }
 
-std::string base_session::create_directory_list(const std::vector<std::string> &fs_objects,
+std::string base_session::create_directory_list(const std::vector<fs_objects::fs_object> &objects,
                                                 const std::string &target_directory, std::string owner,
                                                 bool include_special_entries)
 {
@@ -804,43 +802,26 @@ std::string base_session::create_directory_list(const std::vector<std::string> &
         directory_list += "drwxrwxrwx 1 " + owner + " " + owner + " 0 Jan 1 00:00 ..\r\n";
     }
 
-    size_t i = 2;
-    while (i < fs_objects.size())
+    for (const fs_objects::fs_object &object : objects)
     {
-        if (fs_objects[i] != target_directory)
+        if (object.path != target_directory)
         {
-            i += 6;
             continue;
         }
 
-        std::string listing_format = "";
-
-        // is file
-        if (fs_objects[i + 3] == "0")
+        if (object.is_directory)
         {
-            listing_format += "-rwxrwxrwx 1 ";
+            directory_list += "drwxrwxrwx 1 ";
         }
-        else if (fs_objects[i + 3] == "1")
+        else
         {
-            // is directory
-            listing_format += "drwxrwxrwx 1 ";
+            directory_list += "-rwxrwxrwx 1 ";
         }
 
-        // file owner
-        listing_format += owner + " " + owner + " ";
-
-        // file_size
-        listing_format += fs_objects[i + 1] + " ";
-
-        // modified_time
-        listing_format += parse_metadata_time(fs_objects[i + 2]) + " ";
-
-        // file_name
-        listing_format += fs_objects[i - 1];
-
-        directory_list += listing_format + "\r\n";
-
-        i += 6;
+        directory_list += owner + " " + owner + " ";
+        directory_list += object.size + " ";
+        directory_list += parse_metadata_time(object.modified_time) + " ";
+        directory_list += object.name + "\r\n";
     }
 
     return directory_list;

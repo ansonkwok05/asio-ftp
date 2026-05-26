@@ -8,10 +8,14 @@
 std::string get_basename(const std::string &path)
 {
     if (path.empty())
+    {
         return std::string();
+    }
 
     if (path.find('/') == std::string::npos)
+    {
         return path;
+    }
 
     // scan backwards for the last '/'
     size_t i = path.length() - 1;
@@ -33,18 +37,24 @@ std::string get_parent_path(const std::string &path)
 {
     // already at root directory
     if (path.length() <= 1)
+    {
         return std::string("/");
+    }
 
     // not absolute path
     if (path[0] != '/')
+    {
         return std::string("/");
+    }
 
     // scan backwards for the last '/'
     size_t i = path.length() - 1;
     while (i > 1)
     {
         if (path[i] == '/')
+        {
             break;
+        }
 
         i--;
     }
@@ -55,10 +65,14 @@ std::string get_parent_path(const std::string &path)
 std::vector<std::string> string_split(const std::string &input_string, const std::string &delimiter)
 {
     if (input_string.empty())
+    {
         return std::vector<std::string>{};
+    }
 
     if (delimiter.empty() || input_string.length() < delimiter.length())
+    {
         return std::vector<std::string>{input_string};
+    }
 
     std::vector<std::string> splitted;
     splitted.reserve(std::min<size_t>(input_string.length() / delimiter.length(), 64));
@@ -84,7 +98,9 @@ std::vector<std::string> string_split(const std::string &input_string, const std
 std::string string_join(const std::vector<std::string> &input_vector, const std::string &separator)
 {
     if (input_vector.size() == 0)
+    {
         return std::string();
+    }
 
     size_t total_length = 0;
 
@@ -123,16 +139,15 @@ std::string string_to_uppercase(const std::string &input_string)
 
 bool string_starts_with(const std::string &input_string, const std::string &prefix)
 {
-    if (input_string.length() < prefix.length())
-        return false;
-
-    return input_string.substr(0, prefix.length()) == prefix;
+    return input_string.length() > prefix.length() && input_string.substr(0, prefix.length()) == prefix;
 }
 
 std::string string_replace(std::string_view input_string, std::string_view search, std::string_view replace)
 {
     if (input_string.empty() || search.empty() || input_string.length() < search.length() || search == replace)
+    {
         return std::string(input_string);
+    }
 
     std::string replaced;
     replaced.reserve(input_string.length());

@@ -15,7 +15,7 @@ namespace users
 
     constexpr char CREATE_USER_QUERY[] = "INSERT INTO users (user_id, name, password) VALUES (?, ?, ?)";
 
-    constexpr char GET_ALL_TABLE_NAMES_QUERY[] = "SELECT name FROM sqlite_master WHERE type='table'";
+    constexpr char GET_TABLE_NAME_QUERY[] = "SELECT name FROM sqlite_master WHERE type='table' AND name='users'";
 
     constexpr char USER_TABLE_CREATION_QUERY[] = "CREATE TABLE users (user_id CHAR(64) PRIMARY KEY NOT NULL, name "
                                                  "VARCHAR(30) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL)";

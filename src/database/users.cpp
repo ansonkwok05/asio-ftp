@@ -65,19 +65,9 @@ namespace users
 
     void users::check_table_exists()
     {
-        std::vector<std::string> result = m_db.run_query(GET_ALL_TABLE_NAMES_QUERY);
+        std::vector<std::string> db_output = m_db.run_query(GET_TABLE_NAME_QUERY);
 
-        bool exists = false;
-        for (const std::string &table_name : result)
-        {
-            if (table_name == "users")
-            {
-                exists = true;
-                break;
-            }
-        }
-
-        if (!exists)
+        if (db_output.empty())
         {
             custom_utils::println("Missing \"users\" table, creating a new one", custom_utils::COLOR::YELLOW);
             create_table();
@@ -90,8 +80,7 @@ namespace users
 
     void users::create_table()
     {
-        std::vector<std::string> result = m_db.run_query(USER_TABLE_CREATION_QUERY);
-
+        m_db.run_query(USER_TABLE_CREATION_QUERY);
         custom_utils::println("Created \"users\" table, checking table structure", custom_utils::COLOR::GREEN);
         check_table_structure();
     }

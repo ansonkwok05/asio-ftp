@@ -94,8 +94,9 @@ protected:
 private:
     std::pair<std::string, std::string> parse_buffer(size_t bytes_received);
 
-    std::string create_directory_list(const std::vector<std::string> &fs_objects, const std::string &target_directory,
-                                      std::string owner, bool include_special_entries);
+    std::string create_directory_list(const std::vector<fs_objects::fs_object> &objects,
+                                      const std::string &target_directory, std::string owner,
+                                      bool include_special_entries);
 };
 
 namespace
