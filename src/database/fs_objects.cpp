@@ -43,9 +43,9 @@ namespace fs_objects
         return object;
     }
 
-    std::vector<fs_object> fs_objects::get_all_objects(const std::string &user_id)
+    std::vector<fs_object> fs_objects::get_objects_by_path(const std::string &user_id, const std::string &object_path)
     {
-        std::vector<std::string> db_output = m_db.run_param_query(GET_ALL_OBJECTS_QUERY, {user_id});
+        std::vector<std::string> db_output = m_db.run_param_query(GET_OBJECTS_BY_PATH_QUERY, {user_id, object_path});
 
         std::vector<fs_object> objects;
 
@@ -145,14 +145,14 @@ namespace fs_objects
             path_prefix += object_name + "%";
 
             std::vector<std::string> object_ids_for_removal =
-                m_db.run_param_query(GET_ALL_OBJECTS_WITH_PREFIX_QUERY, {user_id, path_prefix});
+                m_db.run_param_query(GET_OBJECT_IDS_WITH_PATH_PREFIX_QUERY, {user_id, path_prefix});
 
             for (const std::string &remove_id : object_ids_for_removal)
             {
                 fs_handler::remove_file("data/" + remove_id);
             }
 
-            m_db.run_param_query(DELETE_ALL_OBJECTS_WITH_PREFIX_QUERY, {user_id, path_prefix});
+            m_db.run_param_query(DELETE_OBJECT_IDS_WITH_PATH_PREFIX_QUERY, {user_id, path_prefix});
         }
 
         // delete the object

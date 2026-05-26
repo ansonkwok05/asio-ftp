@@ -605,10 +605,11 @@ void base_session::handle_data_send_callback(boost::system::error_code ec, size_
 
 void base_session::data_directory_listing()
 {
-    std::vector<fs_objects::fs_object> objects = m_fs_objects_table.get_all_objects(m_userid);
+    std::vector<fs_objects::fs_object> objects =
+        m_fs_objects_table.get_objects_by_path(m_userid, m_pending_directory_list);
 
     // send directory list over data channel
-    data_send(create_directory_list(objects, m_pending_directory_list, m_username, m_pending_directory_list_all));
+    data_send(create_directory_list(objects, m_username, m_pending_directory_list_all));
 
     m_pending_directory_list_all = false;
 }
@@ -790,8 +791,7 @@ std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_rece
 }
 
 std::string base_session::create_directory_list(const std::vector<fs_objects::fs_object> &objects,
-                                                const std::string &target_directory, std::string owner,
-                                                bool include_special_entries)
+                                                const std::string &owner, bool include_special_entries)
 {
     std::string directory_list = "";
 
@@ -804,11 +804,6 @@ std::string base_session::create_directory_list(const std::vector<fs_objects::fs
 
     for (const fs_objects::fs_object &object : objects)
     {
-        if (object.path != target_directory)
-        {
-            continue;
-        }
-
         if (object.is_directory)
         {
             directory_list += "drwxrwxrwx 1 ";

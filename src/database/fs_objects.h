@@ -7,6 +7,10 @@ namespace fs_objects
     constexpr char GET_OBJECT_QUERY[] = "SELECT object_id, name, path, size, modified_time, is_directory FROM "
                                         "fs_objects WHERE user_id = ? AND name = ? AND path = ?";
 
+    constexpr char GET_OBJECTS_BY_PATH_QUERY[] =
+        "SELECT object_id, name, path, size, modified_time, is_directory FROM fs_objects WHERE user_id = ? AND path "
+        "= ?";
+
     constexpr char GET_ALL_OBJECTS_QUERY[] =
         "SELECT object_id, name, path, size, modified_time, is_directory FROM fs_objects WHERE user_id = ?";
 
@@ -16,10 +20,11 @@ namespace fs_objects
     constexpr char UPDATE_OBJECT_SIZE_QUERY[] =
         "UPDATE fs_objects SET size = ?, modified_time = CURRENT_TIMESTAMP WHERE object_id = ?";
 
-    constexpr char GET_ALL_OBJECTS_WITH_PREFIX_QUERY[] =
+    constexpr char GET_OBJECT_IDS_WITH_PATH_PREFIX_QUERY[] =
         "SELECT object_id FROM fs_objects WHERE user_id = ? AND path LIKE ?";
 
-    constexpr char DELETE_ALL_OBJECTS_WITH_PREFIX_QUERY[] = "DELETE FROM fs_objects WHERE user_id = ? AND path LIKE ?";
+    constexpr char DELETE_OBJECT_IDS_WITH_PATH_PREFIX_QUERY[] =
+        "DELETE FROM fs_objects WHERE user_id = ? AND path LIKE ?";
 
     constexpr char DELETE_OBJECT_QUERY[] = "DELETE FROM fs_objects WHERE object_id = ?";
 
@@ -52,7 +57,7 @@ namespace fs_objects
 
         fs_object get_object(const std::string &user_id, const std::string &object_name,
                              const std::string &object_path);
-        std::vector<fs_object> get_all_objects(const std::string &user_id);
+        std::vector<fs_object> get_objects_by_path(const std::string &user_id, const std::string &object_path);
         std::string create_object(const std::string &user_id, const std::string &object_name,
                                   const std::string &object_path, long long object_size, bool is_directory);
         std::string update_object_size(const std::string &user_id, const std::string &object_name,

@@ -79,7 +79,7 @@ namespace sqlite_wrapper
             throw std::runtime_error("run_param_query failed");
         }
 
-        for (int i = 0; i < params.size(); i++)
+        for (size_t i = 0; i < params.size(); i++)
         {
             rc = sqlite3_bind_text(stmt, i + 1, params[i].c_str(), params[i].length(), SQLITE_STATIC);
             if (rc != SQLITE_OK)
@@ -101,7 +101,7 @@ namespace sqlite_wrapper
             sqlite3_column_text(stmt, 1);
             for (int i = 0, max = sqlite3_column_count(stmt); i < max; i++)
             {
-                result.push_back((const char *)sqlite3_column_text(stmt, i));
+                result.emplace_back((const char *)sqlite3_column_text(stmt, i));
             }
         }
 
