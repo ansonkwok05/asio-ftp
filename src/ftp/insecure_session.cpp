@@ -67,7 +67,7 @@ namespace ftp
 
     void session::run_LIST(const std::string &argument)
     {
-        if (m_pending_directory_list != "")
+        if (!m_pending_directory_list.empty())
         {
             println("Previous list directory operation not finished -> " + m_pending_directory_list,
                     custom_utils::COLOR::RED);
@@ -100,15 +100,14 @@ namespace ftp
 
     void session::run_STOR(const std::string &argument)
     {
-        // no argument
-        if (argument == "")
+        if (argument.empty())
         {
             control_send("501 No arguments presented.");
             control_receive();
             return;
         }
 
-        if (m_pending_write_file != "")
+        if (!m_pending_write_file.empty())
         {
             println("Previous write operation not finished -> " + m_pending_write_file, custom_utils::COLOR::RED);
             return;
@@ -212,21 +211,21 @@ namespace ftp
                 self->m_data_socket = std::move(socket);
 
                 // check if need to list directory
-                if (self->m_pending_directory_list != "")
+                if (!self->m_pending_directory_list.empty())
                 {
                     self->data_directory_listing();
                     return;
                 }
 
                 // check if need to receive file
-                if (self->m_pending_write_file != "")
+                if (!self->m_pending_write_file.empty())
                 {
                     self->data_receive_file();
                     return;
                 }
 
                 // check if need to send file
-                if (self->m_sendable_file_id != "")
+                if (!self->m_sendable_file_id.empty())
                 {
                     self->data_send_file();
                     return;
@@ -236,12 +235,13 @@ namespace ftp
             });
     }
 
-    void session::data_send(const std::string &message)
+    void session::data_send()
     {
-        boost::asio::async_write(m_data_socket, boost::asio::buffer(message),
-                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_written) {
-                                     self->handle_data_send_callback(ec, bytes_written);
-                                 });
+        boost::asio::async_write(
+            m_data_socket, boost::asio::buffer(m_directory_list),
+            [self = shared_from_this()](const boost::system::error_code ec, const size_t bytes_sent) {
+                self->handle_data_send_callback(ec, bytes_sent);
+            });
     }
 
     void session::data_async_receive()
@@ -279,7 +279,7 @@ namespace ftp
         boost::system::error_code ec = m_data_socket.shutdown(boost::asio::ip::tcp::socket::shutdown_both, ec);
         if (ec)
         {
-            println("Error during data socket shutdown, possible client sudden disconnect", custom_utils::COLOR::RED);
+            println("Error during data socket shutdown, ignored " + ec.message(), custom_utils::COLOR::YELLOW);
         }
         m_data_socket.close();
     }

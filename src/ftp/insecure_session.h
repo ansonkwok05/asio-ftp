@@ -36,7 +36,7 @@ namespace ftp
 
         void data_acceptor_start_accept() override;
 
-        void data_send(const std::string &message) override;
+        void data_send() override;
 
         void data_async_receive() override;
 

@@ -28,7 +28,9 @@ base_session::base_session(boost::asio::any_io_executor executor)
 
         // break when successfully bind to a usable port
         if (ec.message() == "Success")
+        {
             break;
+        }
 
         port++;
     }
@@ -286,7 +288,7 @@ void base_session::handle_command(const std::string &command, const std::string 
             // type 1 "/test/one"   // absolute path
             // type 2 "test/one"    // absolute path using current working directory as parent
 
-            std::string object_path = "";
+            std::string object_path;
             std::vector<std::string> path_segments = string_split(argument, "/");
 
             if (argument[0] == '/')
@@ -544,7 +546,7 @@ void base_session::parse_RETR_argument(const std::string &argument)
         return;
     }
 
-    if (m_sendable_file_id != "")
+    if (!m_sendable_file_id.empty())
     {
         println("Previous send file operation not finished -> " + m_sendable_file_id, custom_utils::COLOR::RED);
         return;
@@ -598,8 +600,10 @@ void base_session::handle_data_send_callback(boost::system::error_code ec, size_
     }
 
     // inform client through control channel that data channel finished
-    m_pending_directory_list = "";
+    m_pending_directory_list.clear();
+    m_pending_directory_list_all = false;
     control_send("226 Transferred.");
+
     data_close();
 }
 
@@ -609,9 +613,8 @@ void base_session::data_directory_listing()
         m_fs_objects_table.get_objects_by_path(m_userid, m_pending_directory_list);
 
     // send directory list over data channel
-    data_send(create_directory_list(objects, m_username, m_pending_directory_list_all));
-
-    m_pending_directory_list_all = false;
+    create_directory_list(objects, m_username, m_pending_directory_list_all);
+    data_send();
 }
 
 void base_session::data_receive_file()
@@ -695,7 +698,7 @@ void base_session::data_async_receive_end()
     m_fs_objects_table.update_object_size(m_userid, m_receive_file_name, m_receive_file_path, m_received_file_size);
 
     // allow another file to be received
-    m_pending_write_file = "";
+    m_pending_write_file.clear();
 
     // notify client
     control_send("226 Received.");
@@ -751,7 +754,7 @@ void base_session::data_async_send_end()
     m_send_file_stream.reset();
 
     // allow another file to be sent
-    m_sendable_file_id = "";
+    m_sendable_file_id.clear();
 
     // notify client
     control_send("226 Sent.");
@@ -779,7 +782,7 @@ std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_rece
         string_split(std::string(m_buffer.begin(), m_buffer.begin() + bytes_received - 2), " ");
 
     std::string FTP_command = splitted[0];
-    std::string FTP_argument = "";
+    std::string FTP_argument;
 
     splitted.erase(splitted.begin());
 
@@ -790,36 +793,34 @@ std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_rece
     return std::pair<std::string, std::string>(string_to_uppercase(FTP_command), FTP_argument);
 }
 
-std::string base_session::create_directory_list(const std::vector<fs_objects::fs_object> &objects,
-                                                const std::string &owner, bool include_special_entries)
+void base_session::create_directory_list(const std::vector<fs_objects::fs_object> &objects, const std::string &owner,
+                                         bool include_special_entries)
 {
-    std::string directory_list = "";
+    m_directory_list.clear();
 
-    // also send "." and ".." entries
+    // include "." and ".." entries
     if (include_special_entries)
     {
-        directory_list += "drwxrwxrwx 1 " + owner + " " + owner + " 0 Jan 1 00:00 .\r\n";
-        directory_list += "drwxrwxrwx 1 " + owner + " " + owner + " 0 Jan 1 00:00 ..\r\n";
+        m_directory_list += "drwxrwxrwx 1 " + owner + " " + owner + " 0 Jan 1 00:00 .\r\n";
+        m_directory_list += "drwxrwxrwx 1 " + owner + " " + owner + " 0 Jan 1 00:00 ..\r\n";
     }
 
     for (const fs_objects::fs_object &object : objects)
     {
         if (object.is_directory)
         {
-            directory_list += "drwxrwxrwx 1 ";
+            m_directory_list += "drwxrwxrwx 1 ";
         }
         else
         {
-            directory_list += "-rwxrwxrwx 1 ";
+            m_directory_list += "-rwxrwxrwx 1 ";
         }
 
-        directory_list += owner + " " + owner + " ";
-        directory_list += object.size + " ";
-        directory_list += parse_metadata_time(object.modified_time) + " ";
-        directory_list += object.name + "\r\n";
+        m_directory_list += owner + " " + owner + " ";
+        m_directory_list += object.size + " ";
+        m_directory_list += parse_metadata_time(object.modified_time) + " ";
+        m_directory_list += object.name + "\r\n";
     }
-
-    return directory_list;
 }
 
 namespace
@@ -828,11 +829,11 @@ namespace
     {
         // format: 2025-08-28 05:12:43 -> Aug 28 05:12
 
-        std::string parsedStr = "";
+        std::string parsed_string;
 
         if (time_str.length() < 19)
         {
-            return parsedStr;
+            return parsed_string;
         }
 
         switch (time_str[5])
@@ -843,47 +844,47 @@ namespace
             {
             // 01
             case '1': {
-                parsedStr += "Jan ";
+                parsed_string += "Jan ";
                 break;
             }
             // 02
             case '2': {
-                parsedStr += "Feb ";
+                parsed_string += "Feb ";
                 break;
             }
             // 03
             case '3': {
-                parsedStr += "Mar ";
+                parsed_string += "Mar ";
                 break;
             }
             // 04
             case '4': {
-                parsedStr += "Apr ";
+                parsed_string += "Apr ";
                 break;
             }
             // 05
             case '5': {
-                parsedStr += "May ";
+                parsed_string += "May ";
                 break;
             }
             // 06
             case '6': {
-                parsedStr += "Jun ";
+                parsed_string += "Jun ";
                 break;
             }
             // 07
             case '7': {
-                parsedStr += "July ";
+                parsed_string += "July ";
                 break;
             }
             // 08
             case '8': {
-                parsedStr += "Aug ";
+                parsed_string += "Aug ";
                 break;
             }
             // 09
             case '9': {
-                parsedStr += "Sep ";
+                parsed_string += "Sep ";
                 break;
             }
             }
@@ -895,17 +896,17 @@ namespace
             {
             // 10
             case '0': {
-                parsedStr += "Oct ";
+                parsed_string += "Oct ";
                 break;
             }
             // 11
             case '1': {
-                parsedStr += "Nov ";
+                parsed_string += "Nov ";
                 break;
             }
             // 12
             case '2': {
-                parsedStr += "Dec ";
+                parsed_string += "Dec ";
                 break;
             }
             }
@@ -914,11 +915,11 @@ namespace
         }
 
         // add day
-        parsedStr += time_str.substr(8, 2) + " ";
+        parsed_string += time_str.substr(8, 2) + " ";
 
         // add hour:minute
-        parsedStr += time_str.substr(11, 5);
+        parsed_string += time_str.substr(11, 5);
 
-        return parsedStr;
+        return parsed_string;
     }
 } // namespace

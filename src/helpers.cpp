@@ -174,7 +174,7 @@ std::string string_replace(std::string_view input_string, std::string_view searc
 
 std::string generate_uuid_string(size_t length)
 {
-    std::string uuid = "";
+    std::string uuid;
 
     for (size_t i = 0; i < length; i++)
     {

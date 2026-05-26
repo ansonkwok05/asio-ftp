@@ -64,7 +64,8 @@ protected:
 
     virtual void data_acceptor_start_accept() = 0; // todo extract data socket handling if logics
 
-    virtual void data_send(const std::string &message) = 0;
+    std::string m_directory_list;
+    virtual void data_send() = 0;
     void handle_data_send_callback(boost::system::error_code ec, size_t bytes_sent);
 
     void data_directory_listing();
@@ -94,8 +95,8 @@ protected:
 private:
     std::pair<std::string, std::string> parse_buffer(size_t bytes_received);
 
-    std::string create_directory_list(const std::vector<fs_objects::fs_object> &objects, const std::string &owner,
-                                      bool include_special_entries);
+    void create_directory_list(const std::vector<fs_objects::fs_object> &objects, const std::string &owner,
+                               bool include_special_entries);
 };
 
 namespace

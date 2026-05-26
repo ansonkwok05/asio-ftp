@@ -189,7 +189,7 @@ namespace ftps
 
     void secure_session::run_LIST(const std::string &argument)
     {
-        if (m_pending_directory_list != "")
+        if (!m_pending_directory_list.empty())
         {
             println("Previous list directory operation not finished -> " + m_pending_directory_list,
                     custom_utils::COLOR::RED);
@@ -222,15 +222,14 @@ namespace ftps
 
     void secure_session::run_STOR(const std::string &argument)
     {
-        // no argument
-        if (argument == "")
+        if (argument.empty())
         {
             control_send("501 No arguments presented.");
             control_receive();
             return;
         }
 
-        if (m_pending_write_file != "")
+        if (!m_pending_write_file.empty())
         {
             println("Previous write operation not finished -> " + m_pending_write_file, custom_utils::COLOR::RED);
             return;
@@ -321,80 +320,84 @@ namespace ftps
 
     void secure_session::data_acceptor_start_accept()
     {
-        m_data_socket_acceptor.async_accept([self = shared_from_this()](boost::system::error_code ec,
-                                                                        boost::asio::ip::tcp::socket socket) {
-            if (ec)
-            {
-                self->println("data socket acceptor error -> " + ec.message(), custom_utils::COLOR::RED);
-                return;
-            }
+        m_data_socket_acceptor.async_accept(
+            [self = shared_from_this()](const boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
+                if (ec)
+                {
+                    self->println("data socket acceptor error -> " + ec.message(), custom_utils::COLOR::RED);
+                    return;
+                }
 
-            // disables nagle's algorithm to reduce small packet latency
-            socket.set_option(boost::asio::ip::tcp::no_delay(true));
+                // disables nagle's algorithm to reduce small packet latency
+                socket.set_option(boost::asio::ip::tcp::no_delay(true));
 
-            self->m_data_socket =
-                boost::asio::ssl::stream<boost::asio::ip::tcp::socket>(std::move(socket), self->m_ssl_context);
+                self->m_data_socket =
+                    boost::asio::ssl::stream<boost::asio::ip::tcp::socket>(std::move(socket), self->m_ssl_context);
 
-            self->m_data_socket.async_handshake(
-                boost::asio::ssl::stream_base::handshake_type::server, [self](boost::system::error_code handshake_ec) {
-                    if (handshake_ec)
-                    {
-                        self->println("handshake error", custom_utils::COLOR::RED);
-                        return;
-                    }
+                self->m_data_socket.async_handshake(
+                    boost::asio::ssl::stream_base::handshake_type::server,
+                    [self](const boost::system::error_code handshake_ec) {
+                        if (handshake_ec)
+                        {
+                            self->println("handshake error", custom_utils::COLOR::RED);
+                            return;
+                        }
 
-                    self->println("Data socket accepted and handshaked", custom_utils::COLOR::GREEN);
+                        self->println("Data socket accepted and handshaked", custom_utils::COLOR::GREEN);
 
-                    // check if need to list directory
-                    if (self->m_pending_directory_list != "")
-                    {
-                        self->data_directory_listing();
-                        return;
-                    }
+                        // check if need to list directory
+                        if (!self->m_pending_directory_list.empty())
+                        {
+                            self->data_directory_listing();
+                            return;
+                        }
 
-                    // check if need to receive file
-                    if (self->m_pending_write_file != "")
-                    {
-                        self->data_receive_file();
-                        return;
-                    }
+                        // check if need to receive file
+                        if (!self->m_pending_write_file.empty())
+                        {
+                            self->data_receive_file();
+                            return;
+                        }
 
-                    // check if need to send file
-                    if (self->m_sendable_file_id != "")
-                    {
-                        self->data_send_file();
-                        return;
-                    }
+                        // check if need to send file
+                        if (!self->m_sendable_file_id.empty())
+                        {
+                            self->data_send_file();
+                            return;
+                        }
 
-                    self->println("Data socket nothing done, possible late commands", custom_utils::COLOR::CYAN);
-                });
-        });
+                        self->println("Data socket nothing done, possible late commands", custom_utils::COLOR::CYAN);
+                    });
+            });
     }
 
-    void secure_session::data_send(const std::string &message)
+    void secure_session::data_send()
     {
-        boost::asio::async_write(m_data_socket, boost::asio::buffer(message),
-                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_sent) {
-                                     self->handle_data_send_callback(ec, bytes_sent);
-                                 });
+        boost::asio::async_write(
+            m_data_socket, boost::asio::buffer(m_directory_list),
+            [self = shared_from_this()](const boost::system::error_code ec, const size_t bytes_sent) {
+                self->handle_data_send_callback(ec, bytes_sent);
+            });
     }
 
     void secure_session::data_async_receive()
     {
-        boost::asio::async_read(m_data_socket, m_receive_buffer,
-                                [self = shared_from_this()](boost::system::error_code ec, size_t bytes_read) {
-                                    self->handle_data_async_receive_callback(ec, bytes_read);
-                                });
+        boost::asio::async_read(
+            m_data_socket, m_receive_buffer,
+            [self = shared_from_this()](const boost::system::error_code ec, const size_t bytes_read) {
+                self->handle_data_async_receive_callback(ec, bytes_read);
+            });
     }
 
     void secure_session::data_async_send()
     {
         m_send_file_stream->read(m_send_buffer, SEND_BUFFER_SIZE);
 
-        boost::asio::async_write(m_data_socket, boost::asio::const_buffer(m_send_buffer, m_send_file_stream->gcount()),
-                                 [self = shared_from_this()](boost::system::error_code ec, size_t bytes_sent) {
-                                     self->handle_data_async_send_callback(ec, bytes_sent);
-                                 });
+        boost::asio::async_write(
+            m_data_socket, boost::asio::const_buffer(m_send_buffer, m_send_file_stream->gcount()),
+            [self = shared_from_this()](const boost::system::error_code ec, const size_t bytes_sent) {
+                self->handle_data_async_send_callback(ec, bytes_sent);
+            });
     }
 
     void secure_session::data_close()
@@ -402,32 +405,42 @@ namespace ftps
         // close data channel
         println("Operation finished, closing data socket", custom_utils::COLOR::GREEN);
 
-        if (!m_data_socket.next_layer().is_open())
+        if (!m_data_socket.lowest_layer().is_open())
         {
-            println("Unable to close data socket. It is not open?", custom_utils::COLOR::YELLOW);
+            println("Unable to close data socket. It is not open?", custom_utils::COLOR::RED);
             return;
         }
-
-        // cancel all async operations
-        m_data_socket.next_layer().cancel();
 
         m_data_socket.async_shutdown([self = shared_from_this()](const boost::system::error_code &ec) {
             if (ec)
             {
-                self->println("Error during data socket ssl shutdown, possible client sudden disconnect",
-                              custom_utils::COLOR::RED);
-                self->m_data_socket.next_layer().close();
+                self->println("Error during data socket ssl shutdown, probably disconnected",
+                              custom_utils::COLOR::YELLOW);
+                self->m_data_socket.lowest_layer().close();
                 return;
             }
 
             boost::system::error_code temp_ec =
-                self->m_data_socket.next_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, temp_ec);
+                self->m_data_socket.lowest_layer().shutdown(boost::asio::ip::tcp::socket::shutdown_both, temp_ec);
+
             if (temp_ec)
             {
-                self->println("Error during data socket shutdown, possible client sudden disconnect",
-                              custom_utils::COLOR::RED);
+                self->println("Error during data socket shutdown", custom_utils::COLOR::YELLOW);
+                self->m_data_socket.lowest_layer().close();
+                return;
             }
-            self->m_data_socket.next_layer().close();
+
+            // cancel all async operations
+            temp_ec = self->m_data_socket.lowest_layer().cancel(temp_ec);
+
+            if (temp_ec)
+            {
+                self->println("Error cancelling all async operations for data socket", custom_utils::COLOR::YELLOW);
+                self->m_data_socket.lowest_layer().close();
+                return;
+            }
+
+            self->m_data_socket.lowest_layer().close();
         });
     }
 } // namespace ftps
