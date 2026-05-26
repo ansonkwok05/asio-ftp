@@ -107,7 +107,7 @@ void base_session::handle_command(const std::string &command, const std::string 
             }
 
             // get user_id by name from database users table
-            std::string uid = m_user.get_id_by_name(argument);
+            std::string uid = m_users_table.get_id_by_name(argument);
 
             if (uid == "")
             {
@@ -136,7 +136,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 return;
             }
 
-            if (m_user.check_password(m_userid, argument))
+            if (m_users_table.check_password(m_userid, argument))
             {
                 m_connection_stage = CONNECTION_STAGE::LOGGED_IN;
                 println("User \"" + m_username + "\" logged in", custom_utils::COLOR::GREEN);
@@ -309,7 +309,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 size_t i = 0; // path iterator
 
                 // check if first subdirectory exists
-                if (m_fs_objects.get_object(m_userid, path_segments[0], object_path).size() == 0)
+                if (m_fs_objects_table.get_object(m_userid, path_segments[0], object_path).size() == 0)
                 {
                     println("Cannot change working directory: " + object_path + " -> " + path_segments[0] +
                                 ", not found",
@@ -332,7 +332,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                     object_path += "/";
                     object_path += path_segments[i];
 
-                    if (m_fs_objects.get_object(m_userid, path_segments[i + 1], object_path).size() == 0)
+                    if (m_fs_objects_table.get_object(m_userid, path_segments[i + 1], object_path).size() == 0)
                     {
                         println("Cannot change working directory: " + object_path + " -> " + path_segments[i + 1] +
                                     ", not found",
@@ -398,7 +398,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 object_name = get_basename(argument);
             }
 
-            std::string object_id = m_fs_objects.create_object(m_userid, object_name, object_path, 0, true);
+            std::string object_id = m_fs_objects_table.create_object(m_userid, object_name, object_path, 0, true);
 
             // check if created successfully
             if (object_id == "")
@@ -455,7 +455,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 object_name = get_basename(argument);
             }
 
-            m_fs_objects.remove_fs_object(m_userid, object_name, object_path);
+            m_fs_objects_table.remove_fs_object(m_userid, object_name, object_path);
             control_send("250 Deleted.");
 
             control_receive();
@@ -493,7 +493,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 object_name = get_basename(argument);
             }
 
-            m_fs_objects.remove_fs_object(m_userid, object_name, object_path);
+            m_fs_objects_table.remove_fs_object(m_userid, object_name, object_path);
             control_send("250 Deleted.");
 
             control_receive();
@@ -518,7 +518,7 @@ void base_session::handle_command(const std::string &command, const std::string 
             std::string object_path = get_parent_path(argument);
             std::string object_name = get_basename(argument);
 
-            std::vector<std::string> object = m_fs_objects.get_object(m_userid, object_name, object_path);
+            std::vector<std::string> object = m_fs_objects_table.get_object(m_userid, object_name, object_path);
             if (object.size() == 0)
             {
                 // file does not exists
@@ -578,7 +578,7 @@ void base_session::parse_RETR_argument(const std::string &argument)
         object_name = get_basename(argument);
     }
 
-    std::vector<std::string> object = m_fs_objects.get_object(m_userid, object_name, object_path);
+    std::vector<std::string> object = m_fs_objects_table.get_object(m_userid, object_name, object_path);
     if (object.size() == 0)
     {
         // file does not exists
@@ -606,7 +606,7 @@ void base_session::handle_data_send_callback(boost::system::error_code ec, size_
 
 void base_session::data_directory_listing()
 {
-    std::vector<std::string> objects = m_fs_objects.get_all_objects(m_userid);
+    std::vector<std::string> objects = m_fs_objects_table.get_all_objects(m_userid);
 
     // send directory list over data channel
     data_send(create_directory_list(objects, m_pending_directory_list, m_username, m_pending_directory_list_all));
@@ -621,12 +621,12 @@ void base_session::data_receive_file()
     m_receive_file_name = get_basename(m_pending_write_file);
 
     // check if object exists already
-    std::vector<std::string> object = m_fs_objects.get_object(m_userid, m_receive_file_name, m_receive_file_path);
+    std::vector<std::string> object = m_fs_objects_table.get_object(m_userid, m_receive_file_name, m_receive_file_path);
     if (object.size() == 0)
     {
         // object not found, create one
         std::string created_file_id =
-            m_fs_objects.create_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
+            m_fs_objects_table.create_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
         println("creating new file", custom_utils::COLOR::CYAN);
         m_receive_file_stream =
             std::make_unique<std::ofstream>("data/" + created_file_id, std::ios_base::app | std::ios::binary);
@@ -693,7 +693,7 @@ void base_session::data_async_receive_end()
     m_receive_file_stream.reset();
 
     println("updating object metadata in db", custom_utils::COLOR::CYAN);
-    m_fs_objects.update_object_size(m_userid, m_receive_file_name, m_receive_file_path, m_received_file_size);
+    m_fs_objects_table.update_object_size(m_userid, m_receive_file_name, m_receive_file_path, m_received_file_size);
 
     // allow another file to be received
     m_pending_write_file = "";

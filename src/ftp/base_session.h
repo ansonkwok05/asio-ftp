@@ -2,7 +2,7 @@
 
 #include "constants.h"
 
-#include "../database/user_db.h"
+#include "../database/users.h"
 #include "../database/fs_objects.h"
 #include "../custom_utils.h"
 
@@ -54,8 +54,8 @@ protected:
     std::string m_pending_write_file;
     std::string m_sendable_file_id;
 
-    user_db::user m_user;
-    fs_objects::fs_objects m_fs_objects;
+    users::users m_users_table;
+    fs_objects::fs_objects m_fs_objects_table;
 
     std::string m_userid;
     std::string m_username;

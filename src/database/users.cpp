@@ -1,4 +1,4 @@
-#include "user_db.h"
+#include "users.h"
 #include "sqlite_wrapper.h"
 #include "../helpers.h"
 #include "../custom_utils.h"
@@ -7,47 +7,63 @@
 #include <string>
 #include <vector>
 
-namespace user_db
+namespace users
 {
-    user::user()
+    users::users()
     {
         m_db.connect();
     }
 
-    void user::initialize()
+    void users::initialize()
     {
         check_table_exists();
     }
 
-    std::string user::get_id_by_name(const std::string &name)
+    std::string users::get_id_by_name(const std::string &name)
     {
         std::vector<std::string> result_vector = m_db.run_param_query(GET_ID_BY_NAME_QUERY, {name});
 
         // return empty string if username not found
         if (result_vector.empty())
+        {
             return std::string();
+        }
 
         return result_vector[0];
     }
 
-    std::vector<std::string> user::get_all_user_credentials()
+    std::vector<user> users::get_all_user_credentials()
     {
-        return m_db.run_query(GET_ALL_USER_CREDENTIALS_QUERY);
+        std::vector<std::string> db_output = m_db.run_query(GET_ALL_USER_CREDENTIALS_QUERY);
+
+        std::vector<user> all_user_credentials;
+        all_user_credentials.reserve(db_output.size() / 2);
+
+        for (size_t i = 0; i < db_output.size(); i += 2)
+        {
+            user user;
+            user.name = std::move(db_output[i]);
+            user.password = std::move(db_output[i + 1]);
+
+            all_user_credentials.push_back(user);
+        }
+
+        return all_user_credentials;
     }
 
-    bool user::check_password(const std::string &id, const std::string &password)
+    bool users::check_password(const std::string &id, const std::string &password)
     {
         std::vector<std::string> result_vector = m_db.run_param_query(GET_PASSWORD_BY_ID_QUERY, {id});
 
         return !result_vector.empty() && (result_vector[0] == password);
     }
 
-    void user::create_user(const std::string &name, const std::string &password)
+    void users::create_user(const std::string &name, const std::string &password)
     {
         m_db.run_param_query(CREATE_USER_QUERY, {generate_uuid_string(64), name, password});
     }
 
-    void user::check_table_exists()
+    void users::check_table_exists()
     {
         std::vector<std::string> result = m_db.run_query(GET_ALL_TABLE_NAMES_QUERY);
 
@@ -72,7 +88,7 @@ namespace user_db
         check_table_structure();
     }
 
-    void user::create_table()
+    void users::create_table()
     {
         std::vector<std::string> result = m_db.run_query(USER_TABLE_CREATION_QUERY);
 
@@ -80,7 +96,7 @@ namespace user_db
         check_table_structure();
     }
 
-    void user::check_table_structure()
+    void users::check_table_structure()
     {
         std::vector<std::string> result = m_db.run_query(CHECK_USER_TABLE_STRUCTURE_QUERY);
 
@@ -97,4 +113,4 @@ namespace user_db
 
         custom_utils::println("Verified \"users\" table structure", custom_utils::COLOR::GREEN);
     }
-} // namespace user_db
+} // namespace users

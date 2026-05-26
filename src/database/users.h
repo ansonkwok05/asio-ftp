@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace user_db
+namespace users
 {
     constexpr char GET_ID_BY_NAME_QUERY[] = "SELECT user_id FROM users WHERE name = ?";
 
@@ -22,15 +22,22 @@ namespace user_db
 
     constexpr char CHECK_USER_TABLE_STRUCTURE_QUERY[] = "SELECT sql FROM sqlite_master WHERE name = 'users'";
 
-    class user
+    struct user
+    {
+        std::string id;
+        std::string name;
+        std::string password;
+    };
+
+    class users
     {
     public:
-        user();
+        users();
 
         void initialize();
 
         std::string get_id_by_name(const std::string &name);
-        std::vector<std::string> get_all_user_credentials();
+        std::vector<user> get_all_user_credentials();
 
         bool check_password(const std::string &id, const std::string &password);
         void create_user(const std::string &name, const std::string &password);
@@ -42,4 +49,4 @@ namespace user_db
         void create_table();
         void check_table_structure();
     };
-} // namespace user_db
+} // namespace users

@@ -2,7 +2,7 @@
 #include "src/config/parser.h"
 #include "src/database/fs_handler.h"
 #include "src/database/sqlite_wrapper.h"
-#include "src/database/user_db.h"
+#include "src/database/users.h"
 #include "src/database/fs_objects.h"
 #include "src/ftp/server.h"
 
@@ -56,16 +56,21 @@ void init_user_table(config::parsed_config cfg)
 {
     std::map<std::string, std::string> db_users;
     {
-        user_db::user user = user_db::user();
-        user.initialize();
+        users::users users_table = users::users();
+        users_table.initialize();
 
-        std::vector<std::string> temp_userlist = user.get_all_user_credentials();
-        int i = 0;
-        while (i < temp_userlist.size())
+        std::vector<users::user> all_user_credential = users_table.get_all_user_credentials();
+        for (const users::user &user : all_user_credential)
         {
-            db_users[temp_userlist[i]] = temp_userlist[i + 1];
-            i += 2;
+            db_users[user.name] = user.password;
         }
+
+        // int i = 0;
+        // while (i < temp_userlist.size())
+        // {
+        //     db_users[temp_userlist[i]] = temp_userlist[i + 1];
+        //     i += 2;
+        // }
     }
 
     if (any_users_changed(db_users, cfg.users))
@@ -78,10 +83,10 @@ void init_user_table(config::parsed_config cfg)
         init_sql_db(false);
     }
 
-    user_db::user user = user_db::user();
+    users::users users_table = users::users();
     for (const auto &[name, password] : cfg.users)
     {
-        user.create_user(name, password);
+        users_table.create_user(name, password);
         println("Created user \"" + name + "\"", custom_utils::COLOR::GREEN);
     }
 }
