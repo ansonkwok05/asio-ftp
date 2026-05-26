@@ -59,7 +59,7 @@ void init_user_table(config::parsed_config cfg)
         user_db::user user = user_db::user();
         user.initialize();
 
-        std::vector<std::string> temp_userlist = user.get_username_list();
+        std::vector<std::string> temp_userlist = user.get_all_user_credentials();
         int i = 0;
         while (i < temp_userlist.size())
         {

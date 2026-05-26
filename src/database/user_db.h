@@ -7,8 +7,21 @@
 
 namespace user_db
 {
+    constexpr char GET_ID_BY_NAME_QUERY[] = "SELECT user_id FROM users WHERE name = ?";
+
+    constexpr char GET_ALL_USER_CREDENTIALS_QUERY[] = "SELECT name, password FROM users";
+
+    constexpr char GET_PASSWORD_BY_ID_QUERY[] = "SELECT password FROM users WHERE user_id = ?";
+
+    constexpr char CREATE_USER_QUERY[] = "INSERT INTO users (user_id, name, password) VALUES (?, ?, ?)";
+
+    constexpr char GET_ALL_TABLE_NAMES_QUERY[] = "SELECT name FROM sqlite_master WHERE type='table'";
+
     constexpr char USER_TABLE_CREATION_QUERY[] = "CREATE TABLE users (user_id CHAR(64) PRIMARY KEY NOT NULL, name "
                                                  "VARCHAR(30) UNIQUE NOT NULL, password VARCHAR(255) NOT NULL)";
+
+    constexpr char CHECK_USER_TABLE_STRUCTURE_QUERY[] = "SELECT sql FROM sqlite_master WHERE name = 'users'";
+
     class user
     {
     public:
@@ -17,7 +30,7 @@ namespace user_db
         void initialize();
 
         std::string get_id_by_name(const std::string &name);
-        std::vector<std::string> get_username_list();
+        std::vector<std::string> get_all_user_credentials();
 
         bool check_password(const std::string &id, const std::string &password);
         void create_user(const std::string &name, const std::string &password);

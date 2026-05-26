@@ -21,52 +21,38 @@ namespace user_db
 
     std::string user::get_id_by_name(const std::string &name)
     {
-        std::vector<std::string> result_vector = db.run_param_query("SELECT user_id FROM users WHERE name = ?", {name});
+        std::vector<std::string> result_vector = db.run_param_query(GET_ID_BY_NAME_QUERY, {name});
 
-        if (result_vector.size() == 0)
-        {
-            // username not found
-            return "";
-        }
+        // return empty string if username not found
+        if (result_vector.empty())
+            return std::string();
 
         return result_vector[0];
     }
 
-    std::vector<std::string> user::get_username_list()
+    std::vector<std::string> user::get_all_user_credentials()
     {
-        return db.run_query("SELECT name, password FROM users");
+        return db.run_query(GET_ALL_USER_CREDENTIALS_QUERY);
     }
 
     bool user::check_password(const std::string &id, const std::string &password)
     {
-        std::vector<std::string> result_vector =
-            db.run_param_query("SELECT password FROM users WHERE user_id = ?", {id});
+        std::vector<std::string> result_vector = db.run_param_query(GET_PASSWORD_BY_ID_QUERY, {id});
 
-        if (result_vector.size() == 0)
-        {
-            return false;
-        }
-
-        if (result_vector[0] != password)
-        {
-            return false;
-        }
-
-        return true;
+        return !result_vector.empty() && (result_vector[0] == password);
     }
 
     void user::create_user(const std::string &name, const std::string &password)
     {
-        db.run_param_query("INSERT INTO users (user_id, name, password) VALUES (?, ?, ?)",
-                           {generate_uuid_string(64), name, password});
+        db.run_param_query(CREATE_USER_QUERY, {generate_uuid_string(64), name, password});
     }
 
     void user::check_table_exists()
     {
-        std::vector<std::string> result = db.run_query("SELECT name FROM sqlite_master WHERE type='table'");
+        std::vector<std::string> result = db.run_query(GET_ALL_TABLE_NAMES_QUERY);
 
         bool exists = false;
-        for (auto table_name : result)
+        for (const std::string &table_name : result)
         {
             if (table_name == "users")
             {
@@ -96,7 +82,7 @@ namespace user_db
 
     void user::check_table_structure()
     {
-        std::vector<std::string> result = db.run_query("SELECT sql FROM sqlite_master WHERE name = 'users'");
+        std::vector<std::string> result = db.run_query(CHECK_USER_TABLE_STRUCTURE_QUERY);
 
         if (result.size() != 1)
         {
