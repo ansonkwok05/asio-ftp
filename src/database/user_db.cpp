@@ -11,7 +11,7 @@ namespace user_db
 {
     user::user()
     {
-        db.connect();
+        m_db.connect();
     }
 
     void user::initialize()
@@ -21,7 +21,7 @@ namespace user_db
 
     std::string user::get_id_by_name(const std::string &name)
     {
-        std::vector<std::string> result_vector = db.run_param_query(GET_ID_BY_NAME_QUERY, {name});
+        std::vector<std::string> result_vector = m_db.run_param_query(GET_ID_BY_NAME_QUERY, {name});
 
         // return empty string if username not found
         if (result_vector.empty())
@@ -32,24 +32,24 @@ namespace user_db
 
     std::vector<std::string> user::get_all_user_credentials()
     {
-        return db.run_query(GET_ALL_USER_CREDENTIALS_QUERY);
+        return m_db.run_query(GET_ALL_USER_CREDENTIALS_QUERY);
     }
 
     bool user::check_password(const std::string &id, const std::string &password)
     {
-        std::vector<std::string> result_vector = db.run_param_query(GET_PASSWORD_BY_ID_QUERY, {id});
+        std::vector<std::string> result_vector = m_db.run_param_query(GET_PASSWORD_BY_ID_QUERY, {id});
 
         return !result_vector.empty() && (result_vector[0] == password);
     }
 
     void user::create_user(const std::string &name, const std::string &password)
     {
-        db.run_param_query(CREATE_USER_QUERY, {generate_uuid_string(64), name, password});
+        m_db.run_param_query(CREATE_USER_QUERY, {generate_uuid_string(64), name, password});
     }
 
     void user::check_table_exists()
     {
-        std::vector<std::string> result = db.run_query(GET_ALL_TABLE_NAMES_QUERY);
+        std::vector<std::string> result = m_db.run_query(GET_ALL_TABLE_NAMES_QUERY);
 
         bool exists = false;
         for (const std::string &table_name : result)
@@ -74,7 +74,7 @@ namespace user_db
 
     void user::create_table()
     {
-        std::vector<std::string> result = db.run_query(USER_TABLE_CREATION_QUERY);
+        std::vector<std::string> result = m_db.run_query(USER_TABLE_CREATION_QUERY);
 
         custom_utils::println("Created \"users\" table, checking table structure", custom_utils::COLOR::GREEN);
         check_table_structure();
@@ -82,7 +82,7 @@ namespace user_db
 
     void user::check_table_structure()
     {
-        std::vector<std::string> result = db.run_query(CHECK_USER_TABLE_STRUCTURE_QUERY);
+        std::vector<std::string> result = m_db.run_query(CHECK_USER_TABLE_STRUCTURE_QUERY);
 
         if (result.size() != 1)
         {

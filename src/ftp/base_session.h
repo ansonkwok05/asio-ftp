@@ -3,7 +3,7 @@
 #include "constants.h"
 
 #include "../database/user_db.h"
-#include "../database/virtual_fs_db.h"
+#include "../database/fs_objects.h"
 #include "../custom_utils.h"
 
 #include <string>
@@ -55,7 +55,7 @@ protected:
     std::string m_sendable_file_id;
 
     user_db::user m_user;
-    virtual_fs_db::virtual_fs m_virtual_fs;
+    fs_objects::fs_objects m_fs_objects;
 
     std::string m_userid;
     std::string m_username;
@@ -94,9 +94,8 @@ protected:
 private:
     std::pair<std::string, std::string> parse_buffer(size_t bytes_received);
 
-    std::string create_directory_list(const std::vector<std::string> &virtual_object_list,
-                                      const std::string &target_directory, std::string owner,
-                                      bool include_special_entries);
+    std::string create_directory_list(const std::vector<std::string> &fs_objects, const std::string &target_directory,
+                                      std::string owner, bool include_special_entries);
 };
 
 namespace

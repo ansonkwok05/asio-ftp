@@ -140,7 +140,7 @@ namespace ftp
 
         // if not root directory and parent directory not found
         if (parent_directory != "/" &&
-            m_virtual_fs.get_object(m_userid, get_basename(parent_directory), get_parent_path(parent_directory))
+            m_fs_objects.get_object(m_userid, get_basename(parent_directory), get_parent_path(parent_directory))
                     .size() == 0)
         {
             println("Parent directory doesn't exists -> " + m_pending_write_file, custom_utils::COLOR::RED);

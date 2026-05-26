@@ -36,7 +36,7 @@ namespace user_db
         void create_user(const std::string &name, const std::string &password);
 
     private:
-        sqlite_wrapper::SQLiteDb db;
+        sqlite_wrapper::SQLiteDb m_db;
 
         void check_table_exists();
         void create_table();

@@ -3,7 +3,7 @@
 #include "src/database/fs_handler.h"
 #include "src/database/sqlite_wrapper.h"
 #include "src/database/user_db.h"
-#include "src/database/virtual_fs_db.h"
+#include "src/database/fs_objects.h"
 #include "src/ftp/server.h"
 
 #include <map>
@@ -79,12 +79,16 @@ void init_user_table(config::parsed_config cfg)
     }
 
     user_db::user user = user_db::user();
-    user.initialize();
     for (const auto &[name, password] : cfg.users)
     {
         user.create_user(name, password);
         println("Created user \"" + name + "\"", custom_utils::COLOR::GREEN);
     }
+}
+
+void init_fs_objects_table()
+{
+    fs_objects::fs_objects().initialize();
 }
 
 int main()
@@ -106,7 +110,7 @@ int main()
     println("User table initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
             custom_utils::COLOR::GREEN);
 
-    virtual_fs_db::virtual_fs().initialize();
+    init_fs_objects_table();
     println("Virtual_fs table initialization done in " + std::to_string(performanceWatcher.lapNs() / 1'000'000) + "ms",
             custom_utils::COLOR::GREEN);
 

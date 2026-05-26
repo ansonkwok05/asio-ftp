@@ -309,7 +309,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 size_t i = 0; // path iterator
 
                 // check if first subdirectory exists
-                if (m_virtual_fs.get_object(m_userid, path_segments[0], object_path).size() == 0)
+                if (m_fs_objects.get_object(m_userid, path_segments[0], object_path).size() == 0)
                 {
                     println("Cannot change working directory: " + object_path + " -> " + path_segments[0] +
                                 ", not found",
@@ -332,7 +332,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                     object_path += "/";
                     object_path += path_segments[i];
 
-                    if (m_virtual_fs.get_object(m_userid, path_segments[i + 1], object_path).size() == 0)
+                    if (m_fs_objects.get_object(m_userid, path_segments[i + 1], object_path).size() == 0)
                     {
                         println("Cannot change working directory: " + object_path + " -> " + path_segments[i + 1] +
                                     ", not found",
@@ -398,19 +398,18 @@ void base_session::handle_command(const std::string &command, const std::string 
                 object_name = get_basename(argument);
             }
 
-            std::string vobj_id = m_virtual_fs.create_virtual_object(m_userid, object_name, object_path, 0, true);
+            std::string object_id = m_fs_objects.create_object(m_userid, object_name, object_path, 0, true);
 
             // check if created successfully
-            if (vobj_id == "")
+            if (object_id == "")
             {
-                println("Unable to create virtual object", custom_utils::COLOR::YELLOW);
+                println("Unable to create fs object", custom_utils::COLOR::YELLOW);
                 control_send("250 Failed.");
                 control_receive();
                 return;
             }
 
-            println("Created virtual directory \"" + object_path + "\" \"" + object_name + "\"",
-                    custom_utils::COLOR::GREEN);
+            println("Created directory \"" + object_path + "\" \"" + object_name + "\"", custom_utils::COLOR::GREEN);
 
             control_send("250 Directory created.");
             control_receive();
@@ -456,7 +455,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 object_name = get_basename(argument);
             }
 
-            m_virtual_fs.remove_virtual_object(m_userid, object_name, object_path);
+            m_fs_objects.remove_fs_object(m_userid, object_name, object_path);
             control_send("250 Deleted.");
 
             control_receive();
@@ -494,7 +493,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 object_name = get_basename(argument);
             }
 
-            m_virtual_fs.remove_virtual_object(m_userid, object_name, object_path);
+            m_fs_objects.remove_fs_object(m_userid, object_name, object_path);
             control_send("250 Deleted.");
 
             control_receive();
@@ -519,8 +518,8 @@ void base_session::handle_command(const std::string &command, const std::string 
             std::string object_path = get_parent_path(argument);
             std::string object_name = get_basename(argument);
 
-            std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, object_name, object_path);
-            if (v_obj.size() == 0)
+            std::vector<std::string> object = m_fs_objects.get_object(m_userid, object_name, object_path);
+            if (object.size() == 0)
             {
                 // file does not exists
                 println("Client requested -> " + argument + " which does not exists", custom_utils::COLOR::RED);
@@ -528,7 +527,7 @@ void base_session::handle_command(const std::string &command, const std::string 
                 return;
             }
 
-            control_send("213 " + v_obj[3]);
+            control_send("213 " + object[3]);
             return;
         }
     }
@@ -579,8 +578,8 @@ void base_session::parse_RETR_argument(const std::string &argument)
         object_name = get_basename(argument);
     }
 
-    std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, object_name, object_path);
-    if (v_obj.size() == 0)
+    std::vector<std::string> object = m_fs_objects.get_object(m_userid, object_name, object_path);
+    if (object.size() == 0)
     {
         // file does not exists
         println("Client requested -> " + argument + " which does not exists", custom_utils::COLOR::RED);
@@ -588,7 +587,7 @@ void base_session::parse_RETR_argument(const std::string &argument)
         return;
     }
 
-    m_sendable_file_id = v_obj[0];
+    m_sendable_file_id = object[0];
 }
 
 void base_session::handle_data_send_callback(boost::system::error_code ec, size_t bytes_sent)
@@ -607,10 +606,10 @@ void base_session::handle_data_send_callback(boost::system::error_code ec, size_
 
 void base_session::data_directory_listing()
 {
-    std::vector<std::string> v_object_list = m_virtual_fs.get_object_list(m_userid);
+    std::vector<std::string> objects = m_fs_objects.get_all_objects(m_userid);
 
     // send directory list over data channel
-    data_send(create_directory_list(v_object_list, m_pending_directory_list, m_username, m_pending_directory_list_all));
+    data_send(create_directory_list(objects, m_pending_directory_list, m_username, m_pending_directory_list_all));
 
     m_pending_directory_list_all = false;
 }
@@ -621,22 +620,22 @@ void base_session::data_receive_file()
     m_received_file_size = 0;
     m_receive_file_name = get_basename(m_pending_write_file);
 
-    // check if virtual object exists already
-    std::vector<std::string> v_obj = m_virtual_fs.get_object(m_userid, m_receive_file_name, m_receive_file_path);
-    if (v_obj.size() == 0)
+    // check if object exists already
+    std::vector<std::string> object = m_fs_objects.get_object(m_userid, m_receive_file_name, m_receive_file_path);
+    if (object.size() == 0)
     {
-        // virtual object not found, create one
+        // object not found, create one
         std::string created_file_id =
-            m_virtual_fs.create_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
+            m_fs_objects.create_object(m_userid, m_receive_file_name, m_receive_file_path, 0, false);
         println("creating new file", custom_utils::COLOR::CYAN);
         m_receive_file_stream =
             std::make_unique<std::ofstream>("data/" + created_file_id, std::ios_base::app | std::ios::binary);
     }
     else
     {
-        // virtual object found in db
-        std::string existing_file_id = v_obj[0];
-        m_received_file_size = std::stoll(v_obj[3]);
+        // object found in db
+        std::string existing_file_id = object[0];
+        m_received_file_size = std::stoll(object[3]);
         println("appending existing file", custom_utils::COLOR::CYAN);
         m_receive_file_stream = std::make_unique<std::ofstream>("data/" + existing_file_id, std::ios::binary);
     }
@@ -694,7 +693,7 @@ void base_session::data_async_receive_end()
     m_receive_file_stream.reset();
 
     println("updating object metadata in db", custom_utils::COLOR::CYAN);
-    m_virtual_fs.update_virtual_object(m_userid, m_receive_file_name, m_receive_file_path, m_received_file_size);
+    m_fs_objects.update_object_size(m_userid, m_receive_file_name, m_receive_file_path, m_received_file_size);
 
     // allow another file to be received
     m_pending_write_file = "";
@@ -769,6 +768,7 @@ void base_session::println(const std::string &message)
 
 void base_session::println(const std::string &message, custom_utils::COLOR color)
 {
+    // enable logging only for debug builds
 #ifndef NDEBUG
     custom_utils::println("[" + m_session_type + "] [" + m_session_id + "] " + message, color);
 #endif
@@ -791,7 +791,7 @@ std::pair<std::string, std::string> base_session::parse_buffer(size_t bytes_rece
     return std::pair<std::string, std::string>(string_to_uppercase(FTP_command), FTP_argument);
 }
 
-std::string base_session::create_directory_list(const std::vector<std::string> &virtual_object_list,
+std::string base_session::create_directory_list(const std::vector<std::string> &fs_objects,
                                                 const std::string &target_directory, std::string owner,
                                                 bool include_special_entries)
 {
@@ -805,9 +805,9 @@ std::string base_session::create_directory_list(const std::vector<std::string> &
     }
 
     size_t i = 2;
-    while (i < virtual_object_list.size())
+    while (i < fs_objects.size())
     {
-        if (virtual_object_list[i] != target_directory)
+        if (fs_objects[i] != target_directory)
         {
             i += 6;
             continue;
@@ -816,11 +816,11 @@ std::string base_session::create_directory_list(const std::vector<std::string> &
         std::string listing_format = "";
 
         // is file
-        if (virtual_object_list[i + 3] == "0")
+        if (fs_objects[i + 3] == "0")
         {
             listing_format += "-rwxrwxrwx 1 ";
         }
-        else if (virtual_object_list[i + 3] == "1")
+        else if (fs_objects[i + 3] == "1")
         {
             // is directory
             listing_format += "drwxrwxrwx 1 ";
@@ -830,13 +830,13 @@ std::string base_session::create_directory_list(const std::vector<std::string> &
         listing_format += owner + " " + owner + " ";
 
         // file_size
-        listing_format += virtual_object_list[i + 1] + " ";
+        listing_format += fs_objects[i + 1] + " ";
 
         // modified_time
-        listing_format += parse_metadata_time(virtual_object_list[i + 2]) + " ";
+        listing_format += parse_metadata_time(fs_objects[i + 2]) + " ";
 
         // file_name
-        listing_format += virtual_object_list[i - 1];
+        listing_format += fs_objects[i - 1];
 
         directory_list += listing_format + "\r\n";
 
