@@ -11,10 +11,11 @@ FTP file server written in C++
 * Some FTP clients has corrupted files from downloads and uploads (incorrect file size, corrupted data)
 
 ## Requirements
-* CMake version >= 3.30
-* SQLite3
-* Boost (Asio, JSON)
-* OpenSSL
+* CMake (version >= 3.30)
+* sqlite3
+* boost-asio
+* boost-json
+* openssl
 
 ## To build and run
 This project can be compiled using CMake
@@ -29,5 +30,5 @@ make
 
 The program uses no encryption by default. To use encryption, TLS certificate must be provided.
 
-### Configure
+### Configuration
 The program creates a default json file at ./config/config.json when no config file is found. Modify this file to configure program behavior.
