@@ -9,8 +9,6 @@
 
 namespace sqlite_wrapper
 {
-    constexpr bool ENABLE_LOGGING = true;
-
     constexpr char OPTIMIZATIONS[] = "PRAGMA journal_mode = WAL; PRAGMA synchronous = normal; PRAGMA "
                                      "journal_size_limit = 67108864; PRAGMA mmap_size = 134217728; PRAGMA cache_size = "
                                      "2000; PRAGMA busy_timeout = 5000;";
@@ -68,8 +66,6 @@ namespace sqlite_wrapper
         std::vector<std::string> run_param_query(const std::string &sql_query, const std::vector<std::string> &params);
 
     private:
-        bool allowLogging = false;
-
         sqlite3 *db;
 
         // initialization functions

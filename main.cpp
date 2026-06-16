@@ -23,12 +23,9 @@ config::parsed_config init_config()
     return cfg;
 }
 
-void init_sql_db(bool show_logs = true)
+void init_sql_db()
 {
-    if (show_logs)
-        sqlite_wrapper::SQLiteDb(sqlite_wrapper::ENABLE_LOGGING).init_db();
-    else
-        sqlite_wrapper::SQLiteDb().init_db();
+    sqlite_wrapper::SQLiteDb().init_db();
 }
 
 bool any_users_changed(std::map<std::string, std::string> db_users, std::map<std::string, std::string> config_users)
@@ -64,26 +61,27 @@ void init_user_table(config::parsed_config cfg)
         {
             db_users[user.name] = user.password;
         }
-
-        // int i = 0;
-        // while (i < temp_userlist.size())
-        // {
-        //     db_users[temp_userlist[i]] = temp_userlist[i + 1];
-        //     i += 2;
-        // }
     }
 
     if (any_users_changed(db_users, cfg.users))
     {
         // new users config detected
         println("Users config changed. Backing up storage.db and creating a new one", custom_utils::COLOR::YELLOW);
-        fs_handler::rename_file("data/storage.db", "data/backup_storage.db");
+
+        int i = 1;
+        while (fs_handler::file_exists("data/old_storage" + std::to_string(i) + ".db"))
+        {
+            i++;
+        }
+        fs_handler::rename_file("data/storage.db", "data/old_storage" + std::to_string(i) + ".db");
 
         // create a new storage.db
-        init_sql_db(false);
+        init_sql_db();
     }
 
     users::users users_table = users::users();
+    users_table.initialize();
+
     for (const auto &[name, password] : cfg.users)
     {
         users_table.create_user(name, password);

@@ -13,11 +13,6 @@ namespace sqlite_wrapper
     {
     }
 
-    SQLiteDb::SQLiteDb(bool logging)
-    {
-        allowLogging = logging;
-    }
-
     SQLiteDb::~SQLiteDb()
     {
         sqlite3_close(db);
@@ -76,7 +71,7 @@ namespace sqlite_wrapper
             println("Query: " + sql_query, custom_utils::COLOR::RED);
             println("Error code -> " + std::to_string(rc), custom_utils::COLOR::RED);
 
-            throw std::runtime_error("run_param_query failed");
+            throw std::runtime_error("sqlite3_prepare_v2 failed");
         }
 
         for (size_t i = 0; i < params.size(); i++)
@@ -189,16 +184,15 @@ namespace sqlite_wrapper
 
     void SQLiteDb::println(const std::string &message)
     {
-        if (!allowLogging)
-            return;
-        custom_utils::println(message);
+        println(message, custom_utils::COLOR::WHITE);
     }
 
     void SQLiteDb::println(const std::string &message, custom_utils::COLOR color)
     {
-        if (!allowLogging)
-            return;
+        // enable logging only for debug builds
+#ifndef NDEBUG
         custom_utils::println(message, color);
+#endif
     }
 
     int SQLiteDb::sqlite_callback(void *context, int argc, char **argv, char **azColName)
