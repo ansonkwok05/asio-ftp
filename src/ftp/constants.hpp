@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstddef>
-#include <array>
 #include <string_view>
 
 enum class CONNECTION_STAGE
@@ -22,7 +21,7 @@ constexpr size_t SEND_BUFFER_SIZE = 1024 * 512;
 constexpr int DATA_CHANNEL_BEGIN_PORT = 7000;
 
 // list of commands supported
-constexpr std::array<std::string_view, 20> FTP_COMMANDS = {
+constexpr std::string_view FTP_COMMANDS[20] = {
     // Authentication username
     "USER",
 

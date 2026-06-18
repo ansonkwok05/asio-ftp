@@ -1,7 +1,7 @@
 #pragma once
 
-#include <chrono>
 #include <string>
+#include <chrono>
 
 namespace custom_utils
 {

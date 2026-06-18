@@ -1,6 +1,6 @@
 #pragma once
 
-#include "sqlite_wrapper.h"
+#include "sqlite_wrapper.hpp"
 
 #include <string>
 #include <vector>

@@ -1,9 +1,12 @@
 #pragma once
 
-#include "../config/parser.h"
+#include "../config/parser.hpp"
 
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
+#include <string>
+
+#include <boost/asio/io_context.hpp>
+#include <boost/asio/ssl/context.hpp>
+#include <boost/asio/ip/tcp.hpp>
 
 namespace ftp
 {

@@ -1,15 +1,20 @@
 #pragma once
 
-#include "constants.h"
+#include "constants.hpp"
 
-#include "../database/users.h"
-#include "../database/fs_objects.h"
-#include "../custom_utils.h"
+#include "../database/users.hpp"
+#include "../database/fs_objects.hpp"
+#include "../custom_utils.hpp"
 
 #include <string>
+#include <vector>
+#include <utility>
+#include <memory>
 #include <fstream>
 
+#include <boost/asio/any_io_executor.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/system/detail/error_code.hpp>
 #include <boost/asio/streambuf.hpp>
 
 class base_session

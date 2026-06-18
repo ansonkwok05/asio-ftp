@@ -1,8 +1,9 @@
 #pragma once
 
-#include "base_session.h"
+#include "base_session.hpp"
 
 #include <memory>
+#include <string>
 
 #include <boost/asio/ip/tcp.hpp>
 

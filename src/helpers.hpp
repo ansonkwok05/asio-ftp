@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 #include <string_view>
-#include <cstddef>
 
 std::string get_basename(const std::string &path);
 

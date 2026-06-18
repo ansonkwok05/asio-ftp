@@ -1,16 +1,19 @@
-#include "server.h"
-#include "../config/parser.h"
-#include "../custom_utils.h"
-#include "../database/fs_handler.h"
-#include "insecure_session.h"
-#include "secure_session.h"
-
-#include <boost/asio.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/beast.hpp>
+#include "server.hpp"
+#include "../config/parser.hpp"
+#include "../custom_utils.hpp"
+#include "../database/fs_handler.hpp"
+#include "insecure_session.hpp"
+#include "secure_session.hpp"
 
 #include <string>
 #include <stdexcept>
+#include <memory>
+#include <utility>
+
+#include <boost/asio/ssl/context_base.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl/context_base.hpp>
+#include <boost/system/detail/error_code.hpp>
 
 namespace ftp
 {

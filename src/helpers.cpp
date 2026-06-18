@@ -1,9 +1,11 @@
-#include "helpers.h"
+#include "helpers.hpp"
 
 #include <string>
 #include <vector>
+#include <algorithm>
 #include <string_view>
 #include <cstddef>
+#include <cstdlib>
 
 std::string get_basename(const std::string &path)
 {

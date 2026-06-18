@@ -1,16 +1,16 @@
 #pragma once
 
-#include "base_session.h"
+#include "base_session.hpp"
 
-#include "../custom_utils.h"
+#include "../custom_utils.hpp"
 
+#include <memory>
 #include <string>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/ssl/context.hpp>
 #include <boost/asio/steady_timer.hpp>
 #include <boost/asio/ssl/stream.hpp>
-#include <boost/asio/streambuf.hpp>
 
 namespace ftps
 {

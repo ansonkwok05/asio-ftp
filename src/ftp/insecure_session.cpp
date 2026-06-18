@@ -1,9 +1,15 @@
-#include "insecure_session.h"
-#include "base_session.h"
-#include "../helpers.h"
+#include "insecure_session.hpp"
+#include "base_session.hpp"
+#include "../helpers.hpp"
+
+#include <utility>
+#include <string>
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/write.hpp>
+#include <boost/asio/buffer.hpp>
+#include <boost/system/detail/error_code.hpp>
+#include <boost/asio/socket_base.hpp>
 #include <boost/asio/read.hpp>
 
 namespace ftp

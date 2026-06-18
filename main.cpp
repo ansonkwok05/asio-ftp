@@ -1,14 +1,16 @@
-#include "src/custom_utils.h"
-#include "src/config/parser.h"
-#include "src/database/fs_handler.h"
-#include "src/database/sqlite_wrapper.h"
-#include "src/database/users.h"
-#include "src/database/fs_objects.h"
-#include "src/ftp/server.h"
+#include "src/custom_utils.hpp"
+#include "src/config/parser.hpp"
+#include "src/database/fs_handler.hpp"
+#include "src/database/sqlite_wrapper.hpp"
+#include "src/database/users.hpp"
+#include "src/database/fs_objects.hpp"
+#include "src/ftp/server.hpp"
 
 #include <map>
 #include <string>
 #include <vector>
+#include <cstdlib>
+#include <ctime>
 
 using custom_utils::println;
 

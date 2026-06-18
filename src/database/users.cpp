@@ -1,11 +1,12 @@
-#include "users.h"
-#include "sqlite_wrapper.h"
-#include "../helpers.h"
-#include "../custom_utils.h"
+#include "users.hpp"
+#include "sqlite_wrapper.hpp"
+#include "../helpers.hpp"
+#include "../custom_utils.hpp"
 
-#include <stdexcept>
 #include <string>
 #include <vector>
+#include <utility>
+#include <stdexcept>
 
 namespace users
 {
