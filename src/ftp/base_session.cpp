@@ -93,7 +93,7 @@ void base_session::handle_command(const std::string &command, const std::string 
     }
 
     // check if command is supported
-    if (std::find(FTP_COMMANDS.begin(), FTP_COMMANDS.end(), command) == FTP_COMMANDS.end())
+    if (std::find(std::begin(FTP_COMMANDS), std::end(FTP_COMMANDS), command) == std::end(FTP_COMMANDS))
     {
         println("Unknown command -> " + command, custom_utils::COLOR::YELLOW);
         control_send("502 Command not implemented.");
